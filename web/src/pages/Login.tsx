@@ -2,6 +2,19 @@ import React, { useState } from 'react';
 import { Moon, Sun, User, Lock, Eye, EyeOff } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
 
+// Importações do shadcn
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardFooter, 
+  CardHeader, 
+  CardTitle 
+} from "../components/ui/card";
+
 export function Login() {
   const { theme, toggleTheme } = useTheme();
   const [showPassword, setShowPassword] = useState(false);
@@ -18,7 +31,7 @@ export function Login() {
         headers: {
           'Content-Type':'application/json'
         },
-        body: JSON.stringify({email, password})        
+        body: JSON.stringify({email, password}) // O Backend espera { username: email }? Se sim, ajuste aqui.      
       });
 
       const data = await response.json();
@@ -39,91 +52,99 @@ export function Login() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col transition-colors duration-300 bg-background-light dark:bg-background-dark text-text-main-light dark:text-text-main-dark">
+    /* 1. bg-background: Pega a cor base do seu tema.
+       2. text-foreground: Pega a cor principal do texto.
+       Isso substitui o antigo "bg-background-light dark:bg-background-dark" 
+    */
+    <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors duration-300">
       
       <header className="w-full p-8 flex justify-between items-center">
+        {/* text-primary: Pega sua cor primária configurada */}
         <h1 className="text-2xl font-bold tracking-tight text-primary">
-          O.S <span className="text-text-main-light dark:text-text-main-dark font-normal">Inteligência Financeira</span>
+          O.S <span className="text-foreground font-normal">Inteligência Financeira</span>
         </h1>
 
-        <button 
+        <Button 
+          variant="ghost" 
+          size="icon" 
           onClick={toggleTheme}
-          className="p-3 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
           title="Alternar Tema"
+          // Hover do botão ghost já é tratado pelo shadcn
         >
-          {theme === 'light' ? <Moon size={24} /> : <Sun size={24} />}
-        </button>
+          {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+        </Button>
       </header>
 
       <main className="flex-1 flex items-center justify-center p-4">
-        
-        <div className="w-full max-w-md bg-surface-light dark:bg-surface-dark p-10 rounded-2xl shadow-2xl border border-border-light dark:border-border-dark transition-all duration-300">
-          
-          <div className="text-center mb-6">
-            <h2 className="text-3xl font-bold mb-3">Bem-vindo</h2>
-            <p className="text-base text-text-muted-light dark:text-text-muted-dark">
+        <Card className="w-full max-w-md shadow-2xl shadow-black/50 border-border py-8">
+          <CardHeader className="space-y-1 text-center">
+            <CardTitle className="text-3xl font-bold text-foreground">Bem-vindo</CardTitle>
+            <CardDescription className="text-muted-foreground">
               Faça login para acessar o sistema
-            </p>
-          </div>
+            </CardDescription>
+          </CardHeader>
 
-          <form className="space-y-4" onSubmit={handleLogin}>
-            
-            <div className="space-y-2">
-              <label className="text-base font-medium ml-1">Email</label>
-              <div className="relative">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted-light dark:text-text-muted-dark">
-                  <User size={20} /> {/* Ícone maior */}
+          <CardContent>
+            <form onSubmit={handleLogin} className="space-y-4">
+              
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-foreground">Email</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+                  <Input 
+                    id="email"
+                    type="email" 
+                    placeholder="Seu email de acesso"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-10 py-6 bg-background focus-visible:ring-primary"
+                  />
                 </div>
-                <input 
-                  type="email" 
-                  placeholder="Seu email de acesso"
-                  value={email}
-                  onChange={ (e) => setEmail(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 text-base rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark focus:outline-none focus:ring-2 focus:ring-primary transition-colors placeholder:text-slate-400"
-                />
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <label className="text-base font-medium ml-1">Senha</label>
-              <div className="relative">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted-light dark:text-text-muted-dark">
-                  <Lock size={20} />
+              <div className="space-y-2">
+                <Label htmlFor="password">Senha</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+                  <Input 
+                    id="password"
+                    type={showPassword ? "text" : "password"} 
+                    placeholder="Sua senha"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pl-10 pr-10 py-6 bg-background focus-visible:ring-primary"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 h-full px-3 hover:bg-transparent text-muted-foreground hover:text-primary"
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </Button>
                 </div>
-                <input 
-                  type={showPassword ? "text" : "password"} 
-                  placeholder="Sua senha"
-                  value={password}
-                  onChange={ (e) => setPassword(e.target.value)}
-                  className="w-full pl-12 pr-12 py-3 text-base rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark focus:outline-none focus:ring-2 focus:ring-primary transition-colors placeholder:text-slate-400"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-text-muted-light dark:text-text-muted-dark hover:text-primary transition-colors"
-                >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
               </div>
+              <Button 
+                type="submit" 
+                className="w-full text-lg font-bold py-6 mt-1 bg-primary text-primary-foreground hover:bg-primary-hover"
+              >
+                ENTRAR
+              </Button>
+
+            </form>
+          </CardContent>
+
+          <CardFooter className="flex justify-center">
+            <div className="text-sm text-muted-foreground">
+              Não possui uma conta?{" "}
+              <a href="#" className="text-primary hover:text-primary-hover font-medium hover:underline">
+                Faça sua conta
+              </a>
             </div>
+          </CardFooter>
+        </Card>
 
-            <button 
-              type="submit"
-              className="w-full bg-primary hover:bg-primary-hover text-white text-lg font-bold py-3 rounded-xl transition-all duration-200 mt-8 shadow-lg shadow-primary/25 hover:shadow-primary/40 active:scale-[0.98]"
-            >
-              ENTRAR
-            </button>
-
-          </form>
-
-          <div className="mt-8 text-center text-base">
-            <span className="text-text-muted-light dark:text-text-muted-dark">Não possui uma conta? </span>
-            <a href="#" className="text-primary hover:text-primary-hover font-semibold hover:underline">
-              Fale com o suporte
-            </a>
-          </div>
-
-        </div>
       </main>
     </div>
   );
