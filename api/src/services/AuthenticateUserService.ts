@@ -1,6 +1,6 @@
 import { compare } from "bcryptjs";
 import { prismaClient } from "../prisma/index.js";
-import { sign } from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 
 interface IAuthRequest {
     email: string;
@@ -25,7 +25,7 @@ class AuthenticateUserService {
             throw new Error("Usuário ou senha incorretos");
         }
 
-        const token = sign(
+        const token = jwt.sign(
             {
                 name: user.name,
                 email: user.email,
