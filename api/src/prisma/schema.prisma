@@ -1,0 +1,139 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL") 
+}
+
+//------------------------------------------
+// 2. Tabela Usuario
+//------------------------------------------
+
+model User {
+  id       String   @id @default(uuid())
+  email    String   @unique
+  name     String
+  password String
+  role     Role     @default(SALES)
+  created  DateTime @default(now())
+
+  // Relacionamentos
+  leads   Lead[]        @relation("LeadOwner") // Leads do usuário
+  actions Contact[] // Historico de contatos que fez
+  imports ImportBatch[] // Planilhas que importou
+}
+
+//------------------------------------------
+// 3. Planilha importada
+//------------------------------------------
+
+model ImportBatch {
+  id         String   @id @default(uuid())
+  fileName   String // nome do arquivo
+  importedAt DateTime @default(now())
+
+  // Quem importou
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  // Lead gerado
+  leads Lead[]
+}
+
+//------------------------------------------
+// 4. Tabela Lead
+//------------------------------------------
+
+model Lead {
+  id String @id @default(uuid())
+
+  // Dados cadastrais
+  cnpj        String? @unique
+  companyName String // Razao Social
+  cnae        String?
+  phone       String?
+  email       String?
+  city        String?
+  state       String?
+  address     String?
+
+  funnelStage FunnelStage @default(NEW)
+  tags        String[]
+  visitDate   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ownerId   String
+  ownerUser User   @relation("LeadOwner", fields: [ownerId], references: [id])
+
+  // Origem (Pode ser nulo se foi cadastrado manualmente)
+  ImportBatchId String?
+  ImportBatch   ImportBatch? @relation(fields: [ImportBatchId], references: [id])
+
+  // Histórico
+  contacts Contact[]
+}
+
+//------------------------------------------
+// 5. Contato (Log)
+//------------------------------------------
+
+model Contact {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+
+  type        ContactType
+  description String?
+
+  // Usuário que fez a ação
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  // Lead que recebeu a ação
+  leadId String
+  lead   Lead   @relation(fields: [leadId], references: [id])
+
+  // Alterações de estado
+  // Mantive 'didChageFunnel' (com erro de digitação) para bater com a migration do seu colega
+  didChageFunnel Boolean      @default(false) 
+  funnelBefore   FunnelStage?
+  funnelAfter    FunnelStage?
+
+  didChangeOwner Boolean @default(false)
+  ownerBeforeId  String?
+
+  observation String
+}
+
+//------------------------------------------
+// 6. Enums
+//------------------------------------------
+
+enum Role {
+  ADMIN
+  SALES
+}
+
+enum FunnelStage {
+  NEW
+  CONTACTED
+  INTERESTED
+  NEGOTIATING
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+enum ContactType {
+  EMAIL
+  CALL
+  WHATSAPP
+  MEETING
+  SYSTEM_CHANGE
+  NOTE
+}
