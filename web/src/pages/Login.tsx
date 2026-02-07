@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Moon, Sun, User, Lock, Eye, EyeOff } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
+import { Link } from 'react-router-dom';
 
 // Importações do shadcn
 import { Button } from "../components/ui/button";
@@ -31,7 +32,7 @@ export function Login() {
         headers: {
           'Content-Type':'application/json'
         },
-        body: JSON.stringify({email, password}) // O Backend espera { username: email }? Se sim, ajuste aqui.      
+        body: JSON.stringify({email, password}) 
       });
 
       const data = await response.json();
@@ -52,14 +53,9 @@ export function Login() {
   }
 
   return (
-    /* 1. bg-background: Pega a cor base do seu tema.
-       2. text-foreground: Pega a cor principal do texto.
-       Isso substitui o antigo "bg-background-light dark:bg-background-dark" 
-    */
     <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors duration-300">
       
       <header className="w-full p-8 flex justify-between items-center">
-        {/* text-primary: Pega sua cor primária configurada */}
         <h1 className="text-2xl font-bold tracking-tight text-primary">
           O.S <span className="text-foreground font-normal">Inteligência Financeira</span>
         </h1>
@@ -69,7 +65,6 @@ export function Login() {
           size="icon" 
           onClick={toggleTheme}
           title="Alternar Tema"
-          // Hover do botão ghost já é tratado pelo shadcn
         >
           {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
         </Button>
@@ -138,9 +133,9 @@ export function Login() {
           <CardFooter className="flex justify-center">
             <div className="text-sm text-muted-foreground">
               Não possui uma conta?{" "}
-              <a href="#" className="text-primary hover:text-primary-hover font-medium hover:underline">
+              <Link to="/register" className="text-primary hover:text-primary-hover font-medium hover:underline">
                 Faça sua conta
-              </a>
+              </Link>
             </div>
           </CardFooter>
         </Card>
