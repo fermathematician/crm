@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom'; 
+import { Link, useNavigate } from 'react-router-dom'; 
 import { Moon, Sun, User, Lock, Eye, EyeOff, Mail } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
 
@@ -12,6 +12,7 @@ import {
 
 export function Register() {
   const { theme, toggleTheme } = useTheme();
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -21,13 +22,37 @@ export function Register() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  const handleRegister = (e: React.FormEvent) => {
+  async function handleRegister (e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (password !== confirmPassword) {
       alert("As senhas não coincidem!");
       return;
     }
-    console.log("Dados para envio:", { name, email, password });
+    
+    try {
+      const response = await fetch('http://localhost:3000/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type':'application/json'
+        },
+        body: JSON.stringify({name, email, password}) 
+      });
+
+      const data = await response.json();
+
+      if(!response.ok) {
+        alert(data.message);
+        return;
+      }
+
+      // Sucesso
+      alert("Cadastro realizado com sucesso!");
+      navigate('/');
+
+    } catch(error) {
+      console.error(error);
+      alert("Erro ao conectar com o servidor");
+    }
   };
 
   return (
@@ -136,7 +161,6 @@ export function Register() {
           <CardFooter className="flex justify-center">
             <div className="text-sm text-muted-foreground">
               Já possui uma conta?{" "}
-              {/* Link de volta para o Login */}
               <Link to="/" className="text-primary hover:text-primary-hover font-medium hover:underline">
                 Fazer login
               </Link>
