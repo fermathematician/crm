@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Moon, Sun, User, Lock, Eye, EyeOff } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
 import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 // Importações do shadcn
 import { Button } from "../components/ui/button";
@@ -18,8 +19,9 @@ import {
 
 export function Login() {
   const { theme, toggleTheme } = useTheme();
-  const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate();
 
+  const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -42,10 +44,9 @@ export function Login() {
         return;
       }
 
-      console.log("TOKEN: ", data.token);
       localStorage.setItem("token", data.token);
 
-      alert("Login realizado com sucesso!");
+      navigate('/dashboard');
     } catch(error) {
       console.error(error);
       alert("Erro ao conectar com o servidor");
