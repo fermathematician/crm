@@ -1,14 +1,38 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';PrivateRoute
+import { jwtDecode } from 'jwt-decode';
 
 interface PrivateRouteProps {
     children: React.ReactNode;
 }
 
-export function PrivateRoute({ children }: PrivateRouteProps) {
-    // String -> true e null -> false
-    const isAuthenticated = !!localStorage.getItem('token');
+interface JWTPayLoad {
+    sub: string; // Id
+    email: string;
+    exp: number; // Data de expiração
+}
 
-    // Se o token for autenticado eu retorno children (por enquanto meu dashboard), senão redireciono para a página de login
-    return isAuthenticated ? children : <Navigate to="/" />;
+export function PrivateRoute({ children }: PrivateRouteProps) {
+    const token = localStorage.getItem('token');
+
+    if(!token) {
+        return <Navigate to="/" />;
+    }
+
+    try {
+        const decoded = jwtDecode<JWTPayLoad>(token);
+
+        const currentTime = Date.now() / 1000; 
+
+        if (decoded.exp < currentTime) {
+            localStorage.removeItem('token');
+            alert("Sua sessão expirou. Faça login novamente.");
+            return <Navigate to="/" />;
+        }
+
+        return children;
+    }catch(error) {
+        localStorage.removeItem('token');
+        return <Navigate to="/" />;
+    }
 }

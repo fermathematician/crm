@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Moon, Sun, User, Lock, Eye, EyeOff } from 'lucide-react';
+import { Moon, Sun, User, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
 import { Link } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
@@ -24,6 +24,7 @@ export function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [errorMessage, setErrorMessagem] = useState('');
 
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -40,7 +41,7 @@ export function Login() {
       const data = await response.json();
 
       if(!response.ok) {
-        alert(data.message);
+        setErrorMessagem(data.message || "Email ou senha incorretos");
         return;
       }
 
@@ -48,8 +49,7 @@ export function Login() {
 
       navigate('/dashboard');
     } catch(error) {
-      console.error(error);
-      alert("Erro ao conectar com o servidor");
+      setErrorMessagem("Erro ao conectar com o servidor.");
     }
   }
 
@@ -127,6 +127,13 @@ export function Login() {
               >
                 ENTRAR
               </Button>
+
+              {errorMessage && (
+                <div className="flex items-center justify-center gap-2 mt-4 text-red-500 font-medium animate-pulse">
+                  <AlertCircle size={20} />
+                  <span>{errorMessage}</span>
+                </div>
+              )}
 
             </form>
           </CardContent>
