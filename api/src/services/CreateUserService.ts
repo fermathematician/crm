@@ -10,6 +10,10 @@ interface ICreateUserRequest {
 
 class CreateUserService {
     async execute({ name, email, password }: ICreateUserRequest) {
+
+        if (password.length < 6) {
+            throw new Error("A senha deve ter pelo menos 6 caracteres");
+        }
         
         const userAlreadyExists = await prismaClient.user.findUnique({
             where: {

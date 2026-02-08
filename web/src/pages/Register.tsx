@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom'; 
-import { Moon, Sun, User, Lock, Eye, EyeOff, Mail } from 'lucide-react';
+import { Link } from 'react-router-dom'; 
+import { Moon, Sun, User, Lock, Eye, EyeOff, Mail, AlertCircle, CheckCircle } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
 
 import { Button } from "../components/ui/button";
@@ -12,7 +12,6 @@ import {
 
 export function Register() {
   const { theme, toggleTheme } = useTheme();
-  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -21,11 +20,22 @@ export function Register() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   async function handleRegister (e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
+    setErrorMessage('');
+    setSuccessMessage('');
+
+    if (password.length < 6) {
+      setErrorMessage("A senha deve ter pelo menos 6 caracteres.");
+      return;
+    }
+
     if (password !== confirmPassword) {
-      alert("As senhas não coincidem!");
+      setErrorMessage("As senhas não coincidem!");
       return;
     }
     
@@ -41,17 +51,20 @@ export function Register() {
       const data = await response.json();
 
       if(!response.ok) {
-        alert(data.message);
+        setErrorMessage(data?.error || "Erro ao criar conta");
         return;
       }
 
       // Sucesso
-      alert("Cadastro realizado com sucesso!");
-      navigate('/');
-
+      setSuccessMessage("Cadastro realizado com sucesso!");   
+      
+      //setTimeout(() => {
+      //  navigate('/');
+      //}, 2000);
+      
     } catch(error) {
       console.error(error);
-      alert("Erro ao conectar com o servidor");
+      setErrorMessage("Erro ao conectar com o servidor");
     }
   };
 
@@ -155,6 +168,21 @@ export function Register() {
               <Button type="submit" className="w-full text-lg font-bold py-6 mt-10 bg-primary text-primary-foreground hover:bg-primary-hover">
                 CRIAR CONTA
               </Button>
+
+              {errorMessage && (
+                <div className="flex items-center justify-center gap-2 mt-4 text-red-500 font-medium animate-pulse">
+                  <AlertCircle size={20} />
+                  <span>{errorMessage}</span>
+                </div>
+              )}
+
+              {successMessage && (
+                <div className="flex items-center justify-center gap-2 mt-4 text-green-500 font-bold animate-pulse">
+                  <CheckCircle size={20} />
+                  <span>{successMessage}</span>
+                </div>
+              )}
+
             </form>
           </CardContent>
 
