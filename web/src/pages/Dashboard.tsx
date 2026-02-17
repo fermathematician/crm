@@ -5,7 +5,7 @@ import type { DropResult } from '@hello-pangea/dnd';
 
 import { 
   Moon, Sun, LogOut, Bell, Calendar as CalendarIcon, 
-  CheckCircle2, AlertCircle, Clock, User, GripVertical, Check 
+  CheckCircle2, AlertCircle, Clock, User, GripVertical, Check, List
 } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
 
@@ -19,6 +19,23 @@ import {
 } from "../components/ui/dialog";
 
 type LeadTag = 'frio' | 'morno' | 'quente' | 'a contactar' | 'sem resposta' | 'promessa' | 'parcial' | 'completa' | 'aprovado' | 'recusado' | 'sem interesse' | 'novo';
+
+interface ApiLead {
+  id: string;
+  companyName: string;
+  funnelStage: 'NOVO' | 'CONTATO' | 'NEGOCIACAO' | 'CADASTRO' | 'FINALIZADO' | 'SEM_INTERESSE';
+  tags: string[];
+  phone: string | null;
+}
+
+const reverseStageMap: Record<string, string> = {
+  'novos': 'NOVO',
+  'contato': 'CONTATO',
+  'negociacao': 'NEGOCIACAO',
+  'cadastro': 'CADASTRO',
+  'finalizado': 'FINALIZADO',
+  'arquivo': 'SEM_INTERESSE'
+};
 
 const tagColors: Record<LeadTag, string> = {
   'novo': 'bg-slate-500 border-slate-600',
@@ -65,45 +82,13 @@ interface Column {
   leads: Lead[];
 }
 
-const initialBoard: Record<string, Column> = {
-  'novos': {
-    id: 'novos', title: 'Novos / Entrada',
-    leads: [
-      { id: '1', name: 'Ricardo Oliveira', tag: 'novo' },
-    ]
-  },
-  'contato': {
-    id: 'contato', title: 'Contato',
-    leads: [
-      { id: '2', name: 'Ana Silva', tag: 'a contactar' },
-      { id: '3', name: 'João Santos', tag: 'sem resposta' },
-    ]
-  },
-  'negociacao': {
-    id: 'negociacao', title: 'Em Negociação',
-    leads: [
-      { id: '4', name: 'Empresa XYZ', tag: 'morno' },
-      { id: '5', name: 'Carlos Ferreira', tag: 'quente' },
-    ]
-  },
-  'cadastro': {
-    id: 'cadastro', title: 'Cadastro',
-    leads: [
-      { id: '6', name: 'Juliana Costa', tag: 'parcial' },
-    ]
-  },
-  'finalizado': {
-    id: 'finalizado', title: 'Finalizado',
-    leads: [
-      { id: '7', name: 'Roberto Lima', tag: 'aprovado' },
-    ]
-  },
-  'arquivo': {
-    id: 'arquivo', title: 'Sem Interesse / Fora de Perfil',
-    leads: [
-      { id: '8', name: 'Lead Antigo', tag: 'sem interesse' },
-    ]
-  }
+const emptyBoard: Record<string, Column> = {
+  'novos': { id: 'novos', title: 'Novos / Entrada', leads: [] },
+  'contato': { id: 'contato', title: 'Contato', leads: [] },
+  'negociacao': { id: 'negociacao', title: 'Em Negociação', leads: [] },
+  'cadastro': { id: 'cadastro', title: 'Cadastro', leads: [] },
+  'finalizado': { id: 'finalizado', title: 'Finalizado', leads: [] },
+  'arquivo': { id: 'arquivo', title: 'Sem Interesse', leads: [] }
 };
 
 const notifications = [
@@ -117,21 +102,149 @@ export function Dashboard() {
   const navigate = useNavigate();
   const [date, setDate] = useState<Date | undefined>(new Date());
   
-  const [columns, setColumns] = useState(initialBoard);
+  const [columns, setColumns] = useState(emptyBoard);
   
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [editingTag, setEditingTag] = useState<LeadTag | null>(null);
 
-  function handleLogout() {
-    localStorage.removeItem('token');
-    navigate('/');
+  const [userProfile, setUserProfile] = useState<{ name: string, role: string }>({
+    name: "Carregando...",
+    role: "USER"
+  });
+
+  async function updateLeadOnServer(leadId: string, data: { funnelStage?: string, tags?: string[] }) {
+    const token = localStorage.getItem('token');
+    
+    try {
+      // Verifique se a URL e a porta (3000) batem com o seu backend
+      const response = await fetch(`http://localhost:3000/auth/leads/update`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          lead_id: leadId,
+          ...data
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao salvar no servidor');
+      }
+      
+      console.log("Lead atualizado com sucesso no banco!");
+
+    } catch (err) {
+      console.error("Erro ao salvar no banco:", err);
+    }
   }
+
+  useEffect(() => {
+    async function fetchLeads() {
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        navigate('/'); 
+        return;
+      }
+
+      try {
+        const response = await fetch('http://localhost:3000/auth/leads', { 
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.status === 401) {
+          handleLogout();
+          return;
+        }
+
+        const data: ApiLead[] = await response.json(); 
+        
+        const newBoard = JSON.parse(JSON.stringify(emptyBoard)); 
+        const stageMap: Record<string, string> = {
+          'NOVO': 'novos',
+          'CONTATO': 'contato',
+          'NEGOCIACAO': 'negociacao',
+          'CADASTRO': 'cadastro',
+          'FINALIZADO': 'finalizado',
+          'SEM_INTERESSE': 'arquivo'
+        };
+
+        data.forEach((apiLead) => {
+          const columnId = stageMap[apiLead.funnelStage] || 'novos';
+          const tag = (apiLead.tags[0] as LeadTag) || columnDefaultTags[columnId];
+
+          const lead: Lead = {
+            id: apiLead.id,
+            name: apiLead.companyName,
+            tag: tag
+          };
+
+          if (newBoard[columnId]) {
+            newBoard[columnId].leads.push(lead);
+          }
+        });
+
+        setColumns(newBoard);
+
+      } catch (error) {
+        console.error("Erro ao buscar leads:", error);
+      }
+    }
+
+    fetchLeads();
+    
+  }, [navigate]);
 
   useEffect(() => {
     if (selectedLead) {
       setEditingTag(selectedLead.tag);
     }
   }, [selectedLead]);
+
+  useEffect(() => {
+    async function fetchProfile() {
+      const token = localStorage.getItem('token');
+
+      if(!token) {
+        navigate('/');
+        return;
+      }
+
+      try {
+        const response = await fetch('http://localhost:3000/auth/me', {
+          method: 'GET',
+          headers: {
+            'Authorization' : `Bearer ${token}`
+          }
+        });
+
+        if (response.status === 401) {
+          handleLogout();
+          return;
+        }
+
+        const userData = await response.json();
+        setUserProfile({
+          name: userData.name,
+          role: userData.role
+        });
+      }catch (error){
+        console.error("Erro ao carregar perfil: ", error);
+      }
+    }
+
+    fetchProfile();
+  }, [navigate]);
+
+  function handleLogout() {
+    localStorage.removeItem('token');
+    navigate('/');
+  }
 
   function getLeadColumnId(leadId: string | undefined): string | null {
     if (!leadId) return null;
@@ -144,13 +257,12 @@ export function Dashboard() {
   }
 
   function onDragEnd(result: DropResult) {
-    const { source, destination } = result;
+    const { source, destination, draggableId } = result;
     if (!destination) return;
     if (source.droppableId === destination.droppableId && source.index === destination.index) return;
 
     const sourceCol = columns[source.droppableId];
     const destCol = columns[destination.droppableId];
-    
     const sourceItems = [...sourceCol.leads];
     const destItems = source.droppableId === destination.droppableId ? sourceItems : [...destCol.leads];
 
@@ -158,13 +270,15 @@ export function Dashboard() {
     
     if (source.droppableId !== destination.droppableId) {
       const defaultTag = columnDefaultTags[destination.droppableId];
-      if (defaultTag) {
-        removed.tag = defaultTag;
-      }
+      removed.tag = defaultTag || removed.tag;
+
+      updateLeadOnServer(draggableId, { 
+        funnelStage: reverseStageMap[destination.droppableId],
+        tags: [removed.tag]
+      });
     }
 
     destItems.splice(destination.index, 0, removed);
-
     setColumns({
       ...columns,
       [source.droppableId]: { ...sourceCol, leads: sourceItems },
@@ -188,6 +302,8 @@ export function Dashboard() {
         break; 
       }
     }
+
+    updateLeadOnServer(selectedLead.id, { tags: [editingTag] });
 
     setColumns(newColumns);
     setSelectedLead(null);
@@ -221,6 +337,15 @@ export function Dashboard() {
           </div>
         </ScrollArea>
         <div className="p-4 border-t border-border">
+          <Button 
+            variant="ghost" 
+            className="w-full gap-2 justify-start h-12 text-md border border-dashed border-border hover:bg-accent hover:border-solid"
+            onClick={() => navigate('/leads-list')}
+          >
+            <List size={18} />
+            Gerenciar Leads
+          </Button>
+
           <Dialog>
             <DialogTrigger asChild>
               <Button variant="outline" className="w-full gap-2 justify-start h-12 text-md">
@@ -250,8 +375,10 @@ export function Dashboard() {
                 <User size={18} />
               </div>
               <div className="flex flex-col text-right">
-                <span className="text-sm font-semibold leading-none">Fernando Vieira</span>
-                <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Admin</span>
+                <span className="text-sm font-semibold leading-none">{userProfile.name}</span>
+                <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+                  {userProfile.role}
+                </span>
               </div>
             </div>
             <Button variant="ghost" size="icon" onClick={toggleTheme}>
