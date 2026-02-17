@@ -62,7 +62,7 @@ model Lead {
   state       String?
   address     String?
 
-  funnelStage FunnelStage @default(NEW)
+  funnelStage FunnelStage @default(NOVO)
   tags        String[]
   visitDate   DateTime?
 
@@ -121,12 +121,12 @@ enum Role {
 }
 
 enum FunnelStage {
-  NEW
-  CONTACTED
-  INTERESTED
-  NEGOTIATING
-  CLOSED_WON
-  CLOSED_LOST
+  NOVO
+  CONTATO
+  NEGOCIACAO
+  CADASTRO
+  FINALIZADO
+  SEM_INTERESSE
 }
 
 enum ContactType {

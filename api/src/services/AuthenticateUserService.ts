@@ -1,5 +1,5 @@
 import { compare } from "bcryptjs";
-import { prismaClient } from "../prisma/index.js";
+import { prismaClient } from "../../prisma/index.js";
 import jwt from "jsonwebtoken";
 
 interface IAuthRequest {
