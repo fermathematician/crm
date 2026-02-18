@@ -12,6 +12,7 @@ interface UpdateLeadRequest {
   address?: string;
   funnelStage?: "NOVO" | "CONTATO" | "NEGOCIACAO" | "CADASTRO" | "FINALIZADO" | "SEM_INTERESSE";
   tags?: string[];
+  visitDate?: string | null; 
 }
 
 class UpdateLeadService {
@@ -26,7 +27,8 @@ class UpdateLeadService {
     state,
     address,
     funnelStage,
-    tags
+    tags,
+    visitDate 
   }: UpdateLeadRequest) {
     
     if (!lead_id) {
@@ -45,6 +47,10 @@ class UpdateLeadService {
     if (address !== undefined) dataToUpdate.address = address;
     if (funnelStage !== undefined) dataToUpdate.funnelStage = funnelStage;
     if (tags !== undefined) dataToUpdate.tags = tags;
+    
+    if (visitDate !== undefined) {
+      dataToUpdate.visitDate = visitDate ? new Date(visitDate) : null;
+    }
 
     const lead = await prismaClient.lead.update({
       where: {

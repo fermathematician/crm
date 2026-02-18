@@ -26,6 +26,7 @@ interface ApiLead {
   funnelStage: 'NOVO' | 'CONTATO' | 'NEGOCIACAO' | 'CADASTRO' | 'FINALIZADO' | 'SEM_INTERESSE';
   tags: string[];
   phone: string | null;
+  visitDate: string | null; 
 }
 
 const reverseStageMap: Record<string, string> = {
@@ -74,6 +75,7 @@ interface Lead {
   id: string;
   name: string;
   tag: LeadTag;
+  visitDate?: string | null; 
 }
 
 interface Column {
@@ -97,6 +99,26 @@ const notifications = [
   { id: 3, title: "Novo cadastro", time: "17:00", type: "info" },
 ];
 
+function formatDisplayDate(dateString: string) {
+  if (!dateString) return '';
+  const datePart = dateString.includes('T') ? dateString.split('T')[0] : dateString;
+  const parts = datePart.split('-');
+  
+  if (parts.length === 3) {
+    const [year, month, day] = parts;
+    return `${day}/${month}/${year}`;
+  }
+  return dateString;
+}
+
+const maskDate = (value: string) => {
+  value = value.replace(/\D/g, ""); 
+  if (value.length > 8) value = value.slice(0, 8); 
+  if (value.length > 2) value = `${value.slice(0, 2)}/${value.slice(2)}`;
+  if (value.length > 5) value = `${value.slice(0, 5)}/${value.slice(5)}`;
+  return value;
+};
+
 export function Dashboard() {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
@@ -106,17 +128,18 @@ export function Dashboard() {
   
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [editingTag, setEditingTag] = useState<LeadTag | null>(null);
+  const [editingVisitDate, setEditingVisitDate] = useState<string>(''); 
+  const [dateError, setDateError] = useState<string | null>(null); // <-- NOVO ESTADO DE ERRO
 
   const [userProfile, setUserProfile] = useState<{ name: string, role: string }>({
     name: "Carregando...",
     role: "USER"
   });
 
-  async function updateLeadOnServer(leadId: string, data: { funnelStage?: string, tags?: string[] }) {
+  async function updateLeadOnServer(leadId: string, data: { funnelStage?: string, tags?: string[], visitDate?: string | null }) {
     const token = localStorage.getItem('token');
     
     try {
-      // Verifique se a URL e a porta (3000) batem com o seu backend
       const response = await fetch(`http://localhost:3000/auth/leads/update`, {
         method: 'PUT',
         headers: {
@@ -181,7 +204,8 @@ export function Dashboard() {
           const lead: Lead = {
             id: apiLead.id,
             name: apiLead.companyName,
-            tag: tag
+            tag: tag,
+            visitDate: apiLead.visitDate 
           };
 
           if (newBoard[columnId]) {
@@ -203,6 +227,15 @@ export function Dashboard() {
   useEffect(() => {
     if (selectedLead) {
       setEditingTag(selectedLead.tag);
+      setDateError(null); // Reseta o erro ao abrir o modal
+      
+      if (selectedLead.visitDate) {
+        const datePart = selectedLead.visitDate.split('T')[0];
+        const [year, month, day] = datePart.split('-');
+        setEditingVisitDate(`${day}/${month}/${year}`);
+      } else {
+        setEditingVisitDate('');
+      }
     }
   }, [selectedLead]);
 
@@ -289,6 +322,39 @@ export function Dashboard() {
   function handleSaveLead() {
     if (!selectedLead || !editingTag) return;
 
+    if (editingVisitDate && editingVisitDate.length > 0) {
+      if (editingVisitDate.length < 10) {
+        setDateError("Por favor, digite uma data completa no formato DD/MM/AAAA.");
+        return; 
+      }
+
+      const [dayStr, monthStr, yearStr] = editingVisitDate.split('/');
+      const day = parseInt(dayStr, 10);
+      const month = parseInt(monthStr, 10);
+      const year = parseInt(yearStr, 10);
+
+      if (
+        month < 1 || month > 12 || 
+        day < 1 || day > 31 ||
+        year < 2000 
+      ) {
+        setDateError("Data inválida. Verifique o dia e o mês.");
+        return; 
+      }
+      
+      const daysInMonth = new Date(year, month, 0).getDate();
+      if (day > daysInMonth) {
+         setDateError(`Data inválida. O mês ${month} só tem ${daysInMonth} dias.`);
+         return;
+      }
+    }
+
+    let formattedDateForBackend = null;
+    if (editingVisitDate && editingVisitDate.length === 10) {
+      const [day, month, year] = editingVisitDate.split('/');
+      formattedDateForBackend = `${year}-${month}-${day}`;
+    }
+
     const newColumns = { ...columns };
     for (const colId in newColumns) {
       const column = newColumns[colId];
@@ -297,13 +363,17 @@ export function Dashboard() {
       if (leadIndex !== -1) {
         newColumns[colId].leads[leadIndex] = {
           ...newColumns[colId].leads[leadIndex],
-          tag: editingTag
+          tag: editingTag,
+          visitDate: formattedDateForBackend 
         };
         break; 
       }
     }
 
-    updateLeadOnServer(selectedLead.id, { tags: [editingTag] });
+    updateLeadOnServer(selectedLead.id, { 
+      tags: [editingTag],
+      visitDate: formattedDateForBackend 
+    });
 
     setColumns(newColumns);
     setSelectedLead(null);
@@ -311,6 +381,8 @@ export function Dashboard() {
 
   const currentLeadColumnId = getLeadColumnId(selectedLead?.id);
   const availableTags = currentLeadColumnId ? columnAllowedTags[currentLeadColumnId] : [];
+  
+  const showVisitDate = currentLeadColumnId && ['negociacao', 'cadastro', 'finalizado'].includes(currentLeadColumnId);
 
   return (
     <div className="h-screen w-full flex bg-background text-foreground transition-colors duration-300 overflow-hidden">
@@ -432,11 +504,22 @@ export function Dashboard() {
                                     <CardContent className="p-3">
                                       <div className="flex justify-between items-start mb-2">
                                         <span className="font-semibold text-sm line-clamp-1">{lead.name}</span>
-                                        <GripVertical size={14} className="text-muted-foreground/50" />
+                                        <GripVertical size={14} className="text-muted-foreground/50 shrink-0" />
                                       </div>
-                                      <Badge variant="outline" className="text-[10px] px-1 py-0 h-5 font-normal uppercase">
-                                        {lead.tag}
-                                      </Badge>
+                                      
+                                      <div className="flex justify-between items-end mt-2">
+                                        <Badge variant="outline" className="text-[10px] px-1 py-0 h-5 font-normal uppercase">
+                                          {lead.tag}
+                                        </Badge>
+                                        
+                                        {lead.visitDate && (
+                                          <div className="flex items-center gap-1.5 text-[11px] font-bold text-blue-700 bg-blue-100 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30 px-2 py-0.5 rounded-md shadow-sm">
+                                            <CalendarIcon size={12} strokeWidth={2.5} />
+                                            {formatDisplayDate(lead.visitDate)}
+                                          </div>
+                                        )}
+                                      </div>
+                                      
                                     </CardContent>
                                   </Card>
                                 )}
@@ -524,6 +607,45 @@ export function Dashboard() {
                 <p className="text-sm text-muted-foreground">Nenhuma etiqueta disponível para esta coluna.</p>
               )}
             </div>
+
+            {showVisitDate && (
+              <div className="space-y-3 pt-2 border-t border-border/50">
+                <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Agendar Visita</h4>
+                <div className="flex items-center gap-3">
+                   <div className="flex-1 relative">
+                     <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+                     <input 
+                       type="text"
+                       placeholder="DD/MM/AAAA"
+                       maxLength={10}
+                       value={editingVisitDate}
+                       onChange={(e) => {
+                         setEditingVisitDate(maskDate(e.target.value));
+                         if (dateError) setDateError(null); // Limpa o erro ao digitar
+                       }}
+                       className={`flex h-10 w-full rounded-md border bg-card px-3 py-2 pl-10 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${dateError ? 'border-red-500 focus-visible:ring-red-500' : 'border-input'}`}
+                     />
+                   </div>
+                   {editingVisitDate && (
+                     <Button 
+                       variant="ghost" 
+                       size="sm" 
+                       onClick={() => {
+                         setEditingVisitDate('');
+                         setDateError(null);
+                       }} 
+                       className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+                     >
+                        Remover
+                     </Button>
+                   )}
+                </div>
+                {/* <-- MENSAGEM DE ERRO VISUAL --> */}
+                {dateError && (
+                  <p className="text-xs text-red-500 font-medium mt-1 ml-1">{dateError}</p>
+                )}
+              </div>
+            )}
             
             <div className="space-y-2 bg-accent/20 p-4 rounded-lg">
               <h4 className="font-bold text-sm">Histórico de Contato</h4>
