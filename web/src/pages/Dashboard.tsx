@@ -5,14 +5,13 @@ import type { DropResult } from '@hello-pangea/dnd';
 
 import { 
   Moon, Sun, LogOut, Bell, Calendar as CalendarIcon, 
-  CheckCircle2, AlertCircle, Clock, User, GripVertical, Check, List
+  CheckCircle2, AlertCircle, Clock, User, GripVertical, Check, List, ChevronLeft, ChevronRight, ArrowLeft, ExternalLink
 } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
 
 import { Button } from "../components/ui/button";
 import { ScrollArea } from "../components/ui/scroll-area";
 import { Badge } from "../components/ui/badge";
-import { Calendar } from "../components/ui/calendar";
 import { Card, CardContent } from "../components/ui/card";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
@@ -93,12 +92,12 @@ const emptyBoard: Record<string, Column> = {
   'arquivo': { id: 'arquivo', title: 'Sem Interesse', leads: [] }
 };
 
-// <-- Interface de Notificações Dinâmicas -->
 interface Notification {
   id: string;
   title: string;
   time: string;
   type: 'warning' | 'success' | 'info';
+  leadId?: string; 
 }
 
 function formatDisplayDate(dateString: string) {
@@ -121,7 +120,6 @@ const maskDate = (value: string) => {
   return value;
 };
 
-// Função auxiliar para pegar a data de hoje no formato YYYY-MM-DD
 function getTodayString() {
   const today = new Date();
   const year = today.getFullYear();
@@ -133,7 +131,6 @@ function getTodayString() {
 export function Dashboard() {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
-  const [date, setDate] = useState<Date | undefined>(new Date());
   
   const [columns, setColumns] = useState(emptyBoard);
   
@@ -142,34 +139,50 @@ export function Dashboard() {
   const [editingVisitDate, setEditingVisitDate] = useState<string>(''); 
   const [dateError, setDateError] = useState<string | null>(null); 
 
-  // <-- NOVO ESTADO: Notificações Dinâmicas -->
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+
   const [notifications, setNotifications] = useState<Notification[]>([]);
+
+  const [currentMonthDate, setCurrentMonthDate] = useState(new Date());
+  const [selectedDateView, setSelectedDateView] = useState<string | null>(null); 
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   const [userProfile, setUserProfile] = useState<{ name: string, role: string }>({
     name: "Carregando...",
     role: "USER"
   });
 
-  // <-- NOVA FUNÇÃO: Atualizar notificações de visitas de hoje -->
   function updateTodayNotifications(boardData: Record<string, Column>) {
     const todayStr = getTodayString();
     const todayVisits: Notification[] = [];
 
-    // Vasculha todas as colunas e todos os leads
     for (const colId in boardData) {
       boardData[colId].leads.forEach((lead) => {
         if (lead.visitDate && lead.visitDate.startsWith(todayStr)) {
           todayVisits.push({
             id: lead.id,
             title: `Visita Agendada: ${lead.name}`,
-            time: "Hoje", // No futuro, se houver hora, pode colocar aqui
-            type: "warning" // Icone de alerta/atenção para visita
+            time: "Hoje", 
+            type: "warning",
+            leadId: lead.id
           });
         }
       });
     }
 
     setNotifications(todayVisits);
+  }
+
+  function handleNotificationClick(leadId?: string) {
+    if (!leadId) return;
+    
+    for (const colId in columns) {
+      const foundLead = columns[colId].leads.find(l => l.id === leadId);
+      if (foundLead) {
+        setSelectedLead(foundLead);
+        return;
+      }
+    }
   }
 
   async function updateLeadOnServer(leadId: string, data: { funnelStage?: string, tags?: string[], visitDate?: string | null }) {
@@ -191,9 +204,6 @@ export function Dashboard() {
       if (!response.ok) {
         throw new Error('Erro ao salvar no servidor');
       }
-      
-      console.log("Lead atualizado com sucesso no banco!");
-
     } catch (err) {
       console.error("Erro ao salvar no banco:", err);
     }
@@ -250,7 +260,7 @@ export function Dashboard() {
         });
 
         setColumns(newBoard);
-        updateTodayNotifications(newBoard); // <-- Atualiza notificações ao carregar
+        updateTodayNotifications(newBoard); 
 
       } catch (error) {
         console.error("Erro ao buscar leads:", error);
@@ -357,7 +367,7 @@ export function Dashboard() {
     };
     
     setColumns(newBoard);
-    updateTodayNotifications(newBoard); // <-- Atualiza as notificações ao arrastar (caso troque de coluna/apague data)
+    updateTodayNotifications(newBoard); 
   }
 
   function handleSaveLead() {
@@ -417,8 +427,72 @@ export function Dashboard() {
     });
 
     setColumns(newColumns);
-    updateTodayNotifications(newColumns); // <-- Atualiza as notificações após salvar a data no modal
+    updateTodayNotifications(newColumns); 
     setSelectedLead(null);
+  }
+
+  function getVisitsForDate(dateStr: string): Lead[] {
+    const visits: Lead[] = [];
+    for (const colId in columns) {
+      columns[colId].leads.forEach(lead => {
+        if (lead.visitDate && lead.visitDate.startsWith(dateStr)) {
+          visits.push(lead);
+        }
+      });
+    }
+    return visits;
+  }
+
+  function changeMonth(offset: number) {
+    const newDate = new Date(currentMonthDate);
+    newDate.setMonth(newDate.getMonth() + offset);
+    setCurrentMonthDate(newDate);
+  }
+
+  function renderCalendarGrid() {
+    const year = currentMonthDate.getFullYear();
+    const month = currentMonthDate.getMonth();
+    
+    const firstDayOfMonth = new Date(year, month, 1).getDay(); 
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const days = [];
+    const todayStr = getTodayString();
+
+    for (let i = 0; i < firstDayOfMonth; i++) {
+      days.push(<div key={`empty-${i}`} className="h-20 border border-border/30 bg-muted/20"></div>);
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const isToday = dateStr === todayStr;
+      const visits = getVisitsForDate(dateStr);
+
+      days.push(
+        <div 
+          key={dateStr} 
+          onClick={() => setSelectedDateView(dateStr)}
+          className={`h-20 border border-border/50 p-1 flex flex-col gap-1 cursor-pointer transition-colors hover:bg-accent/30 relative
+            ${isToday ? 'bg-primary/5 border-primary/30' : 'bg-card'}
+          `}
+        >
+          <span className={`text-xs font-medium ml-1 ${isToday ? 'text-primary font-bold' : 'text-muted-foreground'}`}>
+            {day}
+          </span>
+          
+          <div className="flex flex-col gap-1 overflow-hidden px-1">
+            {visits.slice(0, 3).map((v, i) => (
+               <div key={i} className="w-full h-1.5 bg-blue-500 rounded-full" title={v.name}></div>
+            ))}
+            {visits.length > 3 && (
+               <span className="text-[9px] text-muted-foreground leading-none font-bold">+ {visits.length - 3}</span>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    return days;
   }
 
   const currentLeadColumnId = getLeadColumnId(selectedLead?.id);
@@ -433,7 +507,6 @@ export function Dashboard() {
         <div className="p-6 border-b border-border flex items-center gap-2">
           <Bell className="h-5 w-5 text-primary" />
           <h2 className="font-bold text-lg">Notificações</h2>
-          {/* <-- BUBBLE COM CONTAGEM DINÂMICA --> */}
           {notifications.length > 0 && (
             <Badge variant="destructive" className="ml-auto">{notifications.length}</Badge>
           )}
@@ -441,14 +514,17 @@ export function Dashboard() {
         <ScrollArea className="flex-1 p-4">
           <div className="space-y-4">
             
-            {/* <-- RENDERIZAÇÃO DINÂMICA DAS NOTIFICAÇÕES --> */}
             {notifications.length === 0 ? (
               <div className="text-center text-sm text-muted-foreground p-4 bg-card rounded-lg border border-dashed border-border mt-4">
                 Nenhuma visita agendada para hoje.
               </div>
             ) : (
               notifications.map((notif) => (
-                <div key={notif.id} className="flex items-start gap-3 p-3 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors cursor-pointer shadow-sm">
+                <div 
+                  key={notif.id} 
+                  onClick={() => handleNotificationClick(notif.leadId)}
+                  className="flex items-start gap-3 p-3 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors cursor-pointer shadow-sm"
+                >
                   {notif.type === 'warning' && <AlertCircle size={18} className="text-orange-500 mt-1" />}
                   {notif.type === 'success' && <CheckCircle2 size={18} className="text-green-500 mt-1" />}
                   {notif.type === 'info' && <Clock size={18} className="text-blue-500 mt-1" />}
@@ -462,7 +538,7 @@ export function Dashboard() {
             
           </div>
         </ScrollArea>
-        <div className="p-4 border-t border-border">
+        <div className="p-4 border-t border-border flex flex-col gap-3">
           <Button 
             variant="ghost" 
             className="w-full gap-2 justify-start h-12 text-md border border-dashed border-border hover:bg-accent hover:border-solid"
@@ -472,18 +548,87 @@ export function Dashboard() {
             Gerenciar Leads
           </Button>
 
-          <Dialog>
+          <Dialog open={isCalendarOpen} onOpenChange={(open) => {
+             setIsCalendarOpen(open);
+             if(!open) setSelectedDateView(null); 
+          }}>
             <DialogTrigger asChild>
               <Button variant="outline" className="w-full gap-2 justify-start h-12 text-md">
                 <CalendarIcon size={18} />
                 Ver Calendário
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader><DialogTitle>Agendamentos</DialogTitle></DialogHeader>
-              <div className="flex justify-center p-4">
-                <Calendar mode="single" selected={date} onSelect={setDate} className="rounded-md border shadow" />
-              </div>
+            <DialogContent className="sm:max-w-2xl">
+              
+              {!selectedDateView ? (
+                <>
+                  <DialogHeader className="flex flex-row items-center justify-between mb-4">
+                    <DialogTitle className="text-xl">
+                       {currentMonthDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' }).replace(/^\w/, (c) => c.toUpperCase())}
+                    </DialogTitle>
+                    <div className="flex gap-2">
+                       <Button variant="outline" size="icon" onClick={() => changeMonth(-1)}>
+                          <ChevronLeft size={16} />
+                       </Button>
+                       <Button variant="outline" size="icon" onClick={() => changeMonth(1)}>
+                          <ChevronRight size={16} />
+                       </Button>
+                    </div>
+                  </DialogHeader>
+                  
+                  <div className="w-full">
+                    <div className="grid grid-cols-7 gap-0 mb-1">
+                       {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(d => (
+                          <div key={d} className="text-center text-xs font-bold text-muted-foreground uppercase">{d}</div>
+                       ))}
+                    </div>
+                    <div className="grid grid-cols-7 gap-0 rounded-md overflow-hidden border border-border/50">
+                       {renderCalendarGrid()}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <DialogHeader className="flex flex-row items-center gap-4 mb-4">
+                    <Button variant="ghost" size="icon" onClick={() => setSelectedDateView(null)}>
+                       <ArrowLeft size={18} />
+                    </Button>
+                    <DialogTitle className="text-xl">
+                       Visitas do dia {formatDisplayDate(selectedDateView)}
+                    </DialogTitle>
+                  </DialogHeader>
+                  
+                  <ScrollArea className="max-h-[60vh]">
+                     <div className="space-y-3 p-1">
+                        {getVisitsForDate(selectedDateView).length === 0 ? (
+                           <div className="text-center p-8 text-muted-foreground bg-muted/20 rounded-lg border border-dashed border-border">
+                              Nenhuma visita agendada para este dia.
+                           </div>
+                        ) : (
+                           getVisitsForDate(selectedDateView).map(lead => (
+                              <Card 
+                                key={lead.id} 
+                                className="border-l-4 border-l-blue-500 shadow-sm cursor-pointer hover:bg-accent/30"
+                                onClick={() => {
+                                  setIsCalendarOpen(false);
+                                  setSelectedLead(lead);
+                                }}
+                              >
+                                 <CardContent className="p-4 flex justify-between items-center">
+                                    <div>
+                                       <h4 className="font-bold text-lg">{lead.name}</h4>
+                                       <p className="text-sm text-muted-foreground">Em: {reverseStageMap[getLeadColumnId(lead.id) || ''] || 'Desconhecido'}</p>
+                                    </div>
+                                    <Badge variant="outline" className="uppercase text-[10px]">{lead.tag}</Badge>
+                                 </CardContent>
+                              </Card>
+                           ))
+                        )}
+                     </div>
+                  </ScrollArea>
+                </>
+              )}
+
             </DialogContent>
           </Dialog>
         </div>
@@ -700,18 +845,38 @@ export function Dashboard() {
               </div>
             )}
             
-            <div className="space-y-2 bg-accent/20 p-4 rounded-lg">
-              <h4 className="font-bold text-sm">Histórico de Contato</h4>
-              <p className="text-sm text-muted-foreground">Nenhum registro de contato recente.</p>
+            <div className="space-y-2 pt-2 border-t border-border/50">
+              <Button 
+                 variant="outline" 
+                 className="w-full gap-2 justify-start h-12 text-md bg-accent/20 hover:bg-accent/40"
+                 onClick={() => {
+                    setSelectedLead(null); 
+                    setIsDetailsModalOpen(true); 
+                 }}
+              >
+                <ExternalLink size={18} className="text-primary" />
+                Ver Histórico e Detalhes Completos
+              </Button>
             </div>
 
-            <div className="flex justify-end gap-2 pt-4">
-               <Button variant="outline" onClick={() => setSelectedLead(null)}>Cancelar</Button>
+            <div className="flex justify-end gap-2 pt-2">
+               <Button variant="ghost" onClick={() => setSelectedLead(null)}>Cancelar</Button>
                <Button onClick={handleSaveLead} className="bg-primary hover:bg-primary/90">
                  Salvar Alterações
                </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
+        <DialogContent className="sm:max-w-3xl h-[80vh] flex flex-col">
+           <DialogHeader>
+             <DialogTitle>Detalhes Completos do Lead</DialogTitle>
+           </DialogHeader>
+           <div className="flex-1 flex items-center justify-center text-muted-foreground border border-dashed border-border rounded-lg mt-4">
+              (Em breve) Tela de detalhes e linha do tempo de contatos...
+           </div>
         </DialogContent>
       </Dialog>
 
