@@ -93,11 +93,13 @@ const emptyBoard: Record<string, Column> = {
   'arquivo': { id: 'arquivo', title: 'Sem Interesse', leads: [] }
 };
 
-const notifications = [
-  { id: 1, title: "Reunião com Cliente A", time: "10:00", type: "warning" },
-  { id: 2, title: "Lead 'Gabriel' avançou", time: "11:30", type: "success" },
-  { id: 3, title: "Novo cadastro", time: "17:00", type: "info" },
-];
+// <-- Interface de Notificações Dinâmicas -->
+interface Notification {
+  id: string;
+  title: string;
+  time: string;
+  type: 'warning' | 'success' | 'info';
+}
 
 function formatDisplayDate(dateString: string) {
   if (!dateString) return '';
@@ -119,6 +121,15 @@ const maskDate = (value: string) => {
   return value;
 };
 
+// Função auxiliar para pegar a data de hoje no formato YYYY-MM-DD
+function getTodayString() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export function Dashboard() {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
@@ -129,12 +140,37 @@ export function Dashboard() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [editingTag, setEditingTag] = useState<LeadTag | null>(null);
   const [editingVisitDate, setEditingVisitDate] = useState<string>(''); 
-  const [dateError, setDateError] = useState<string | null>(null); // <-- NOVO ESTADO DE ERRO
+  const [dateError, setDateError] = useState<string | null>(null); 
+
+  // <-- NOVO ESTADO: Notificações Dinâmicas -->
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
   const [userProfile, setUserProfile] = useState<{ name: string, role: string }>({
     name: "Carregando...",
     role: "USER"
   });
+
+  // <-- NOVA FUNÇÃO: Atualizar notificações de visitas de hoje -->
+  function updateTodayNotifications(boardData: Record<string, Column>) {
+    const todayStr = getTodayString();
+    const todayVisits: Notification[] = [];
+
+    // Vasculha todas as colunas e todos os leads
+    for (const colId in boardData) {
+      boardData[colId].leads.forEach((lead) => {
+        if (lead.visitDate && lead.visitDate.startsWith(todayStr)) {
+          todayVisits.push({
+            id: lead.id,
+            title: `Visita Agendada: ${lead.name}`,
+            time: "Hoje", // No futuro, se houver hora, pode colocar aqui
+            type: "warning" // Icone de alerta/atenção para visita
+          });
+        }
+      });
+    }
+
+    setNotifications(todayVisits);
+  }
 
   async function updateLeadOnServer(leadId: string, data: { funnelStage?: string, tags?: string[], visitDate?: string | null }) {
     const token = localStorage.getItem('token');
@@ -214,6 +250,7 @@ export function Dashboard() {
         });
 
         setColumns(newBoard);
+        updateTodayNotifications(newBoard); // <-- Atualiza notificações ao carregar
 
       } catch (error) {
         console.error("Erro ao buscar leads:", error);
@@ -227,7 +264,7 @@ export function Dashboard() {
   useEffect(() => {
     if (selectedLead) {
       setEditingTag(selectedLead.tag);
-      setDateError(null); // Reseta o erro ao abrir o modal
+      setDateError(null); 
       
       if (selectedLead.visitDate) {
         const datePart = selectedLead.visitDate.split('T')[0];
@@ -312,11 +349,15 @@ export function Dashboard() {
     }
 
     destItems.splice(destination.index, 0, removed);
-    setColumns({
+    
+    const newBoard = {
       ...columns,
       [source.droppableId]: { ...sourceCol, leads: sourceItems },
       [destination.droppableId]: { ...destCol, leads: destItems }
-    });
+    };
+    
+    setColumns(newBoard);
+    updateTodayNotifications(newBoard); // <-- Atualiza as notificações ao arrastar (caso troque de coluna/apague data)
   }
 
   function handleSaveLead() {
@@ -376,6 +417,7 @@ export function Dashboard() {
     });
 
     setColumns(newColumns);
+    updateTodayNotifications(newColumns); // <-- Atualiza as notificações após salvar a data no modal
     setSelectedLead(null);
   }
 
@@ -391,21 +433,33 @@ export function Dashboard() {
         <div className="p-6 border-b border-border flex items-center gap-2">
           <Bell className="h-5 w-5 text-primary" />
           <h2 className="font-bold text-lg">Notificações</h2>
-          <Badge variant="destructive" className="ml-auto">3</Badge>
+          {/* <-- BUBBLE COM CONTAGEM DINÂMICA --> */}
+          {notifications.length > 0 && (
+            <Badge variant="destructive" className="ml-auto">{notifications.length}</Badge>
+          )}
         </div>
         <ScrollArea className="flex-1 p-4">
           <div className="space-y-4">
-            {notifications.map((notif) => (
-              <div key={notif.id} className="flex items-start gap-3 p-3 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors cursor-pointer">
-                {notif.type === 'warning' && <AlertCircle size={18} className="text-yellow-500 mt-1" />}
-                {notif.type === 'success' && <CheckCircle2 size={18} className="text-green-500 mt-1" />}
-                {notif.type === 'info' && <Clock size={18} className="text-blue-500 mt-1" />}
-                <div className="flex-1">
-                  <p className="text-sm font-medium leading-none">{notif.title}</p>
-                  <p className="text-xs text-muted-foreground mt-1">Hoje, às {notif.time}</p>
-                </div>
+            
+            {/* <-- RENDERIZAÇÃO DINÂMICA DAS NOTIFICAÇÕES --> */}
+            {notifications.length === 0 ? (
+              <div className="text-center text-sm text-muted-foreground p-4 bg-card rounded-lg border border-dashed border-border mt-4">
+                Nenhuma visita agendada para hoje.
               </div>
-            ))}
+            ) : (
+              notifications.map((notif) => (
+                <div key={notif.id} className="flex items-start gap-3 p-3 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors cursor-pointer shadow-sm">
+                  {notif.type === 'warning' && <AlertCircle size={18} className="text-orange-500 mt-1" />}
+                  {notif.type === 'success' && <CheckCircle2 size={18} className="text-green-500 mt-1" />}
+                  {notif.type === 'info' && <Clock size={18} className="text-blue-500 mt-1" />}
+                  <div className="flex-1">
+                    <p className="text-sm font-bold leading-none text-foreground">{notif.title}</p>
+                    <p className="text-[11px] font-medium text-muted-foreground mt-1.5 uppercase tracking-wider">{notif.time}</p>
+                  </div>
+                </div>
+              ))
+            )}
+            
           </div>
         </ScrollArea>
         <div className="p-4 border-t border-border">
@@ -621,7 +675,7 @@ export function Dashboard() {
                        value={editingVisitDate}
                        onChange={(e) => {
                          setEditingVisitDate(maskDate(e.target.value));
-                         if (dateError) setDateError(null); // Limpa o erro ao digitar
+                         if (dateError) setDateError(null); 
                        }}
                        className={`flex h-10 w-full rounded-md border bg-card px-3 py-2 pl-10 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${dateError ? 'border-red-500 focus-visible:ring-red-500' : 'border-input'}`}
                      />
@@ -640,7 +694,6 @@ export function Dashboard() {
                      </Button>
                    )}
                 </div>
-                {/* <-- MENSAGEM DE ERRO VISUAL --> */}
                 {dateError && (
                   <p className="text-xs text-red-500 font-medium mt-1 ml-1">{dateError}</p>
                 )}
