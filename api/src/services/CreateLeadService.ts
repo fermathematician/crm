@@ -11,6 +11,7 @@ interface LeadRequest {
   address?: string;
   funnelStage?: "NOVO" | "CONTATO" | "NEGOCIACAO" | "CADASTRO" | "FINALIZADO" | "SEM_INTERESSE";
   tags?: string[];
+  visitDate?: string; 
   ownerId: string; 
 }
 
@@ -25,7 +26,8 @@ class CreateLeadService {
     state,
     address,
     funnelStage = "NOVO", 
-    tags = ["novo"],      
+    tags = ["novo"],   
+    visitDate,
     ownerId
   }: LeadRequest) {
     
@@ -55,6 +57,7 @@ class CreateLeadService {
         address: address || null,
         funnelStage,
         tags,
+        visitDate: visitDate ? new Date(visitDate) : null, // <-- 3. CONVERSÃO ADICIONADA AQUI
         ownerId 
       }
     });

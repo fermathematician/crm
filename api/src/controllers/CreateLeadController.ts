@@ -13,7 +13,8 @@ class CreateLeadController {
       state,
       address,
       funnelStage,
-      tags
+      tags,
+      visitDate 
     } = req.body;
 
     const ownerId = req.user_id;
@@ -31,6 +32,7 @@ class CreateLeadController {
       address,
       funnelStage,
       tags,
+      visitDate, 
       ownerId
     });
 

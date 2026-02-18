@@ -14,7 +14,8 @@ class UpdateLeadController {
       state, 
       address, 
       funnelStage, 
-      tags 
+      tags,
+      visitDate 
     } = req.body;
 
     const updateLeadService = new UpdateLeadService();
@@ -30,11 +31,12 @@ class UpdateLeadController {
       state,
       address,
       funnelStage,
-      tags
+      tags,
+      visitDate 
     });
 
     return res.json(lead);
   }
 }
 
-export { UpdateLeadController };  
+export { UpdateLeadController };
