@@ -10,8 +10,13 @@ class DeleteLeadService {
       throw new Error("ID do Lead não fornecido.");
     }
 
-    // Tenta encontrar e deletar o Lead
     try {
+      await prismaClient.contact.deleteMany({
+        where: {
+          leadId: lead_id
+        }
+      });
+
       const lead = await prismaClient.lead.delete({
         where: {
           id: lead_id

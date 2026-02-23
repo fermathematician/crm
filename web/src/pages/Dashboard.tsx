@@ -5,7 +5,8 @@ import type { DropResult } from '@hello-pangea/dnd';
 
 import { 
   Moon, Sun, LogOut, Bell, Calendar as CalendarIcon, 
-  CheckCircle2, AlertCircle, Clock, User, GripVertical, Check, List, ChevronLeft, ChevronRight, ArrowLeft, ExternalLink
+  CheckCircle2, AlertCircle, Clock, User, GripVertical, Check, List, ChevronLeft, ChevronRight, ArrowLeft, ExternalLink,
+  Phone, Mail, AlignLeft, CalendarDays, History, MapPin, Building2, Plus, Pencil, FileText
 } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
 
@@ -14,10 +15,22 @@ import { ScrollArea } from "../components/ui/scroll-area";
 import { Badge } from "../components/ui/badge";
 import { Card, CardContent } from "../components/ui/card";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter 
 } from "../components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import { Textarea } from "../components/ui/textarea";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
 
 type LeadTag = 'frio' | 'morno' | 'quente' | 'a contactar' | 'sem resposta' | 'promessa' | 'parcial' | 'completa' | 'aprovado' | 'recusado' | 'sem interesse' | 'novo';
+
+// Nova interface para representar o Histórico/Lembretes
+interface ApiContact {
+  id: string;
+  type: 'EMAIL' | 'CALL' | 'MEETING' | 'NOTE' | 'REMINDER';
+  date: string;
+  desc: string;
+}
 
 interface ApiLead {
   id: string;
@@ -26,6 +39,13 @@ interface ApiLead {
   tags: string[];
   phone: string | null;
   visitDate: string | null; 
+  cnpj?: string | null;
+  email?: string | null;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  cnae?: string | null; 
+  contacts?: ApiContact[]; // Adicionado contatos da API
 }
 
 const reverseStageMap: Record<string, string> = {
@@ -75,6 +95,14 @@ interface Lead {
   name: string;
   tag: LeadTag;
   visitDate?: string | null; 
+  phone?: string | null;
+  cnpj?: string | null;
+  email?: string | null;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  cnae?: string | null;
+  contacts?: ApiContact[]; // Adicionado contatos locais
 }
 
 interface Column {
@@ -96,7 +124,7 @@ interface Notification {
   id: string;
   title: string;
   time: string;
-  type: 'warning' | 'success' | 'info';
+  type: 'warning' | 'success' | 'info' | 'reminder'; 
   leadId?: string; 
 }
 
@@ -120,6 +148,40 @@ const maskDate = (value: string) => {
   return value;
 };
 
+const maskCNPJ = (value: string) => {
+  value = value.replace(/\D/g, ""); 
+  if (value.length > 14) value = value.slice(0, 14); 
+  if (value.length > 2) value = `${value.slice(0,2)}.${value.slice(2)}`;
+  if (value.length > 6) value = `${value.slice(0,6)}.${value.slice(6)}`;
+  if (value.length > 10) value = `${value.slice(0,10)}/${value.slice(10)}`;
+  if (value.length > 15) value = `${value.slice(0,15)}-${value.slice(15)}`;
+  return value;
+};
+
+const maskPhone = (value: string) => {
+  value = value.replace(/\D/g, ""); 
+  if (value.length > 11) value = value.slice(0, 11); 
+  if (value.length > 2) value = `(${value.slice(0,2)}) ${value.slice(2)}`;
+  if (value.length > 9) value = `${value.slice(0,10)}-${value.slice(10)}`;
+  return value;
+};
+
+const maskCNAE = (value: string) => {
+  value = value.replace(/\D/g, ""); 
+  if (value.length > 7) value = value.slice(0, 7); 
+  if (value.length > 4) value = `${value.slice(0,4)}-${value.slice(4)}`;
+  if (value.length > 6) value = `${value.slice(0,6)}/${value.slice(6)}`;
+  return value;
+};
+
+function getTodayDDMMYYYY() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${day}/${month}/${year}`;
+}
+
 function getTodayString() {
   const today = new Date();
   const year = today.getFullYear();
@@ -135,12 +197,27 @@ export function Dashboard() {
   const [columns, setColumns] = useState(emptyBoard);
   
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [isSmallModalOpen, setIsSmallModalOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isEditFormModalOpen, setIsEditFormModalOpen] = useState(false);
+
   const [editingTag, setEditingTag] = useState<LeadTag | null>(null);
   const [editingVisitDate, setEditingVisitDate] = useState<string>(''); 
   const [dateError, setDateError] = useState<string | null>(null); 
 
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [formData, setFormData] = useState({ 
+    companyName: '', cnpj: '', cnae: '', phone: '', email: '', 
+    city: '', state: '', address: '', funnelStage: 'NOVO' 
+  });
 
+  const [activeTab, setActiveTab] = useState('history');
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailBody, setEmailBody] = useState('');
+  const [noteText, setNoteText] = useState('');
+  const [noteDate, setNoteDate] = useState(getTodayDDMMYYYY()); 
+  const [leadCalendarMonth, setLeadCalendarMonth] = useState(new Date());
+  
+  const [leadContacts, setLeadContacts] = useState<ApiContact[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
   const [currentMonthDate, setCurrentMonthDate] = useState(new Date());
@@ -152,25 +229,99 @@ export function Dashboard() {
     role: "USER"
   });
 
+  const isFutureDate = (dateString: string) => {
+    if (dateString.length !== 10) return false;
+    const [day, month, year] = dateString.split('/');
+    const selectedDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); 
+    return selectedDate > today;
+  };
+
+  const isNoteDateFuture = isFutureDate(noteDate);
+
+  // <-- NOVA LÓGICA DE NOTIFICAÇÕES INTELIGENTES -->
   function updateTodayNotifications(boardData: Record<string, Column>) {
     const todayStr = getTodayString();
-    const todayVisits: Notification[] = [];
+    const todayNotifications: Notification[] = [];
 
     for (const colId in boardData) {
       boardData[colId].leads.forEach((lead) => {
+        // 1. Verifica Visitas agendadas para hoje
         if (lead.visitDate && lead.visitDate.startsWith(todayStr)) {
-          todayVisits.push({
-            id: lead.id,
+          todayNotifications.push({
+            id: `visit-${lead.id}`,
             title: `Visita Agendada: ${lead.name}`,
             time: "Hoje", 
             type: "warning",
             leadId: lead.id
           });
         }
+        
+        // 2. Verifica Lembretes agendados para hoje
+        if (lead.contacts) {
+          lead.contacts.forEach(contact => {
+            if (contact.type === 'REMINDER' && contact.date.startsWith(todayStr)) {
+               todayNotifications.push({
+                 id: `rem-${contact.id}`,
+                 title: `Lembrete: ${lead.name}`,
+                 time: "Hoje",
+                 type: "reminder",
+                 leadId: lead.id
+               });
+            }
+          });
+        }
       });
     }
 
-    setNotifications(todayVisits);
+    setNotifications(todayNotifications);
+  }
+
+  async function handleSaveInteraction() {
+    if (!selectedLead || !noteText || noteDate.length < 10) return;
+
+    // Converte DD/MM/AAAA para YYYY-MM-DD
+    const [d, m, y] = noteDate.split('/');
+    const formattedDate = `${y}-${m}-${d}`;
+    const interactionType = isNoteDateFuture ? 'REMINDER' : 'NOTE';
+
+    const newContact: ApiContact = {
+      id: Date.now().toString(), // ID temporário até o F5
+      type: interactionType,
+      date: formattedDate,
+      desc: noteText
+    };
+
+    // 1. Atualiza visualmente a Aba de Histórico na mesma hora (SEM F5)
+    setLeadContacts(prev => [newContact, ...prev]);
+
+    // 2. Limpa o formulário e muda de aba
+    setNoteText('');
+    setActiveTab('history'); 
+
+    // 3. Salva de fato no Backend
+    const token = localStorage.getItem('token');
+    try {
+        const response = await fetch(`http://localhost:3000/auth/leads/${selectedLead.id}/contacts`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                type: interactionType,
+                date: formattedDate,
+                desc: noteText
+            })
+        });
+
+        if (!response.ok) {
+           console.error("O backend recusou a requisição");
+        }
+    } catch(e) {
+        console.error("Erro ao tentar conectar com o backend", e);
+    }
   }
 
   function handleNotificationClick(leadId?: string) {
@@ -180,6 +331,7 @@ export function Dashboard() {
       const foundLead = columns[colId].leads.find(l => l.id === leadId);
       if (foundLead) {
         setSelectedLead(foundLead);
+        setIsSmallModalOpen(true); 
         return;
       }
     }
@@ -187,7 +339,6 @@ export function Dashboard() {
 
   async function updateLeadOnServer(leadId: string, data: { funnelStage?: string, tags?: string[], visitDate?: string | null }) {
     const token = localStorage.getItem('token');
-    
     try {
       const response = await fetch(`http://localhost:3000/auth/leads/update`, {
         method: 'PUT',
@@ -200,10 +351,7 @@ export function Dashboard() {
           ...data
         })
       });
-
-      if (!response.ok) {
-        throw new Error('Erro ao salvar no servidor');
-      }
+      if (!response.ok) throw new Error('Erro ao salvar no servidor');
     } catch (err) {
       console.error("Erro ao salvar no banco:", err);
     }
@@ -212,35 +360,22 @@ export function Dashboard() {
   useEffect(() => {
     async function fetchLeads() {
       const token = localStorage.getItem('token');
-      
-      if (!token) {
-        navigate('/'); 
-        return;
-      }
+      if (!token) { navigate('/'); return; }
 
       try {
         const response = await fetch('http://localhost:3000/auth/leads', { 
           method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+          headers: { 'Authorization': `Bearer ${token}` }
         });
 
-        if (response.status === 401) {
-          handleLogout();
-          return;
-        }
+        if (response.status === 401) { handleLogout(); return; }
 
         const data: ApiLead[] = await response.json(); 
         
         const newBoard = JSON.parse(JSON.stringify(emptyBoard)); 
         const stageMap: Record<string, string> = {
-          'NOVO': 'novos',
-          'CONTATO': 'contato',
-          'NEGOCIACAO': 'negociacao',
-          'CADASTRO': 'cadastro',
-          'FINALIZADO': 'finalizado',
-          'SEM_INTERESSE': 'arquivo'
+          'NOVO': 'novos', 'CONTATO': 'contato', 'NEGOCIACAO': 'negociacao',
+          'CADASTRO': 'cadastro', 'FINALIZADO': 'finalizado', 'SEM_INTERESSE': 'arquivo'
         };
 
         data.forEach((apiLead) => {
@@ -251,7 +386,20 @@ export function Dashboard() {
             id: apiLead.id,
             name: apiLead.companyName,
             tag: tag,
-            visitDate: apiLead.visitDate 
+            visitDate: apiLead.visitDate,
+            phone: apiLead.phone,
+            cnpj: apiLead.cnpj,
+            email: apiLead.email,
+            address: apiLead.address,
+            city: apiLead.city,
+            state: apiLead.state,
+            cnae: apiLead.cnae,
+            contacts: apiLead.contacts ? apiLead.contacts.map((c: any) => ({
+              id: c.id,
+              type: c.type,
+              date: c.date ? c.date.toString().split('T')[0] : '', 
+              desc: c.description || c.observation || '' 
+            })) : []
           };
 
           if (newBoard[columnId]) {
@@ -262,13 +410,10 @@ export function Dashboard() {
         setColumns(newBoard);
         updateTodayNotifications(newBoard); 
 
-      } catch (error) {
-        console.error("Erro ao buscar leads:", error);
-      }
+      } catch (error) { console.error("Erro ao buscar leads:", error); }
     }
 
     fetchLeads();
-    
   }, [navigate]);
 
   useEffect(() => {
@@ -283,39 +428,28 @@ export function Dashboard() {
       } else {
         setEditingVisitDate('');
       }
+
+      // Ao selecionar o lead, carrega o histórico dele na memória
+      setLeadContacts(selectedLead.contacts || []);
     }
   }, [selectedLead]);
 
   useEffect(() => {
     async function fetchProfile() {
       const token = localStorage.getItem('token');
-
-      if(!token) {
-        navigate('/');
-        return;
-      }
+      if(!token) { navigate('/'); return; }
 
       try {
         const response = await fetch('http://localhost:3000/auth/me', {
           method: 'GET',
-          headers: {
-            'Authorization' : `Bearer ${token}`
-          }
+          headers: { 'Authorization': `Bearer ${token}` }
         });
 
-        if (response.status === 401) {
-          handleLogout();
-          return;
-        }
+        if (response.status === 401) { handleLogout(); return; }
 
         const userData = await response.json();
-        setUserProfile({
-          name: userData.name,
-          role: userData.role
-        });
-      }catch (error){
-        console.error("Erro ao carregar perfil: ", error);
-      }
+        setUserProfile({ name: userData.name, role: userData.role });
+      } catch (error){ console.error("Erro ao carregar perfil: ", error); }
     }
 
     fetchProfile();
@@ -384,11 +518,7 @@ export function Dashboard() {
       const month = parseInt(monthStr, 10);
       const year = parseInt(yearStr, 10);
 
-      if (
-        month < 1 || month > 12 || 
-        day < 1 || day > 31 ||
-        year < 2000 
-      ) {
+      if (month < 1 || month > 12 || day < 1 || day > 31 || year < 2000) {
         setDateError("Data inválida. Verifique o dia e o mês.");
         return; 
       }
@@ -428,7 +558,69 @@ export function Dashboard() {
 
     setColumns(newColumns);
     updateTodayNotifications(newColumns); 
-    setSelectedLead(null);
+    setIsSmallModalOpen(false); 
+  }
+
+  async function handleSaveEditForm() {
+    if (!selectedLead) return;
+    const token = localStorage.getItem('token');
+    
+    try {
+      const response = await fetch(`http://localhost:3000/auth/leads/update`, {
+        method: 'PUT',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ lead_id: selectedLead.id, ...formData })
+      });
+
+      if (response.ok) {
+        const updatedColumns = { ...columns };
+        const colId = getLeadColumnId(selectedLead.id);
+        if (colId) {
+           const leadIndex = updatedColumns[colId].leads.findIndex(l => l.id === selectedLead.id);
+           if (leadIndex !== -1) {
+              updatedColumns[colId].leads[leadIndex] = {
+                 ...updatedColumns[colId].leads[leadIndex],
+                 name: formData.companyName,
+                 cnpj: formData.cnpj,
+                 cnae: formData.cnae,
+                 phone: formData.phone,
+                 email: formData.email,
+                 city: formData.city,
+                 state: formData.state,
+                 address: formData.address
+              };
+              setColumns(updatedColumns);
+              setSelectedLead(updatedColumns[colId].leads[leadIndex]); 
+           }
+        }
+        setIsEditFormModalOpen(false);
+        setIsDetailsModalOpen(true); 
+      } else {
+        alert("Erro ao salvar lead");
+      }
+    } catch (error) { 
+      console.error("Erro ao salvar:", error); 
+    }
+  }
+
+  function openEditForm() {
+    if(!selectedLead) return;
+    setFormData({ 
+      companyName: selectedLead.name, 
+      cnpj: selectedLead.cnpj || '',
+      cnae: selectedLead.cnae || '',
+      phone: selectedLead.phone || '',
+      email: selectedLead.email || '',
+      city: selectedLead.city || '',
+      state: selectedLead.state || '',
+      address: selectedLead.address || '',
+      funnelStage: reverseStageMap[getLeadColumnId(selectedLead.id) || ''] as any || 'NOVO'
+    });
+    setIsDetailsModalOpen(false); 
+    setIsEditFormModalOpen(true); 
   }
 
   function getVisitsForDate(dateStr: string): Lead[] {
@@ -495,6 +687,60 @@ export function Dashboard() {
     return days;
   }
 
+  function renderLeadCalendarGrid() {
+    const year = leadCalendarMonth.getFullYear();
+    const month = leadCalendarMonth.getMonth();
+    
+    const firstDay = new Date(year, month, 1).getDay(); 
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const days = [];
+
+    for (let i = 0; i < firstDay; i++) {
+      days.push(<div key={`empty-${i}`} className="h-16 border border-border/30 bg-muted/10"></div>);
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const displayDateStr = `${String(day).padStart(2, '0')}/${String(month + 1).padStart(2, '0')}/${year}`;
+      
+      const contactsToday = leadContacts.filter(c => c.date === dateStr);
+
+      days.push(
+        <div 
+          key={dateStr} 
+          onClick={() => {
+            setNoteDate(displayDateStr);
+            setActiveTab('note');
+          }}
+          className="h-16 border border-border/50 p-1 flex flex-col gap-1 bg-card hover:bg-accent/20 cursor-pointer transition-colors relative group"
+        >
+          <span className="text-xs font-medium text-muted-foreground ml-1">{day}</span>
+          
+          <div className="flex gap-1 px-1 flex-wrap">
+            {contactsToday.map((c, i) => (
+              <div 
+                key={i} 
+                title={c.desc}
+                className={`w-2 h-2 rounded-full ${
+                  c.type === 'EMAIL' ? 'bg-blue-500' : 
+                  c.type === 'CALL' || c.type === 'NOTE' ? 'bg-green-500' : 
+                  c.type === 'MEETING' ? 'bg-orange-500' : 
+                  c.type === 'REMINDER' ? 'bg-purple-500' : 'bg-gray-500'
+                }`}
+              />
+            ))}
+          </div>
+
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+            <Plus size={16} className="text-primary" />
+          </div>
+        </div>
+      );
+    }
+    return days;
+  }
+
   const currentLeadColumnId = getLeadColumnId(selectedLead?.id);
   const availableTags = currentLeadColumnId ? columnAllowedTags[currentLeadColumnId] : [];
   
@@ -516,7 +762,7 @@ export function Dashboard() {
             
             {notifications.length === 0 ? (
               <div className="text-center text-sm text-muted-foreground p-4 bg-card rounded-lg border border-dashed border-border mt-4">
-                Nenhuma visita agendada para hoje.
+                Nenhuma visita ou lembrete para hoje.
               </div>
             ) : (
               notifications.map((notif) => (
@@ -528,6 +774,7 @@ export function Dashboard() {
                   {notif.type === 'warning' && <AlertCircle size={18} className="text-orange-500 mt-1" />}
                   {notif.type === 'success' && <CheckCircle2 size={18} className="text-green-500 mt-1" />}
                   {notif.type === 'info' && <Clock size={18} className="text-blue-500 mt-1" />}
+                  {notif.type === 'reminder' && <Bell size={18} className="text-purple-500 mt-1" />}
                   <div className="flex-1">
                     <p className="text-sm font-bold leading-none text-foreground">{notif.title}</p>
                     <p className="text-[11px] font-medium text-muted-foreground mt-1.5 uppercase tracking-wider">{notif.time}</p>
@@ -539,6 +786,8 @@ export function Dashboard() {
           </div>
         </ScrollArea>
         <div className="p-4 border-t border-border flex flex-col gap-3">
+          
+          {/* <-- BOTÃO GERENCIAR LEADS REPOSICIONADO PARA CÁ --> */}
           <Button 
             variant="ghost" 
             className="w-full gap-2 justify-start h-12 text-md border border-dashed border-border hover:bg-accent hover:border-solid"
@@ -612,6 +861,7 @@ export function Dashboard() {
                                 onClick={() => {
                                   setIsCalendarOpen(false);
                                   setSelectedLead(lead);
+                                  setIsSmallModalOpen(true); 
                                 }}
                               >
                                  <CardContent className="p-4 flex justify-between items-center">
@@ -636,11 +886,15 @@ export function Dashboard() {
 
       <div className="flex-1 flex flex-col min-w-0">
         
-        <header className="w-full p-6 border-b border-border flex justify-between items-center bg-card/50 backdrop-blur-sm">
-          <h1 className="text-xl font-bold tracking-tight text-primary">
+        <header className="w-full p-4 px-6 border-b border-border flex justify-between items-center bg-card/50 backdrop-blur-sm">
+          
+          <h1 className="text-xl font-bold tracking-tight text-primary w-1/4">
             O.S <span className="text-foreground font-normal">Dashboard</span>
           </h1>
-          <div className="flex items-center gap-4">
+
+          {/* Nav do meio foi removida, o botão foi para a sidebar */}
+
+          <div className="flex items-center gap-4 w-1/4 justify-end ml-auto">
             <div className="flex items-center gap-3 px-3 py-1.5 rounded-full bg-accent/20 border border-border/50 mr-2">
               <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-primary">
                 <User size={18} />
@@ -693,7 +947,10 @@ export function Dashboard() {
                                     ref={provided.innerRef}
                                     {...provided.draggableProps}
                                     {...provided.dragHandleProps}
-                                    onDoubleClick={() => setSelectedLead(lead)}
+                                    onDoubleClick={() => {
+                                      setSelectedLead(lead);
+                                      setIsSmallModalOpen(true);
+                                    }}
                                     className={`
                                       cursor-grab active:cursor-grabbing hover:shadow-md transition-all border-l-4
                                       ${tagColors[lead.tag] || 'border-l-gray-500'} 
@@ -774,7 +1031,7 @@ export function Dashboard() {
         </main>
       </div>
 
-      <Dialog open={!!selectedLead} onOpenChange={() => setSelectedLead(null)}>
+      <Dialog open={isSmallModalOpen} onOpenChange={setIsSmallModalOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="text-xl">{selectedLead?.name}</DialogTitle>
@@ -850,7 +1107,7 @@ export function Dashboard() {
                  variant="outline" 
                  className="w-full gap-2 justify-start h-12 text-md bg-accent/20 hover:bg-accent/40"
                  onClick={() => {
-                    setSelectedLead(null); 
+                    setIsSmallModalOpen(false); 
                     setIsDetailsModalOpen(true); 
                  }}
               >
@@ -860,7 +1117,7 @@ export function Dashboard() {
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
-               <Button variant="ghost" onClick={() => setSelectedLead(null)}>Cancelar</Button>
+               <Button variant="ghost" onClick={() => setIsSmallModalOpen(false)}>Cancelar</Button>
                <Button onClick={handleSaveLead} className="bg-primary hover:bg-primary/90">
                  Salvar Alterações
                </Button>
@@ -870,14 +1127,315 @@ export function Dashboard() {
       </Dialog>
 
       <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
-        <DialogContent className="sm:max-w-3xl h-[80vh] flex flex-col">
-           <DialogHeader>
-             <DialogTitle>Detalhes Completos do Lead</DialogTitle>
+        <DialogContent className="max-w-6xl h-[85vh] flex flex-col p-0 overflow-hidden gap-0">
+           
+           <DialogHeader className="p-6 pb-4 border-b border-border flex-row items-center justify-between">
+             <div>
+               <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+                 <Building2 className="text-primary" />
+                 {selectedLead?.name || "Nome da Empresa"}
+               </DialogTitle>
+               <p className="text-sm text-muted-foreground mt-1 flex items-center gap-2">
+                 <Badge variant="outline">{selectedLead?.tag || 'SEM ETIQUETA'}</Badge>
+                 <span>Em: <span className="font-semibold">{selectedLead ? reverseStageMap[getLeadColumnId(selectedLead.id) || ''] : 'Desconhecido'}</span></span>
+               </p>
+             </div>
            </DialogHeader>
-           <div className="flex-1 flex items-center justify-center text-muted-foreground border border-dashed border-border rounded-lg mt-4">
-              (Em breve) Tela de detalhes e linha do tempo de contatos...
+
+           <div className="flex flex-1 min-h-0 bg-muted/10">
+              
+              <div className="w-[35%] border-r border-border p-6 overflow-y-auto bg-card">
+                 <h3 className="font-bold text-sm text-muted-foreground uppercase tracking-wider mb-4 border-b border-border pb-2">
+                   Ficha Cadastral
+                 </h3>
+                 
+                 <div className="space-y-5">
+                   <div>
+                     <Label className="text-xs text-muted-foreground">CNPJ</Label>
+                     <p className="text-sm font-medium">{selectedLead?.cnpj || '-'}</p>
+                   </div>
+                   <div>
+                     <Label className="text-xs text-muted-foreground">Telefone</Label>
+                     <p className="text-sm font-medium flex items-center gap-2">
+                       <Phone size={14} className="text-muted-foreground"/> {selectedLead?.phone || '-'}
+                     </p>
+                   </div>
+                   <div>
+                     <Label className="text-xs text-muted-foreground">E-mail</Label>
+                     <p className="text-sm font-medium flex items-center gap-2">
+                       <Mail size={14} className="text-muted-foreground"/> {selectedLead?.email || '-'}
+                     </p>
+                   </div>
+                   <div>
+                     <Label className="text-xs text-muted-foreground">Endereço</Label>
+                     <p className="text-sm font-medium flex items-start gap-2 mt-1">
+                       <MapPin size={14} className="text-muted-foreground mt-0.5 shrink-0"/> 
+                       {selectedLead?.address ? (
+                         <span>
+                           {selectedLead.address}<br/>
+                           {selectedLead.city || ''}{selectedLead.city && selectedLead.state ? ', ' : ''}{selectedLead.state || ''}
+                         </span>
+                       ) : (
+                         '-'
+                       )}
+                     </p>
+                   </div>
+                 </div>
+
+                 <Button variant="outline" className="w-full mt-6 gap-2" onClick={openEditForm}>
+                   <Pencil size={16} /> Editar Cadastro
+                 </Button>
+              </div>
+
+              <div className="flex-1 flex flex-col min-w-0 bg-background">
+                 <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+                   
+                   <div className="px-6 pt-4 border-b border-border">
+                     <TabsList className="grid w-full grid-cols-4 bg-muted/50 h-12">
+                       <TabsTrigger value="history" className="gap-2"><History size={16} /> Histórico</TabsTrigger>
+                       <TabsTrigger value="email" className="gap-2"><Mail size={16} /> E-mail</TabsTrigger>
+                       <TabsTrigger value="note" className="gap-2"><Phone size={16} /> Ligação / Lembrete</TabsTrigger>
+                       <TabsTrigger value="calendar" className="gap-2"><CalendarDays size={16} /> Agenda</TabsTrigger>
+                     </TabsList>
+                   </div>
+
+                   <ScrollArea className="flex-1 p-6">
+                     
+                     <TabsContent value="history" className="m-0 space-y-4">
+                       {leadContacts.length === 0 ? (
+                         <div className="flex flex-col items-center justify-center py-12 text-center border border-dashed border-border rounded-lg bg-muted/20">
+                           <History size={32} className="text-muted-foreground/50 mb-3" />
+                           <p className="text-sm font-medium text-foreground/80">Nenhum histórico registrado.</p>
+                           <p className="text-xs text-muted-foreground mt-1">Interações e lembretes aparecerão aqui.</p>
+                         </div>
+                       ) : (
+                         leadContacts.map((contact) => (
+                           <div key={contact.id} className="flex gap-4 p-4 border border-border rounded-lg bg-card">
+                             <div className={`mt-1 p-2 rounded-full h-fit
+                               ${contact.type === 'EMAIL' ? 'bg-blue-100 text-blue-600' : 
+                                 contact.type === 'CALL' || contact.type === 'NOTE' ? 'bg-green-100 text-green-600' : 
+                                 contact.type === 'REMINDER' ? 'bg-purple-100 text-purple-600' :
+                                 'bg-orange-100 text-orange-600'}`}
+                             >
+                               {contact.type === 'EMAIL' ? <Mail size={18} /> : 
+                                contact.type === 'CALL' || contact.type === 'NOTE' ? <Phone size={18} /> : 
+                                contact.type === 'REMINDER' ? <Bell size={18} /> :
+                                <CalendarIcon size={18} />}
+                             </div>
+                             <div>
+                               <div className="flex items-center gap-2 mb-1">
+                                 <span className="font-bold text-sm">
+                                   {contact.type === 'EMAIL' ? 'E-mail Enviado' : 
+                                    contact.type === 'CALL' || contact.type === 'NOTE' ? 'Registro de Ligação' : 
+                                    contact.type === 'REMINDER' ? 'Lembrete Agendado' : 'Visita Agendada'}
+                                 </span>
+                                 <span className="text-xs text-muted-foreground">• {formatDisplayDate(contact.date)}</span>
+                               </div>
+                               <p className="text-sm text-foreground/80">{contact.desc}</p>
+                             </div>
+                           </div>
+                         ))
+                       )}
+                     </TabsContent>
+
+                     <TabsContent value="email" className="m-0 flex flex-col h-full space-y-4">
+                       <div className="space-y-2">
+                         <Label>Assunto</Label>
+                         <Input 
+                           placeholder="Assunto do e-mail" 
+                           value={emailSubject} onChange={(e)=>setEmailSubject(e.target.value)} 
+                         />
+                       </div>
+                       <div className="space-y-2 flex-1 flex flex-col">
+                         <Label>Mensagem</Label>
+                         <Textarea 
+                           className="flex-1 min-h-[200px] resize-none" 
+                           placeholder="Digite a mensagem aqui..."
+                           value={emailBody} onChange={(e)=>setEmailBody(e.target.value)} 
+                         />
+                       </div>
+                       <div className="flex justify-end">
+                         <Button className="gap-2"><Mail size={16}/> Enviar E-mail via API</Button>
+                       </div>
+                     </TabsContent>
+
+                     <TabsContent value="note" className="m-0 space-y-4">
+                        <div className="space-y-2">
+                          <Label>{isNoteDateFuture ? 'Data do Lembrete' : 'Data da Ligação / Interação'}</Label>
+                          <div className="relative w-1/3">
+                            <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+                            <Input 
+                              type="text" 
+                              placeholder="DD/MM/AAAA"
+                              className="pl-9"
+                              value={noteDate}
+                              onChange={(e) => setNoteDate(maskDate(e.target.value))}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                         <Label>{isNoteDateFuture ? 'O que você precisa fazer?' : 'Detalhes da interação'}</Label>
+                         <Textarea 
+                           className="min-h-[150px] resize-none" 
+                           placeholder={isNoteDateFuture ? "Ex: Ligar para cobrar a assinatura do contrato..." : "Ex: Liguei para o cliente, conversamos sobre a proposta e ele pediu para retornar amanhã..."}
+                           value={noteText} onChange={(e)=>setNoteText(e.target.value)} 
+                         />
+                       </div>
+                       <div className="flex justify-end">
+                         <Button onClick={handleSaveInteraction} className={`gap-2 text-white ${isNoteDateFuture ? 'bg-purple-600 hover:bg-purple-700' : 'bg-green-600 hover:bg-green-700'}`}>
+                           {isNoteDateFuture ? <Bell size={16}/> : <AlignLeft size={16}/>}
+                           {isNoteDateFuture ? 'Agendar Lembrete' : 'Salvar Observação'}
+                         </Button>
+                       </div>
+                     </TabsContent>
+
+                     <TabsContent value="calendar" className="m-0">
+                       <div className="flex items-center justify-between mb-4 bg-muted/30 p-2 rounded-lg border border-border">
+                         <Button variant="ghost" size="icon" onClick={() => {
+                           const d = new Date(leadCalendarMonth); d.setMonth(d.getMonth()-1); setLeadCalendarMonth(d);
+                         }}><ChevronLeft size={16}/></Button>
+                         
+                         <h3 className="font-bold text-sm uppercase tracking-wider">
+                           {leadCalendarMonth.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}
+                         </h3>
+                         
+                         <Button variant="ghost" size="icon" onClick={() => {
+                           const d = new Date(leadCalendarMonth); d.setMonth(d.getMonth()+1); setLeadCalendarMonth(d);
+                         }}><ChevronRight size={16}/></Button>
+                       </div>
+
+                       <div className="w-full">
+                         <div className="grid grid-cols-7 gap-0 mb-1">
+                           {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(d => (
+                              <div key={d} className="text-center text-[10px] font-bold text-muted-foreground uppercase">{d}</div>
+                           ))}
+                         </div>
+                         <div className="grid grid-cols-7 gap-0 rounded-md overflow-hidden border border-border/50">
+                           {renderLeadCalendarGrid()}
+                         </div>
+                       </div>
+                       
+                       <div className="flex items-center gap-4 mt-4 text-xs text-muted-foreground justify-center">
+                         <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-blue-500"></div> E-mail</span>
+                         <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-green-500"></div> Ligação/Nota</span>
+                         <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-orange-500"></div> Visita</span>
+                         <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-purple-500"></div> Lembrete</span>
+                       </div>
+                     </TabsContent>
+
+                   </ScrollArea>
+                 </Tabs>
+              </div>
            </div>
         </DialogContent>
+      </Dialog>
+
+      <Dialog open={isEditFormModalOpen} onOpenChange={(open) => {
+         setIsEditFormModalOpen(open);
+         if (!open) setIsDetailsModalOpen(true); 
+      }}>
+         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+             <DialogHeader>
+                 <DialogTitle className="flex items-center gap-2">
+                    <Pencil size={18} /> Editar Cadastro
+                 </DialogTitle>
+             </DialogHeader>
+             
+             <div className="grid gap-4 py-4">
+                 <div className="grid gap-2">
+                     <Label htmlFor="edit-name">Razão Social *</Label>
+                     <div className="relative">
+                        <Building2 className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input 
+                           id="edit-name" className="pl-8" placeholder="Nome da Empresa"
+                           value={formData.companyName} onChange={e => setFormData({...formData, companyName: e.target.value})}
+                        />
+                     </div>
+                 </div>
+                 
+                 <div className="grid grid-cols-2 gap-4">
+                     <div className="grid gap-2">
+                         <Label htmlFor="edit-cnpj">CNPJ</Label>
+                         <div className="relative">
+                            <FileText className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input 
+                               id="edit-cnpj" className="pl-8" placeholder="00.000.000/0000-00"
+                               value={formData.cnpj} 
+                               onChange={e => setFormData({...formData, cnpj: maskCNPJ(e.target.value)})}
+                            />
+                         </div>
+                     </div>
+                     <div className="grid gap-2">
+                         <Label htmlFor="edit-cnae">CNAE</Label>
+                         <Input 
+                            id="edit-cnae" placeholder="Ex: 6204-0/00"
+                            value={formData.cnae} 
+                            onChange={e => setFormData({...formData, cnae: maskCNAE(e.target.value)})}
+                         />
+                     </div>
+                 </div>
+
+                 <div className="grid grid-cols-2 gap-4">
+                     <div className="grid gap-2">
+                         <Label htmlFor="edit-phone">Telefone / WhatsApp</Label>
+                         <div className="relative">
+                            <Phone className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input 
+                               id="edit-phone" className="pl-8" placeholder="(XX) 99999-9999"
+                               value={formData.phone} 
+                               onChange={e => setFormData({...formData, phone: maskPhone(e.target.value)})}
+                            />
+                         </div>
+                     </div>
+                     <div className="grid gap-2">
+                         <Label htmlFor="edit-email">Email</Label>
+                         <div className="relative">
+                            <Mail className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input 
+                               id="edit-email" type="email" className="pl-8" placeholder="contato@empresa.com"
+                               value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})}
+                            />
+                         </div>
+                     </div>
+                 </div>
+
+                 <div className="grid grid-cols-2 gap-4">
+                     <div className="grid gap-2">
+                         <Label htmlFor="edit-city">Cidade</Label>
+                         <Input 
+                            id="edit-city" placeholder="Sua Cidade"
+                            value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})}
+                         />
+                     </div>
+                     <div className="grid gap-2">
+                         <Label htmlFor="edit-state">UF</Label>
+                         <Input 
+                            id="edit-state" placeholder="EX: SP" maxLength={2}
+                            value={formData.state} onChange={e => setFormData({...formData, state: e.target.value.toUpperCase()})}
+                         />
+                     </div>
+                 </div>
+
+                 <div className="grid gap-2 border-b border-border pb-4">
+                     <Label htmlFor="edit-address">Endereço</Label>
+                     <div className="relative">
+                        <MapPin className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input 
+                           id="edit-address" className="pl-8" placeholder="Rua, Número, Bairro"
+                           value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})}
+                        />
+                     </div>
+                 </div>
+             </div>
+
+             <DialogFooter>
+                 <Button variant="outline" onClick={() => { setIsEditFormModalOpen(false); setIsDetailsModalOpen(true); }}>
+                   Cancelar
+                 </Button>
+                 <Button onClick={handleSaveEditForm}>Salvar Alterações</Button>
+             </DialogFooter>
+         </DialogContent>
       </Dialog>
 
     </div>

@@ -7,6 +7,7 @@ import { DetailUserController } from '../controllers/DetailUserController.js';
 import { UpdateLeadController } from '../controllers/UpdateLeadController.js';
 import { CreateLeadController } from '../controllers/CreateLeadController.js';
 import { DeleteLeadController } from '../controllers/DeleteLeadController.js'; 
+import { CreateContactController } from '../controllers/CreateContactController.js';
 
 const router = Router();
 const detailUserController = new DetailUserController(); 
@@ -14,6 +15,7 @@ const listLeadsController = new ListLeadsController();
 const updateLeadController = new UpdateLeadController();
 const createLeadController = new CreateLeadController();
 const deleteLeadController = new DeleteLeadController(); 
+const createContactController = new CreateContactController();
 
 router.post('/login', AuthenticateUserController.handle);
 router.post('/register', CreateUserController.handle);
@@ -23,5 +25,6 @@ router.get('/leads', ensureAuthenticated, listLeadsController.handle);
 router.post('/leads', ensureAuthenticated, createLeadController.handle);
 router.put('/leads/update', ensureAuthenticated, updateLeadController.handle);
 router.delete('/leads/:lead_id', ensureAuthenticated, deleteLeadController.handle); 
+router.post('/leads/:id/contacts', ensureAuthenticated, createContactController.handle);
 
 export const authRoutes = router;
