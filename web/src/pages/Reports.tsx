@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../hooks/useTheme';
-import { Moon, Sun, LogOut, ArrowLeft, User, BarChart3, Users, Eye } from 'lucide-react';
+import { Moon, Sun, LogOut, ArrowLeft, User, BarChart3, Users, Eye, Search } from 'lucide-react';
 import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
 import { ScrollArea } from "../components/ui/scroll-area";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -28,6 +29,7 @@ export function Reports() {
 
   const [usersList, setUsersList] = useState<ApiUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
   
   // Estado para as métricas do topo
   const [metrics, setMetrics] = useState({ totalLeads: 0, closedLeads: 0, negotiationLeads: 0 });
@@ -117,6 +119,11 @@ export function Reports() {
     }
   }
 
+  const filteredUsers = usersList.filter(user => 
+    user.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    user.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="h-screen w-full flex bg-background text-foreground transition-colors duration-300 overflow-hidden">
       
@@ -187,9 +194,22 @@ export function Reports() {
 
             {/* SECÃO DA EQUIPE (TABELA) */}
             <div className="pt-6">
-              <div className="flex items-center gap-3 mb-4">
-                <Users size={24} className="text-primary" />
-                <h3 className="text-xl font-bold">Gestão da Equipe</h3>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                <div className="flex items-center gap-3">
+                  <Users size={24} className="text-primary" />
+                  <h3 className="text-xl font-bold">Gestão da Equipe</h3>
+                </div>
+
+                {/* BARRA DE PESQUISA */}
+                <div className="relative w-full md:w-80">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    placeholder="Buscar colaborador por nome ou email..." 
+                    className="pl-9 bg-card"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
               </div>
 
               <div className="rounded-md border border-border bg-card overflow-hidden shadow-sm max-h-[400px] flex flex-col">
@@ -210,14 +230,14 @@ export function Reports() {
                              Carregando equipe...
                            </td>
                          </tr>
-                       ) : usersList.length === 0 ? (
+                       ) : filteredUsers.length === 0 ? (
                          <tr>
                            <td colSpan={4} className="px-6 py-8 text-center text-muted-foreground">
-                             Nenhum usuário encontrado.
+                             Nenhum colaborador encontrado com "{searchTerm}".
                            </td>
                          </tr>
                        ) : (
-                         usersList.map((user) => (
+                         filteredUsers.map((user) => (
                            <tr key={user.id} className="hover:bg-muted/30 transition-colors">
                              <td className="px-6 py-4 font-semibold text-foreground flex items-center gap-3">
                                <div className="h-8 w-8 rounded-full bg-accent flex items-center justify-center text-muted-foreground">
