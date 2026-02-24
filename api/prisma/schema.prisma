@@ -85,22 +85,20 @@ model Lead {
 //------------------------------------------
 
 model Contact {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now())
+  
+  date        DateTime @default(now()) 
 
   type        ContactType
   description String?
 
-  // Usuário que fez a ação
   userId String
   user   User   @relation(fields: [userId], references: [id])
 
-  // Lead que recebeu a ação
   leadId String
   lead   Lead   @relation(fields: [leadId], references: [id])
 
-  // Alterações de estado
-  // Mantive 'didChageFunnel' (com erro de digitação) para bater com a migration do seu colega
   didChageFunnel Boolean      @default(false) 
   funnelBefore   FunnelStage?
   funnelAfter    FunnelStage?
@@ -108,7 +106,7 @@ model Contact {
   didChangeOwner Boolean @default(false)
   ownerBeforeId  String?
 
-  observation String
+  observation String? 
 }
 
 //------------------------------------------
@@ -136,4 +134,5 @@ enum ContactType {
   MEETING
   SYSTEM_CHANGE
   NOTE
+  REMINDER 
 }

@@ -3,8 +3,10 @@ import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
 import { PrivateRoute } from './components/PrivateRoute';
 import { LeadsList } from './pages/LeadsLIsta';
+import { UserReport } from './pages/UserReport';  
 
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Reports } from './pages/Reports';
 
 function App() {
   return (
@@ -31,6 +33,25 @@ function App() {
             </PrivateRoute>
           } 
         />
+
+        <Route 
+          path="/reports" 
+          element={
+            <PrivateRoute>
+              <Reports />
+            </PrivateRoute>
+          } 
+        />
+        
+        <Route 
+          path="/reports/user/:id" 
+          element={
+            <PrivateRoute>
+              <UserReport />
+            </PrivateRoute>
+          } 
+        />
+        
       </Routes>
     </BrowserRouter>
   );

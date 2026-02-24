@@ -9,6 +9,13 @@ class ListLeadsService {
       },
       orderBy: {
         companyName: 'asc'
+      },
+        include: {
+        contacts: {
+          orderBy: {
+            date: 'desc' 
+          }
+        }
       }
     });
 
