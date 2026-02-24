@@ -8,6 +8,10 @@ import { UpdateLeadController } from '../controllers/UpdateLeadController.js';
 import { CreateLeadController } from '../controllers/CreateLeadController.js';
 import { DeleteLeadController } from '../controllers/DeleteLeadController.js'; 
 import { CreateContactController } from '../controllers/CreateContactController.js';
+import { ListUsersController } from '../controllers/ListUsersController.js';
+import { UpdateUserRoleController } from '../controllers/UpdateUserRoleController.js';
+import { GetUserMetricsController } from '../controllers/GetUserMetricsController.js';
+import { GetGlobalMetricsController } from '../controllers/GetGlobalMetricsController.js';
 
 const router = Router();
 const detailUserController = new DetailUserController(); 
@@ -16,6 +20,10 @@ const updateLeadController = new UpdateLeadController();
 const createLeadController = new CreateLeadController();
 const deleteLeadController = new DeleteLeadController(); 
 const createContactController = new CreateContactController();
+const listUsersController = new ListUsersController();
+const updateUserRoleController = new UpdateUserRoleController();
+const getUserMetricsController = new GetUserMetricsController();
+const getGlobalMetricsController = new GetGlobalMetricsController();
 
 router.post('/login', AuthenticateUserController.handle);
 router.post('/register', CreateUserController.handle);
@@ -26,5 +34,10 @@ router.post('/leads', ensureAuthenticated, createLeadController.handle);
 router.put('/leads/update', ensureAuthenticated, updateLeadController.handle);
 router.delete('/leads/:lead_id', ensureAuthenticated, deleteLeadController.handle); 
 router.post('/leads/:id/contacts', ensureAuthenticated, createContactController.handle);
+
+router.get('/users', ensureAuthenticated, listUsersController.handle);
+router.patch('/users/:id/role', ensureAuthenticated, updateUserRoleController.handle);
+router.get('/users/:id/metrics', ensureAuthenticated, getUserMetricsController.handle);
+router.get('/metrics/global', ensureAuthenticated, getGlobalMetricsController.handle);
 
 export const authRoutes = router;

@@ -215,6 +215,9 @@ export function Dashboard() {
   const [emailBody, setEmailBody] = useState('');
   const [noteText, setNoteText] = useState('');
   const [noteDate, setNoteDate] = useState(getTodayDDMMYYYY()); 
+  const [reminderText, setReminderText] = useState('');
+  const [reminderDate, setReminderDate] = useState(getTodayDDMMYYYY());
+
   const [leadCalendarMonth, setLeadCalendarMonth] = useState(new Date());
   
   const [leadContacts, setLeadContacts] = useState<ApiContact[]>([]);
@@ -279,28 +282,42 @@ export function Dashboard() {
   }
 
   async function handleSaveInteraction() {
-    if (!selectedLead || !noteText || noteDate.length < 10) return;
+    const isReminder = activeTab === 'reminder';
+    const textToSave = isReminder ? reminderText : noteText;
+    const dateToSave = isReminder ? reminderDate : noteDate;
 
-    // Converte DD/MM/AAAA para YYYY-MM-DD
-    const [d, m, y] = noteDate.split('/');
+    if (!selectedLead || !textToSave || dateToSave.length < 10) return;
+
+    const [d, m, y] = dateToSave.split('/');
     const formattedDate = `${y}-${m}-${d}`;
-    const interactionType = isNoteDateFuture ? 'REMINDER' : 'NOTE';
+    const interactionType = isReminder ? 'REMINDER' : 'NOTE';
 
     const newContact: ApiContact = {
-      id: Date.now().toString(), // ID temporário até o F5
+      id: Date.now().toString(),
       type: interactionType,
       date: formattedDate,
-      desc: noteText
+      desc: textToSave
     };
 
-    // 1. Atualiza visualmente a Aba de Histórico na mesma hora (SEM F5)
     setLeadContacts(prev => [newContact, ...prev]);
 
-    // 2. Limpa o formulário e muda de aba
-    setNoteText('');
+    const newColumns = { ...columns };
+    const colId = getLeadColumnId(selectedLead.id);
+    if (colId) {
+       const leadIndex = newColumns[colId].leads.findIndex(l => l.id === selectedLead.id);
+       if (leadIndex !== -1) {
+          const leadToUpdate = newColumns[colId].leads[leadIndex];
+          leadToUpdate.contacts = [newContact, ...(leadToUpdate.contacts || [])];
+       }
+    }
+    setColumns(newColumns);
+    updateTodayNotifications(newColumns); 
+
+    // Limpa o respectivo formulário
+    if (isReminder) setReminderText('');
+    else setNoteText('');
     setActiveTab('history'); 
 
-    // 3. Salva de fato no Backend
     const token = localStorage.getItem('token');
     try {
         const response = await fetch(`http://localhost:3000/auth/leads/${selectedLead.id}/contacts`, {
@@ -312,7 +329,7 @@ export function Dashboard() {
             body: JSON.stringify({
                 type: interactionType,
                 date: formattedDate,
-                desc: noteText
+                desc: textToSave
             })
         });
 
@@ -710,8 +727,13 @@ export function Dashboard() {
         <div 
           key={dateStr} 
           onClick={() => {
-            setNoteDate(displayDateStr);
-            setActiveTab('note');
+            if (isFutureDate(displayDateStr)) {
+              setReminderDate(displayDateStr);
+              setActiveTab('reminder');
+            } else {
+              setNoteDate(displayDateStr);
+              setActiveTab('note');
+            }
           }}
           className="h-16 border border-border/50 p-1 flex flex-col gap-1 bg-card hover:bg-accent/20 cursor-pointer transition-colors relative group"
         >
@@ -787,7 +809,6 @@ export function Dashboard() {
         </ScrollArea>
         <div className="p-4 border-t border-border flex flex-col gap-3">
           
-          {/* <-- BOTÃO GERENCIAR LEADS REPOSICIONADO PARA CÁ --> */}
           <Button 
             variant="ghost" 
             className="w-full gap-2 justify-start h-12 text-md border border-dashed border-border hover:bg-accent hover:border-solid"
@@ -796,6 +817,17 @@ export function Dashboard() {
             <List size={18} />
             Gerenciar Leads
           </Button>
+
+          {userProfile.role === 'ADMIN' && (
+            <Button 
+              variant="ghost" 
+              className="w-full gap-2 justify-start h-12 text-md border border-dashed border-border hover:bg-accent hover:border-solid"
+              onClick={() => navigate('/reports')}
+            >
+              <FileText size={18} />
+              Relatórios
+            </Button>
+          )}
 
           <Dialog open={isCalendarOpen} onOpenChange={(open) => {
              setIsCalendarOpen(open);
@@ -889,7 +921,7 @@ export function Dashboard() {
         <header className="w-full p-4 px-6 border-b border-border flex justify-between items-center bg-card/50 backdrop-blur-sm">
           
           <h1 className="text-xl font-bold tracking-tight text-primary w-1/4">
-            O.S <span className="text-foreground font-normal">Dashboard</span>
+            O.S <span className="text-foreground font-normal">Inteligência FInanceira</span>
           </h1>
 
           {/* Nav do meio foi removida, o botão foi para a sidebar */}
@@ -1191,10 +1223,11 @@ export function Dashboard() {
                  <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
                    
                    <div className="px-6 pt-4 border-b border-border">
-                     <TabsList className="grid w-full grid-cols-4 bg-muted/50 h-12">
+                     <TabsList className="grid w-full grid-cols-5 bg-muted/50 h-12">
                        <TabsTrigger value="history" className="gap-2"><History size={16} /> Histórico</TabsTrigger>
                        <TabsTrigger value="email" className="gap-2"><Mail size={16} /> E-mail</TabsTrigger>
-                       <TabsTrigger value="note" className="gap-2"><Phone size={16} /> Ligação / Lembrete</TabsTrigger>
+                       <TabsTrigger value="note" className="gap-2"><Phone size={16} /> Ligação</TabsTrigger>
+                       <TabsTrigger value="reminder" className="gap-2"><Bell size={16} /> Lembrete</TabsTrigger>
                        <TabsTrigger value="calendar" className="gap-2"><CalendarDays size={16} /> Agenda</TabsTrigger>
                      </TabsList>
                    </div>
@@ -1261,7 +1294,7 @@ export function Dashboard() {
 
                      <TabsContent value="note" className="m-0 space-y-4">
                         <div className="space-y-2">
-                          <Label>{isNoteDateFuture ? 'Data do Lembrete' : 'Data da Ligação / Interação'}</Label>
+                          <Label>Data da Ligação / Interação</Label>
                           <div className="relative w-1/3">
                             <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
                             <Input 
@@ -1275,17 +1308,46 @@ export function Dashboard() {
                         </div>
 
                         <div className="space-y-2">
-                         <Label>{isNoteDateFuture ? 'O que você precisa fazer?' : 'Detalhes da interação'}</Label>
+                         <Label>Detalhes da interação</Label>
                          <Textarea 
                            className="min-h-[150px] resize-none" 
-                           placeholder={isNoteDateFuture ? "Ex: Ligar para cobrar a assinatura do contrato..." : "Ex: Liguei para o cliente, conversamos sobre a proposta e ele pediu para retornar amanhã..."}
+                           placeholder="Ex: Liguei para o cliente, conversamos sobre a proposta e ele pediu para retornar amanhã..."
                            value={noteText} onChange={(e)=>setNoteText(e.target.value)} 
                          />
                        </div>
                        <div className="flex justify-end">
-                         <Button onClick={handleSaveInteraction} className={`gap-2 text-white ${isNoteDateFuture ? 'bg-purple-600 hover:bg-purple-700' : 'bg-green-600 hover:bg-green-700'}`}>
-                           {isNoteDateFuture ? <Bell size={16}/> : <AlignLeft size={16}/>}
-                           {isNoteDateFuture ? 'Agendar Lembrete' : 'Salvar Observação'}
+                         <Button onClick={handleSaveInteraction} className="gap-2 text-white bg-green-600 hover:bg-green-700">
+                           <AlignLeft size={16}/> Salvar Observação
+                         </Button>
+                       </div>
+                     </TabsContent>
+
+                     <TabsContent value="reminder" className="m-0 space-y-4">
+                        <div className="space-y-2">
+                          <Label>Data do Lembrete</Label>
+                          <div className="relative w-1/3">
+                            <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+                            <Input 
+                              type="text" 
+                              placeholder="DD/MM/AAAA"
+                              className="pl-9"
+                              value={reminderDate}
+                              onChange={(e) => setReminderDate(maskDate(e.target.value))}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                         <Label>O que você precisa fazer?</Label>
+                         <Textarea 
+                           className="min-h-[150px] resize-none" 
+                           placeholder="Ex: Ligar para cobrar a assinatura do contrato..."
+                           value={reminderText} onChange={(e)=>setReminderText(e.target.value)} 
+                         />
+                       </div>
+                       <div className="flex justify-end">
+                         <Button onClick={handleSaveInteraction} className="gap-2 text-white bg-purple-600 hover:bg-purple-700">
+                           <Bell size={16}/> Agendar Lembrete
                          </Button>
                        </div>
                      </TabsContent>
