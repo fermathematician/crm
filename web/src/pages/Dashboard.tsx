@@ -6,7 +6,7 @@ import type { DropResult } from '@hello-pangea/dnd';
 import { 
   Moon, Sun, LogOut, Bell, Calendar as CalendarIcon, 
   CheckCircle2, AlertCircle, Clock, User, GripVertical, Check, List, ChevronLeft, ChevronRight, ArrowLeft, ExternalLink,
-  Phone, Mail, AlignLeft, CalendarDays, History, MapPin, Building2, Plus, Pencil, FileText
+  Phone, Mail, AlignLeft, CalendarDays, History, MapPin, Building2, Plus, Pencil, FileText, ChevronDown
 } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
 
@@ -212,6 +212,14 @@ export function Dashboard() {
   const [activeTab, setActiveTab] = useState('history');
   const [emailSubject, setEmailSubject] = useState('');
   const [emailBody, setEmailBody] = useState('');
+  const [isSendingEmail, setIsSendingEmail] = useState(false); 
+  const [expandedHistory, setExpandedHistory] = useState<string[]>([]);
+
+  function toggleHistoryExpand(id: string) {
+    setExpandedHistory(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  }
   const [noteText, setNoteText] = useState('');
   const [noteDate, setNoteDate] = useState(getTodayDDMMYYYY()); 
   const [reminderText, setReminderText] = useState('');
@@ -275,7 +283,6 @@ export function Dashboard() {
     setNotifications(todayNotifications);
   }
 
-  // --- NOVA FUNÇÃO PARA FORÇAR O LOG DE HISTÓRICO NO BACKEND ---
   async function createHistoryLog(leadId: string, type: string, desc: string, didChangeFunnel: boolean = false) {
     const token = localStorage.getItem('token');
     const dateStr = getTodayString(); 
@@ -332,6 +339,47 @@ export function Dashboard() {
             body: JSON.stringify({ type: interactionType, date: formattedDate, desc: textToSave })
         });
     } catch(e) { console.error(e); }
+  }
+
+  async function handleSendEmail() {
+    if (!selectedLead || !emailSubject || !emailBody) {
+      alert("Preencha o assunto e a mensagem antes de enviar.");
+      return;
+    }
+
+    setIsSendingEmail(true);
+    const token = localStorage.getItem('token');
+
+    try {
+      const response = await fetch(`http://localhost:3000/auth/leads/${selectedLead.id}/email`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`, 
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify({ subject: emailSubject, body: emailBody })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        
+        if (result.contact) {
+          setLeadContacts(prev => [result.contact, ...prev]);
+        }
+        
+        setEmailSubject('');
+        setEmailBody('');
+        setActiveTab('history');
+      } else {
+        const err = await response.json();
+        alert(err.error || "Erro ao enviar e-mail.");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Erro de conexão ao tentar enviar e-mail.");
+    } finally {
+      setIsSendingEmail(false);
+    }
   }
 
   function handleNotificationClick(leadId?: string) {
@@ -481,7 +529,6 @@ export function Dashboard() {
 
     const [removed] = sourceItems.splice(source.index, 1);
     
-    // CASO TROQUE DE FUNIL, REGISTRE NO HISTÓRICO!
     if (source.droppableId !== destination.droppableId) {
       const defaultTag = columnDefaultTags[destination.droppableId];
       removed.tag = defaultTag || removed.tag;
@@ -492,7 +539,7 @@ export function Dashboard() {
       });
 
       const desc = `Funil alterado: ${sourceCol.title} ➔ ${destCol.title}`;
-      createHistoryLog(draggableId, 'SYSTEM_CHANGE', desc, true); // True = didChangeFunnel
+      createHistoryLog(draggableId, 'SYSTEM_CHANGE', desc, true);
       const newLocalContact: ApiContact = { id: Date.now().toString(), type: 'SYSTEM_CHANGE', date: getTodayString(), desc };
       removed.contacts = [newLocalContact, ...(removed.contacts || [])];
     }
@@ -549,7 +596,6 @@ export function Dashboard() {
       if (leadIndex !== -1) {
         const oldLead = newColumns[colId].leads[leadIndex];
         
-        // NOVO: SALVA A TROCA DE ETIQUETA NO HISTÓRICO
         if (oldLead.tag !== editingTag) {
           const desc = `Etiqueta alterada: [${oldLead.tag}] ➔ [${editingTag}]`;
           createHistoryLog(selectedLead.id, 'SYSTEM_CHANGE', desc, false);
@@ -557,7 +603,6 @@ export function Dashboard() {
           oldLead.contacts = [newLocalContact, ...(oldLead.contacts || [])];
         }
 
-        // NOVO: SALVA O AGENDAMENTO DE VISITA NO HISTÓRICO COMO 'MEETING' PARA CONTAR NO RELATÓRIO
         if (formattedDateForBackend && oldLead.visitDate !== formattedDateForBackend) {
           const desc = `Visita agendada para: ${editingVisitDate}`;
           createHistoryLog(selectedLead.id, 'MEETING', desc, false);
@@ -727,8 +772,8 @@ export function Dashboard() {
       const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       const displayDateStr = `${String(day).padStart(2, '0')}/${String(month + 1).padStart(2, '0')}/${year}`;
       
-      const contactsToday = leadContacts.filter(c => c.date === dateStr);
-
+      const contactsToday = leadContacts.filter(c => c.date === dateStr && c.type !== 'SYSTEM_CHANGE');
+      
       days.push(
         <div 
           key={dateStr} 
@@ -774,47 +819,53 @@ export function Dashboard() {
   
   const showVisitDate = currentLeadColumnId && ['negociacao', 'cadastro', 'finalizado'].includes(currentLeadColumnId);
 
+  // Variável utilitária para o histórico filtrado
+  const visibleContacts = leadContacts.filter(c => c.type !== 'SYSTEM_CHANGE');
+
   return (
     <div className="h-screen w-full flex bg-background text-foreground transition-colors duration-300 overflow-hidden">
       
-      <aside className="w-80 border-r border-border bg-card/30 flex flex-col hidden md:flex">
-        <div className="p-6 border-b border-border flex items-center gap-2">
+      {/* --- SIDEBAR NOTIFICAÇÕES (AJUSTADA COM SCROLL CORRETO) --- */}
+      <aside className="w-80 border-r border-border bg-card/30 flex flex-col hidden md:flex h-full">
+        <div className="p-6 border-b border-border flex items-center gap-2 shrink-0">
           <Bell className="h-5 w-5 text-primary" />
           <h2 className="font-bold text-lg">Notificações</h2>
           {notifications.length > 0 && (
             <Badge variant="destructive" className="ml-auto">{notifications.length}</Badge>
           )}
         </div>
-        <ScrollArea className="flex-1 p-4">
-          <div className="space-y-4">
-            
-            {notifications.length === 0 ? (
-              <div className="text-center text-sm text-muted-foreground p-4 bg-card rounded-lg border border-dashed border-border mt-4">
-                Nenhuma visita ou lembrete para hoje.
-              </div>
-            ) : (
-              notifications.map((notif) => (
-                <div 
-                  key={notif.id} 
-                  onClick={() => handleNotificationClick(notif.leadId)}
-                  className="flex items-start gap-3 p-3 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors cursor-pointer shadow-sm"
-                >
-                  {notif.type === 'warning' && <AlertCircle size={18} className="text-orange-500 mt-1" />}
-                  {notif.type === 'success' && <CheckCircle2 size={18} className="text-green-500 mt-1" />}
-                  {notif.type === 'info' && <Clock size={18} className="text-blue-500 mt-1" />}
-                  {notif.type === 'reminder' && <Bell size={18} className="text-purple-500 mt-1" />}
-                  <div className="flex-1">
-                    <p className="text-sm font-bold leading-none text-foreground">{notif.title}</p>
-                    <p className="text-[11px] font-medium text-muted-foreground mt-1.5 uppercase tracking-wider">{notif.time}</p>
-                  </div>
+        
+        {/* O container interno precisa ter flex-1 e overflow-hidden para o Radix ScrollArea funcionar */}
+        <div className="flex-1 overflow-hidden">
+          <ScrollArea className="h-full px-4 py-2">
+            <div className="space-y-4 pb-4 pt-2">
+              {notifications.length === 0 ? (
+                <div className="text-center text-sm text-muted-foreground p-4 bg-card rounded-lg border border-dashed border-border mt-4">
+                  Nenhuma visita ou lembrete para hoje.
                 </div>
-              ))
-            )}
-            
-          </div>
-        </ScrollArea>
-        <div className="p-4 border-t border-border flex flex-col gap-3">
-          
+              ) : (
+                notifications.map((notif) => (
+                  <div 
+                    key={notif.id} 
+                    onClick={() => handleNotificationClick(notif.leadId)}
+                    className="flex items-start gap-3 p-3 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors cursor-pointer shadow-sm"
+                  >
+                    {notif.type === 'warning' && <AlertCircle size={18} className="text-orange-500 mt-1" />}
+                    {notif.type === 'success' && <CheckCircle2 size={18} className="text-green-500 mt-1" />}
+                    {notif.type === 'info' && <Clock size={18} className="text-blue-500 mt-1" />}
+                    {notif.type === 'reminder' && <Bell size={18} className="text-purple-500 mt-1" />}
+                    <div className="flex-1">
+                      <p className="text-sm font-bold leading-none text-foreground">{notif.title}</p>
+                      <p className="text-[11px] font-medium text-muted-foreground mt-1.5 uppercase tracking-wider">{notif.time}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+        </div>
+
+        <div className="p-4 border-t border-border flex flex-col gap-3 shrink-0">
           <Button 
             variant="ghost" 
             className="w-full gap-2 justify-start h-12 text-md border border-dashed border-border hover:bg-accent hover:border-solid"
@@ -1165,7 +1216,7 @@ export function Dashboard() {
       <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
         <DialogContent className="max-w-6xl h-[85vh] flex flex-col p-0 overflow-hidden gap-0">
            
-           <DialogHeader className="p-6 pb-4 border-b border-border flex-row items-center justify-between">
+           <DialogHeader className="p-6 pb-4 border-b border-border flex-row items-center justify-between shrink-0">
              <div>
                <DialogTitle className="text-2xl font-bold flex items-center gap-2">
                  <Building2 className="text-primary" />
@@ -1223,10 +1274,11 @@ export function Dashboard() {
                  </Button>
               </div>
 
+              {/* CONTEÚDO DAS TABS COM SCROLLARRUMADO */}
               <div className="flex-1 flex flex-col min-w-0 bg-background">
-                 <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+                 <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
                    
-                   <div className="px-6 pt-4 border-b border-border">
+                   <div className="px-6 pt-4 border-b border-border shrink-0">
                      <TabsList className="grid w-full grid-cols-5 bg-muted/50 h-12">
                        <TabsTrigger value="history" className="gap-2"><History size={16} /> Histórico</TabsTrigger>
                        <TabsTrigger value="email" className="gap-2"><Mail size={16} /> E-mail</TabsTrigger>
@@ -1236,162 +1288,214 @@ export function Dashboard() {
                      </TabsList>
                    </div>
 
-                   <ScrollArea className="flex-1 p-6">
-                     
-                     <TabsContent value="history" className="m-0 space-y-4">
-                       {leadContacts.length === 0 ? (
-                         <div className="flex flex-col items-center justify-center py-12 text-center border border-dashed border-border rounded-lg bg-muted/20">
-                           <History size={32} className="text-muted-foreground/50 mb-3" />
-                           <p className="text-sm font-medium text-foreground/80">Nenhum histórico registrado.</p>
-                           <p className="text-xs text-muted-foreground mt-1">Interações e lembretes aparecerão aqui.</p>
-                         </div>
-                       ) : (
-                         leadContacts.filter(c => c.type !== 'SYSTEM_CHANGE').map((contact) => (
-                           <div key={contact.id} className="flex gap-4 p-4 border border-border rounded-lg bg-card">
-                             <div className={`mt-1 p-2 rounded-full h-fit
-                               ${contact.type === 'EMAIL' ? 'bg-blue-100 text-blue-600' : 
-                                 contact.type === 'CALL' ? 'bg-green-100 text-green-600' : 
-                                 contact.type === 'REMINDER' ? 'bg-purple-100 text-purple-600' :
-                                 'bg-orange-100 text-orange-600'}`}
-                             >
-                               {contact.type === 'EMAIL' ? <Mail size={18} /> : 
-                                contact.type === 'CALL' ? <Phone size={18} /> : 
-                                contact.type === 'REMINDER' ? <Bell size={18} /> :
-                                <CalendarIcon size={18} />}
+                   {/* Wrap do ScrollArea com overflow-hidden para forçar o tamanho exato da flex box pai */}
+                   <div className="flex-1 overflow-hidden">
+                     <ScrollArea className="h-full w-full">
+                       <div className="p-6">
+                         <TabsContent value="history" className="m-0 space-y-4">
+                           {visibleContacts.length === 0 ? (
+                             <div className="flex flex-col items-center justify-center py-12 text-center border border-dashed border-border rounded-lg bg-muted/20">
+                               <History size={32} className="text-muted-foreground/50 mb-3" />
+                               <p className="text-sm font-medium text-foreground/80">Nenhum histórico registrado.</p>
+                               <p className="text-xs text-muted-foreground mt-1">Interações, ligações e lembretes aparecerão aqui.</p>
                              </div>
-                             <div>
-                               <div className="flex items-center gap-2 mb-1">
-                                 <span className="font-bold text-sm">
-                                   {contact.type === 'EMAIL' ? 'E-mail Enviado' : 
-                                    contact.type === 'CALL' ? 'Registro de Ligação' : 
-                                    contact.type === 'REMINDER' ? 'Lembrete Agendado' : 
-                                    'Visita Agendada'}
-                                 </span>
-                                 <span className="text-xs text-muted-foreground">• {formatDisplayDate(contact.date)}</span>
-                               </div>
-                               <p className="text-sm text-foreground/80">{contact.desc}</p>
+                           ) : (
+                             visibleContacts.map((contact) => {
+                               const isEmail = contact.type === 'EMAIL';
+                               const isExpanded = expandedHistory.includes(contact.id);
+                               
+                               let subjectTitle = "Sem Assunto";
+                               let emailBody = contact.desc;
+                               
+                               if (isEmail && contact.desc.includes('Assunto:')) {
+                                 const parts = contact.desc.split('\n\nMensagem:\n');
+                                 if (parts.length === 2) {
+                                   subjectTitle = parts[0].replace('Assunto: ', '');
+                                   emailBody = parts[1];
+                                 }
+                               }
+
+                               return (
+                                 <div key={contact.id} className="flex gap-4 p-4 border border-border rounded-lg bg-card">
+                                   <div className={`mt-1 p-2 rounded-full h-fit shrink-0
+                                     ${contact.type === 'EMAIL' ? 'bg-blue-100 text-blue-600' : 
+                                       contact.type === 'CALL' || contact.type === 'NOTE' ? 'bg-green-100 text-green-600' : 
+                                       contact.type === 'REMINDER' ? 'bg-purple-100 text-purple-600' :
+                                       'bg-orange-100 text-orange-600'}`}
+                                   >
+                                     {contact.type === 'EMAIL' ? <Mail size={18} /> : 
+                                      contact.type === 'CALL' || contact.type === 'NOTE' ? <Phone size={18} /> : 
+                                      contact.type === 'REMINDER' ? <Bell size={18} /> :
+                                      <CalendarIcon size={18} />}
+                                   </div>
+                                   
+                                   <div className="flex-1 min-w-0">
+                                     <div className="flex items-center gap-2 mb-1">
+                                       <span className="font-bold text-sm">
+                                         {contact.type === 'EMAIL' ? 'E-mail Enviado' : 
+                                          contact.type === 'CALL' || contact.type === 'NOTE' ? 'Registro de Ligação' : 
+                                          contact.type === 'REMINDER' ? 'Lembrete Agendado' : 
+                                          'Visita Agendada'}
+                                       </span>
+                                       <span className="text-xs text-muted-foreground">• {formatDisplayDate(contact.date)}</span>
+                                     </div>
+
+                                     {/* NOVO: Layout condicional para E-mails (Sanfona) ou Notas normais */}
+                                     {isEmail ? (
+                                       <div className="mt-2 border border-border rounded-md overflow-hidden">
+                                         <div 
+                                           className="bg-muted/30 p-2 px-3 text-sm font-semibold cursor-pointer flex justify-between items-center hover:bg-muted/50 transition-colors"
+                                           onClick={() => toggleHistoryExpand(contact.id)}
+                                         >
+                                           <span className="truncate flex-1">Assunto: {subjectTitle}</span>
+                                           {isExpanded ? (
+                                             <ChevronDown size={16} className="text-muted-foreground shrink-0"/>
+                                           ) : (
+                                             <ChevronRight size={16} className="text-muted-foreground shrink-0"/>
+                                           )}
+                                         </div>
+                                         
+                                         {isExpanded && (
+                                           <div className="p-3 text-sm text-foreground/80 bg-background border-t border-border whitespace-pre-wrap">
+                                             {emailBody}
+                                           </div>
+                                         )}
+                                       </div>
+                                     ) : (
+                                       <p className="text-sm text-foreground/80 whitespace-pre-wrap mt-1">{contact.desc}</p>
+                                     )}
+                                   </div>
+                                 </div>
+                               );
+                             })
+                           )}
+                         </TabsContent>
+
+                         <TabsContent value="email" className="m-0 flex flex-col h-full space-y-4">
+                           <div className="space-y-2">
+                             <Label>Assunto</Label>
+                             <Input 
+                               placeholder="Assunto do e-mail" 
+                               value={emailSubject} onChange={(e)=>setEmailSubject(e.target.value)} 
+                             />
+                           </div>
+                           <div className="space-y-2 flex-1 flex flex-col">
+                             <Label>Mensagem</Label>
+                             <Textarea 
+                               className="flex-1 min-h-[200px] resize-none" 
+                               placeholder="Digite a mensagem aqui..."
+                               value={emailBody} onChange={(e)=>setEmailBody(e.target.value)} 
+                             />
+                           </div>
+                           <div className="flex justify-end">
+                             <Button 
+                              className="gap-2" 
+                              onClick={handleSendEmail} 
+                              disabled={isSendingEmail || !emailSubject || !emailBody}
+                              >
+                              <Mail size={16}/> 
+                              {isSendingEmail ? "Enviando..." : "Enviar E-mail"}
+                            </Button>
+                           </div>
+                         </TabsContent>
+
+                         <TabsContent value="note" className="m-0 space-y-4">
+                            <div className="space-y-2">
+                              <Label>Data da Ligação / Interação</Label>
+                              <div className="relative w-1/3">
+                                <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+                                <Input 
+                                  type="text" 
+                                  placeholder="DD/MM/AAAA"
+                                  className="pl-9"
+                                  value={noteDate}
+                                  onChange={(e) => setNoteDate(maskDate(e.target.value))}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                             <Label>Detalhes da interação</Label>
+                             <Textarea 
+                               className="min-h-[150px] resize-none" 
+                               placeholder="Ex: Liguei para o cliente, conversamos sobre a proposta e ele pediu para retornar amanhã..."
+                               value={noteText} onChange={(e)=>setNoteText(e.target.value)} 
+                             />
+                           </div>
+                           <div className="flex justify-end">
+                             <Button onClick={handleSaveInteraction} className="gap-2 text-white bg-green-600 hover:bg-green-700">
+                               <AlignLeft size={16}/> Salvar Observação
+                             </Button>
+                           </div>
+                         </TabsContent>
+
+                         <TabsContent value="reminder" className="m-0 space-y-4">
+                            <div className="space-y-2">
+                              <Label>Data do Lembrete</Label>
+                              <div className="relative w-1/3">
+                                <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+                                <Input 
+                                  type="text" 
+                                  placeholder="DD/MM/AAAA"
+                                  className="pl-9"
+                                  value={reminderDate}
+                                  onChange={(e) => setReminderDate(maskDate(e.target.value))}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                             <Label>O que você precisa fazer?</Label>
+                             <Textarea 
+                               className="min-h-[150px] resize-none" 
+                               placeholder="Ex: Ligar para cobrar a assinatura do contrato..."
+                               value={reminderText} onChange={(e)=>setReminderText(e.target.value)} 
+                             />
+                           </div>
+                           <div className="flex justify-end">
+                             <Button onClick={handleSaveInteraction} className="gap-2 text-white bg-purple-600 hover:bg-purple-700">
+                               <Bell size={16}/> Agendar Lembrete
+                             </Button>
+                           </div>
+                         </TabsContent>
+
+                         <TabsContent value="calendar" className="m-0">
+                           <div className="flex items-center justify-between mb-4 bg-muted/30 p-2 rounded-lg border border-border">
+                             <Button variant="ghost" size="icon" onClick={() => {
+                               const d = new Date(leadCalendarMonth); d.setMonth(d.getMonth()-1); setLeadCalendarMonth(d);
+                             }}><ChevronLeft size={16}/></Button>
+                             
+                             <h3 className="font-bold text-sm uppercase tracking-wider">
+                               {leadCalendarMonth.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}
+                             </h3>
+                             
+                             <Button variant="ghost" size="icon" onClick={() => {
+                               const d = new Date(leadCalendarMonth); d.setMonth(d.getMonth()+1); setLeadCalendarMonth(d);
+                             }}><ChevronRight size={16}/></Button>
+                           </div>
+
+                           <div className="w-full">
+                             <div className="grid grid-cols-7 gap-0 mb-1">
+                               {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(d => (
+                                  <div key={d} className="text-center text-[10px] font-bold text-muted-foreground uppercase">{d}</div>
+                               ))}
+                             </div>
+                             <div className="grid grid-cols-7 gap-0 rounded-md overflow-hidden border border-border/50">
+                               {renderLeadCalendarGrid()}
                              </div>
                            </div>
-                         ))
-                       )}
-                     </TabsContent>
+                           
+                           <div className="flex items-center gap-4 mt-4 text-xs text-muted-foreground justify-center">
+                             <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-blue-500"></div> E-mail</span>
+                             <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-green-500"></div> Ligação/Nota</span>
+                             <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-orange-500"></div> Visita</span>
+                             <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-purple-500"></div> Lembrete</span>
+                           </div>
+                         </TabsContent>
 
-                     <TabsContent value="email" className="m-0 flex flex-col h-full space-y-4">
-                       <div className="space-y-2">
-                         <Label>Assunto</Label>
-                         <Input 
-                           placeholder="Assunto do e-mail" 
-                           value={emailSubject} onChange={(e)=>setEmailSubject(e.target.value)} 
-                         />
                        </div>
-                       <div className="space-y-2 flex-1 flex flex-col">
-                         <Label>Mensagem</Label>
-                         <Textarea 
-                           className="flex-1 min-h-[200px] resize-none" 
-                           placeholder="Digite a mensagem aqui..."
-                           value={emailBody} onChange={(e)=>setEmailBody(e.target.value)} 
-                         />
-                       </div>
-                       <div className="flex justify-end">
-                         <Button className="gap-2"><Mail size={16}/> Enviar E-mail via API</Button>
-                       </div>
-                     </TabsContent>
-
-                     <TabsContent value="note" className="m-0 space-y-4">
-                        <div className="space-y-2">
-                          <Label>Data da Ligação / Interação</Label>
-                          <div className="relative w-1/3">
-                            <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
-                            <Input 
-                              type="text" 
-                              placeholder="DD/MM/AAAA"
-                              className="pl-9"
-                              value={noteDate}
-                              onChange={(e) => setNoteDate(maskDate(e.target.value))}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                         <Label>Detalhes da interação</Label>
-                         <Textarea 
-                           className="min-h-[150px] resize-none" 
-                           placeholder="Ex: Liguei para o cliente, conversamos sobre a proposta e ele pediu para retornar amanhã..."
-                           value={noteText} onChange={(e)=>setNoteText(e.target.value)} 
-                         />
-                       </div>
-                       <div className="flex justify-end">
-                         <Button onClick={handleSaveInteraction} className="gap-2 text-white bg-green-600 hover:bg-green-700">
-                           <AlignLeft size={16}/> Salvar Observação
-                         </Button>
-                       </div>
-                     </TabsContent>
-
-                     <TabsContent value="reminder" className="m-0 space-y-4">
-                        <div className="space-y-2">
-                          <Label>Data do Lembrete</Label>
-                          <div className="relative w-1/3">
-                            <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
-                            <Input 
-                              type="text" 
-                              placeholder="DD/MM/AAAA"
-                              className="pl-9"
-                              value={reminderDate}
-                              onChange={(e) => setReminderDate(maskDate(e.target.value))}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                         <Label>O que você precisa fazer?</Label>
-                         <Textarea 
-                           className="min-h-[150px] resize-none" 
-                           placeholder="Ex: Ligar para cobrar a assinatura do contrato..."
-                           value={reminderText} onChange={(e)=>setReminderText(e.target.value)} 
-                         />
-                       </div>
-                       <div className="flex justify-end">
-                         <Button onClick={handleSaveInteraction} className="gap-2 text-white bg-purple-600 hover:bg-purple-700">
-                           <Bell size={16}/> Agendar Lembrete
-                         </Button>
-                       </div>
-                     </TabsContent>
-
-                     <TabsContent value="calendar" className="m-0">
-                       <div className="flex items-center justify-between mb-4 bg-muted/30 p-2 rounded-lg border border-border">
-                         <Button variant="ghost" size="icon" onClick={() => {
-                           const d = new Date(leadCalendarMonth); d.setMonth(d.getMonth()-1); setLeadCalendarMonth(d);
-                         }}><ChevronLeft size={16}/></Button>
-                         
-                         <h3 className="font-bold text-sm uppercase tracking-wider">
-                           {leadCalendarMonth.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}
-                         </h3>
-                         
-                         <Button variant="ghost" size="icon" onClick={() => {
-                           const d = new Date(leadCalendarMonth); d.setMonth(d.getMonth()+1); setLeadCalendarMonth(d);
-                         }}><ChevronRight size={16}/></Button>
-                       </div>
-
-                       <div className="w-full">
-                         <div className="grid grid-cols-7 gap-0 mb-1">
-                           {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(d => (
-                              <div key={d} className="text-center text-[10px] font-bold text-muted-foreground uppercase">{d}</div>
-                           ))}
-                         </div>
-                         <div className="grid grid-cols-7 gap-0 rounded-md overflow-hidden border border-border/50">
-                           {renderLeadCalendarGrid()}
-                         </div>
-                       </div>
-                       
-                       <div className="flex items-center gap-4 mt-4 text-xs text-muted-foreground justify-center">
-                         <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-blue-500"></div> E-mail</span>
-                         <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-green-500"></div> Ligação/Nota</span>
-                         <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-orange-500"></div> Visita</span>
-                         <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-purple-500"></div> Lembrete</span>
-                       </div>
-                     </TabsContent>
-
-                   </ScrollArea>
+                     </ScrollArea>
+                   </div>
                  </Tabs>
               </div>
            </div>

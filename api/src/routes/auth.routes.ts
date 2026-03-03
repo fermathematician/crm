@@ -14,6 +14,7 @@ import { UpdateUserRoleController } from '../controllers/UpdateUserRoleControlle
 import { GetUserMetricsController } from '../controllers/GetUserMetricsController.js';
 import { GetGlobalMetricsController } from '../controllers/GetGlobalMetricsController.js';
 import { ImportLeadsController } from '../controllers/ImportLeadsController.js';
+import { SendEmailController } from '../controllers/SendEmailController.js';
 
 const router = Router();
 const upload = multer({ dest: 'tmp/' });
@@ -29,6 +30,7 @@ const updateUserRoleController = new UpdateUserRoleController();
 const getUserMetricsController = new GetUserMetricsController();
 const getGlobalMetricsController = new GetGlobalMetricsController();
 const importLeadsController = new ImportLeadsController();
+const sendEmailController = new SendEmailController();
 
 router.post('/login', AuthenticateUserController.handle);
 router.post('/register', CreateUserController.handle);
@@ -45,5 +47,6 @@ router.patch('/users/:id/role', ensureAuthenticated, updateUserRoleController.ha
 router.get('/users/:id/metrics', ensureAuthenticated, getUserMetricsController.handle);
 router.get('/metrics/global', ensureAuthenticated, getGlobalMetricsController.handle);
 router.post( '/leads/import', ensureAuthenticated, upload.single('file'), importLeadsController.handle);
+router.post('/leads/:id/email', ensureAuthenticated, sendEmailController.handle);
 
 export const authRoutes = router;
