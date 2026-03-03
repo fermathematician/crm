@@ -220,6 +220,13 @@ export function Dashboard() {
       prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
     );
   }
+
+  const [columnPages, setColumnPages] = useState<Record<string, number>>({
+    'novos': 1, 'contato': 1, 'negociacao': 1, 'cadastro': 1, 'finalizado': 1, 'arquivo': 1
+  });
+  const [columnHasMore, setColumnHasMore] = useState<Record<string, boolean>>({
+    'novos': true, 'contato': true, 'negociacao': true, 'cadastro': true, 'finalizado': true, 'arquivo': true
+  });
   const [noteText, setNoteText] = useState('');
   const [noteDate, setNoteDate] = useState(getTodayDDMMYYYY()); 
   const [reminderText, setReminderText] = useState('');
@@ -405,65 +412,71 @@ export function Dashboard() {
     } catch (err) { console.error(err); }
   }
 
+  async function fetchColumnLeads(columnId: string, stageName: string, page: number) {
+    const token = localStorage.getItem('token');
+    if (!token) return [];
+
+    try {
+      const response = await fetch(`http://localhost:3000/auth/leads?stage=${stageName}&limit=50&page=${page}`, { 
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!response.ok) return [];
+
+      const responseData = await response.json(); 
+      const leadsArray: ApiLead[] = responseData.leads || responseData;
+      
+      setColumnHasMore(prev => ({ ...prev, [columnId]: leadsArray.length === 50 }));
+
+      return leadsArray.map((apiLead) => {
+        const tag = (apiLead.tags[0] as LeadTag) || columnDefaultTags[columnId];
+        return {
+          id: apiLead.id,
+          name: apiLead.companyName,
+          tag: tag,
+          visitDate: apiLead.visitDate,
+          phone: apiLead.phone,
+          cnpj: apiLead.cnpj,
+          email: apiLead.email,
+          address: apiLead.address,
+          city: apiLead.city,
+          state: apiLead.state,
+          cnae: apiLead.cnae,
+          contacts: apiLead.contacts ? apiLead.contacts.map((c: any) => ({
+            id: c.id,
+            type: c.type,
+            date: c.date ? c.date.toString().split('T')[0] : '', 
+            desc: c.description || c.observation || '' 
+          })) : []
+        };
+      });
+    } catch (error) {
+      console.error(`Erro ao buscar leads da coluna ${columnId}:`, error);
+      return [];
+    }
+  }
+
   useEffect(() => {
-    async function fetchLeads() {
+    async function loadInitialBoard() {
       const token = localStorage.getItem('token');
       if (!token) { navigate('/'); return; }
 
-      try {
-        const response = await fetch('http://localhost:3000/auth/leads', { 
-          method: 'GET',
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+      const newBoard = JSON.parse(JSON.stringify(emptyBoard)); 
+      
+      await Promise.all(Object.entries(reverseStageMap).map(async ([colId, stageName]) => {
+        const leads = await fetchColumnLeads(colId, stageName, 1);
+        if (newBoard[colId]) {
+          newBoard[colId].leads = leads;
+        }
+      }));
 
-        if (response.status === 401) { handleLogout(); return; }
-
-        const data: ApiLead[] = await response.json(); 
-        
-        const newBoard = JSON.parse(JSON.stringify(emptyBoard)); 
-        const stageMap: Record<string, string> = {
-          'NOVO': 'novos', 'CONTATO': 'contato', 'NEGOCIACAO': 'negociacao',
-          'CADASTRO': 'cadastro', 'FINALIZADO': 'finalizado', 'SEM_INTERESSE': 'arquivo'
-        };
-
-        data.forEach((apiLead) => {
-          const columnId = stageMap[apiLead.funnelStage] || 'novos';
-          const tag = (apiLead.tags[0] as LeadTag) || columnDefaultTags[columnId];
-
-          const lead: Lead = {
-            id: apiLead.id,
-            name: apiLead.companyName,
-            tag: tag,
-            visitDate: apiLead.visitDate,
-            phone: apiLead.phone,
-            cnpj: apiLead.cnpj,
-            email: apiLead.email,
-            address: apiLead.address,
-            city: apiLead.city,
-            state: apiLead.state,
-            cnae: apiLead.cnae,
-            contacts: apiLead.contacts ? apiLead.contacts.map((c: any) => ({
-              id: c.id,
-              type: c.type,
-              date: c.date ? c.date.toString().split('T')[0] : '', 
-              desc: c.description || c.observation || '' 
-            })) : []
-          };
-
-          if (newBoard[columnId]) {
-            newBoard[columnId].leads.push(lead);
-          }
-        });
-
-        setColumns(newBoard);
-        updateTodayNotifications(newBoard); 
-
-      } catch (error) { console.error("Erro ao buscar leads:", error); }
+      setColumns(newBoard);
+      updateTodayNotifications(newBoard); 
     }
 
-    fetchLeads();
+    loadInitialBoard();
   }, [navigate]);
-
   useEffect(() => {
     if (selectedLead) {
       setEditingTag(selectedLead.tag);
@@ -480,6 +493,28 @@ export function Dashboard() {
       setLeadContacts(selectedLead.contacts || []);
     }
   }, [selectedLead]);
+
+  async function loadMoreLeads(colId: string) {
+    const nextPage = columnPages[colId] + 1;
+    const stageName = reverseStageMap[colId];
+    
+    if (!stageName) return;
+
+    const newLeads = await fetchColumnLeads(colId, stageName, nextPage);
+    
+    if (newLeads.length > 0) {
+      setColumns(prev => {
+        const updatedBoard = { ...prev };
+        
+        const existingLeadIds = new Set(updatedBoard[colId].leads.map(l => l.id));
+        const uniqueNewLeads = newLeads.filter(lead => !existingLeadIds.has(lead.id));
+
+        updatedBoard[colId].leads = [...updatedBoard[colId].leads, ...uniqueNewLeads];
+        return updatedBoard;
+      });
+      setColumnPages(prev => ({ ...prev, [colId]: nextPage }));
+    }
+  }
 
   useEffect(() => {
     async function fetchProfile() {
@@ -1069,6 +1104,21 @@ export function Dashboard() {
                               </Draggable>
                             ))}
                             {provided.placeholder}
+                            {columnHasMore[colId] && (
+                              <div className="pt-2 pb-1 flex justify-center w-full">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="w-full border border-dashed border-border text-muted-foreground hover:text-primary hover:bg-primary/10"
+                                  onClick={(e) => {
+                                    e.stopPropagation(); 
+                                    loadMoreLeads(colId);
+                                  }}
+                                >
+                                  Carregar mais...
+                                </Button>
+                              </div>
+                            )}
                           </div>
                         )}
                       </Droppable>
@@ -1340,7 +1390,6 @@ export function Dashboard() {
                                        <span className="text-xs text-muted-foreground">• {formatDisplayDate(contact.date)}</span>
                                      </div>
 
-                                     {/* NOVO: Layout condicional para E-mails (Sanfona) ou Notas normais */}
                                      {isEmail ? (
                                        <div className="mt-2 border border-border rounded-md overflow-hidden">
                                          <div 

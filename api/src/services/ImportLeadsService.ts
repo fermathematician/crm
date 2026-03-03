@@ -58,10 +58,6 @@ class ImportLeadsService {
         throw new Error("Planilha vazia.");
       }
 
-      console.log("COLUNAS ENCONTRADAS:");
-      console.log(Object.keys(rows[0]!));
-
-      // 🔥 Normaliza chave (remove acento, espaço e deixa maiúsculo)
       const normalizeKey = (key: string) =>
         key
           .normalize("NFD")
@@ -69,7 +65,6 @@ class ImportLeadsService {
           .replace(/\s+/g, "")
           .toUpperCase();
 
-      // 🔥 Normaliza linha inteira
       const normalizeRow = (row: ExcelRow): ExcelRow => {
         const newRow: ExcelRow = {};
         for (const key in row) {
@@ -78,13 +73,11 @@ class ImportLeadsService {
         return newRow;
       };
 
-      // 🔥 Normaliza valores
       const normalizeValue = (value: any): string | null =>
         value !== null && value !== undefined
           ? String(value).trim()
           : null;
 
-      // Cria batch
       const batch = await prismaClient.importBatch.create({
         data: {
           fileName: file.originalname,
@@ -102,7 +95,6 @@ class ImportLeadsService {
           return {
             companyName: normalizeValue(companyName)!,
 
-            // 🔥 salva CNPJ apenas com números
             cnpj: normalizeValue(row["CNPJ"])?.replace(/\D/g, "") ?? null,
 
             cnae: normalizeValue(row["CNAE"]),
@@ -115,7 +107,7 @@ class ImportLeadsService {
             ownerId: userId,
             ImportBatchId: batch.id,
             funnelStage: "NOVO" as const,
-            tags: ["IMPORTADO_PLANILHA"],
+            tags: ["novo"],
           };
         })
         .filter((lead): lead is NonNullable<typeof lead> => lead !== null);

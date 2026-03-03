@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Moon, Sun, LogOut, Plus, Pencil, Trash2, Search, ArrowLeft, Filter, Phone, Building2, 
-  Mail, MapPin, FileText
+  Mail, MapPin, FileText, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
 
@@ -34,8 +34,8 @@ interface ApiLead {
 
 // --- FUNÇÕES DE MÁSCARA ---
 const maskCNPJ = (value: string) => {
-  value = value.replace(/\D/g, ""); // Remove tudo o que não é dígito
-  if (value.length > 14) value = value.slice(0, 14); // Limita a 14 dígitos
+  value = value.replace(/\D/g, ""); 
+  if (value.length > 14) value = value.slice(0, 14); 
   if (value.length > 2) value = `${value.slice(0,2)}.${value.slice(2)}`;
   if (value.length > 6) value = `${value.slice(0,6)}.${value.slice(6)}`;
   if (value.length > 10) value = `${value.slice(0,10)}/${value.slice(10)}`;
@@ -44,16 +44,16 @@ const maskCNPJ = (value: string) => {
 };
 
 const maskPhone = (value: string) => {
-  value = value.replace(/\D/g, ""); // Remove tudo o que não é dígito
-  if (value.length > 11) value = value.slice(0, 11); // Limita a 11 dígitos
+  value = value.replace(/\D/g, ""); 
+  if (value.length > 11) value = value.slice(0, 11); 
   if (value.length > 2) value = `(${value.slice(0,2)}) ${value.slice(2)}`;
   if (value.length > 9) value = `${value.slice(0,10)}-${value.slice(10)}`;
   return value;
 };
 
 const maskCNAE = (value: string) => {
-  value = value.replace(/\D/g, ""); // Remove tudo o que não é dígito
-  if (value.length > 7) value = value.slice(0, 7); // Limita a 7 dígitos
+  value = value.replace(/\D/g, ""); 
+  if (value.length > 7) value = value.slice(0, 7); 
   if (value.length > 4) value = `${value.slice(0,4)}-${value.slice(4)}`;
   if (value.length > 6) value = `${value.slice(0,6)}/${value.slice(6)}`;
   return value;
@@ -63,12 +63,16 @@ export function LeadsList() {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   
-  // Estados de Dados
+  // Estados de Dados e Paginação
   const [leads, setLeads] = useState<ApiLead[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalLeads, setTotalLeads] = useState(0);
 
   // Estados de Filtro
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchInput, setSearchInput] = useState(''); // O que o usuário digita
+  const [activeSearch, setActiveSearch] = useState(''); // A busca que foi enviada pro backend
   const [filterStage, setFilterStage] = useState('ALL');
 
   // Estados do Modal
@@ -92,13 +96,21 @@ export function LeadsList() {
     funnelStage: 'NOVO' 
   });
 
-  async function fetchLeads() {
+  const fetchLeads = useCallback(async () => {
     setLoading(true);
     const token = localStorage.getItem('token');
     if (!token) { navigate('/'); return; }
 
     try {
-      const response = await fetch('http://localhost:3000/auth/leads', { 
+      // Adicionando os parâmetros de paginação e filtro na URL
+      const queryParams = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: '50', // Quantidade de leads por página
+        search: activeSearch,
+        stage: filterStage
+      });
+
+      const response = await fetch(`http://localhost:3000/auth/leads?${queryParams}`, { 
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -109,15 +121,38 @@ export function LeadsList() {
       }
 
       const data = await response.json();
-      setLeads(data);
+      
+      // Atualizando os estados com o novo formato de resposta do backend
+      if (data.leads) {
+        setLeads(data.leads);
+        setTotalPages(data.totalPages || 1);
+        setTotalLeads(data.totalCount || 0);
+      } else {
+        // Fallback caso o backend ainda retorne um Array direto (durante a transição)
+        setLeads(data.length ? data : []);
+      }
+      
     } catch (error) { 
       console.error("Erro ao buscar leads:", error); 
     } finally {
       setLoading(false);
     }
-  }
+  }, [navigate, currentPage, activeSearch, filterStage]);
 
-  useEffect(() => { fetchLeads(); }, []);
+  // Recarrega os leads sempre que a página, a busca ativa ou o estágio mudarem
+  useEffect(() => { 
+    fetchLeads(); 
+  }, [fetchLeads]);
+
+  // Reseta a página para 1 sempre que trocar o filtro de estágio
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStage, activeSearch]);
+
+  function handleSearchSubmit(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    setActiveSearch(searchInput);
+  }
 
   // --- DELETAR LEAD (DELETE) ---
   async function handleDelete(id: string) {
@@ -131,7 +166,7 @@ export function LeadsList() {
       });
 
       if (response.ok) {
-        setLeads(leads.filter(lead => lead.id !== id)); 
+        fetchLeads(); // Recarrega a página atual para manter a paginação correta
       } else {
         alert("Erro ao excluir lead");
       }
@@ -181,7 +216,6 @@ export function LeadsList() {
     setIsImporting(true);
     const token = localStorage.getItem('token');
     
-    // FormData é necessário para enviar arquivos
     const formDataPayload = new FormData();
     formDataPayload.append('file', selectedFile);
 
@@ -196,9 +230,10 @@ export function LeadsList() {
 
       if (response.ok) {
         const result = await response.json();
-        alert(`Sucesso! ${result.imported} leads foram importados do total de ${result.total}.`);
+        alert(`Sucesso! ${result.imported} leads foram importados.`);
         setIsImportModalOpen(false);
         setSelectedFile(null);
+        setCurrentPage(1); // Volta para a primeira página após importar
         fetchLeads(); 
       } else {
         const errorData = await response.json();
@@ -216,15 +251,8 @@ export function LeadsList() {
   function openNewModal() {
     setEditingLead(null);
     setFormData({ 
-      companyName: '', 
-      cnpj: '', 
-      cnae: '', 
-      phone: '', 
-      email: '', 
-      city: '', 
-      state: '', 
-      address: '', 
-      funnelStage: 'NOVO' 
+      companyName: '', cnpj: '', cnae: '', phone: '', email: '', 
+      city: '', state: '', address: '', funnelStage: 'NOVO' 
     });
     setIsModalOpen(true);
   }
@@ -245,23 +273,9 @@ export function LeadsList() {
     setIsModalOpen(true);
   }
 
-  const filteredLeads = leads.filter(lead => {
-    const searchLower = searchTerm.toLowerCase();
-    
-    const matchesSearch = 
-      lead.companyName.toLowerCase().includes(searchLower) || 
-      (lead.phone && lead.phone.includes(searchLower)) ||
-      (lead.cnpj && lead.cnpj.includes(searchLower));
-    
-    const matchesStage = filterStage === 'ALL' || lead.funnelStage === filterStage;
-
-    return matchesSearch && matchesStage;
-  });
-
   return (
     <div className="h-screen w-full flex bg-background text-foreground transition-colors duration-300 overflow-hidden">
       
-      {/* --- ÁREA PRINCIPAL --- */}
       <div className="flex-1 flex flex-col min-w-0">
         
         {/* HEADER */}
@@ -291,15 +305,18 @@ export function LeadsList() {
            <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
               
               <div className="flex gap-2 w-full md:w-auto flex-1">
-                <div className="relative w-full md:w-96">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    placeholder="Buscar empresa, CNPJ ou telefone..." 
-                    className="pl-8 bg-card border-border"
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                  />
-                </div>
+                <form onSubmit={handleSearchSubmit} className="relative w-full md:w-96 flex gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      placeholder="Buscar empresa, CNPJ ou telefone..." 
+                      className="pl-8 bg-card border-border"
+                      value={searchInput}
+                      onChange={e => setSearchInput(e.target.value)}
+                    />
+                  </div>
+                  <Button type="submit" variant="secondary">Buscar</Button>
+                </form>
 
                 <div className="relative w-full md:w-56">
                     <Filter className="absolute left-2 top-3 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />
@@ -321,6 +338,7 @@ export function LeadsList() {
               </div>
 
               <div className='flex gap-2'>
+                {/* Modais omitidos para brevidade (MANTENHA OS SEUS AQUI) */}
                 <Dialog open={isImportModalOpen} onOpenChange={setIsImportModalOpen}>
                   <DialogTrigger asChild>
                     <Button variant="outline" className="gap-2 border-primary text-primary hover:bg-primary/10">
@@ -384,7 +402,6 @@ export function LeadsList() {
                       </DialogHeader>
                       
                       <div className="grid gap-4 py-4">
-                          {/* Linha 1: Razão Social */}
                           <div className="grid gap-2">
                               <Label htmlFor="name">Razão Social *</Label>
                               <div className="relative">
@@ -396,7 +413,6 @@ export function LeadsList() {
                               </div>
                           </div>
                           
-                          {/* Linha 2: CNPJ e CNAE (COM MÁSCARA) */}
                           <div className="grid grid-cols-2 gap-4">
                               <div className="grid gap-2">
                                   <Label htmlFor="cnpj">CNPJ</Label>
@@ -419,7 +435,6 @@ export function LeadsList() {
                               </div>
                           </div>
 
-                          {/* Linha 3: Telefone e Email (TELEFONE COM MÁSCARA) */}
                           <div className="grid grid-cols-2 gap-4">
                               <div className="grid gap-2">
                                   <Label htmlFor="phone">Telefone / WhatsApp</Label>
@@ -444,7 +459,6 @@ export function LeadsList() {
                               </div>
                           </div>
 
-                          {/* Linha 4: Cidade e UF */}
                           <div className="grid grid-cols-2 gap-4">
                               <div className="grid gap-2">
                                   <Label htmlFor="city">Cidade</Label>
@@ -462,7 +476,6 @@ export function LeadsList() {
                               </div>
                           </div>
 
-                          {/* Linha 5: Endereço */}
                           <div className="grid gap-2 border-b border-border pb-4">
                               <Label htmlFor="address">Endereço</Label>
                               <div className="relative">
@@ -485,7 +498,7 @@ export function LeadsList() {
            </div>
 
            {/* TABELA DE DADOS */}
-           <div className="rounded-md border border-border bg-card overflow-x-auto flex-1 shadow-sm">
+           <div className="rounded-t-md border border-border bg-card overflow-x-auto flex-1 shadow-sm">
              <ScrollArea className="h-full">
                <table className="w-full text-sm text-left whitespace-nowrap">
                  <thead className="text-xs text-muted-foreground uppercase bg-muted/50 border-b border-border sticky top-0 backdrop-blur-sm z-10">
@@ -509,14 +522,14 @@ export function LeadsList() {
                          Carregando leads...
                        </td>
                      </tr>
-                   ) : filteredLeads.length === 0 ? (
+                   ) : leads.length === 0 ? (
                      <tr>
                        <td colSpan={10} className="px-6 py-8 text-center text-muted-foreground">
-                         Nenhum lead encontrado com estes filtros.
+                         Nenhum lead encontrado.
                        </td>
                      </tr>
                    ) : (
-                     filteredLeads.map((lead) => (
+                     leads.map((lead) => (
                        <tr key={lead.id} className="hover:bg-muted/30 transition-colors">
                          <td className="px-4 py-4 font-medium text-foreground">
                             {lead.companyName}
@@ -575,6 +588,33 @@ export function LeadsList() {
                  </tbody>
                </table>
              </ScrollArea>
+           </div>
+
+           {/* CONTROLES DE PAGINAÇÃO */}
+           <div className="flex items-center justify-between px-4 py-3 border border-t-0 border-border bg-card rounded-b-md shadow-sm">
+             <div className="text-sm text-muted-foreground">
+               Mostrando página <span className="font-medium text-foreground">{currentPage}</span> de <span className="font-medium text-foreground">{totalPages}</span> ({totalLeads} leads totails)
+             </div>
+             <div className="flex gap-2">
+               <Button 
+                 variant="outline" 
+                 size="sm" 
+                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                 disabled={currentPage === 1 || loading}
+                 className="gap-1"
+               >
+                 <ChevronLeft size={16} /> Anterior
+               </Button>
+               <Button 
+                 variant="outline" 
+                 size="sm" 
+                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                 disabled={currentPage >= totalPages || loading}
+                 className="gap-1"
+               >
+                 Próxima <ChevronRight size={16} />
+               </Button>
+             </div>
            </div>
 
         </main>

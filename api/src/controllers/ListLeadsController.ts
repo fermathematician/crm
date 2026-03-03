@@ -6,11 +6,22 @@ class ListLeadsController {
     
     const userId = req.user_id;
 
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 50;
+    const search = (req.query.search as string) || "";
+    const stage = (req.query.stage as string) || "ALL";
+
     const listLeadsService = new ListLeadsService();
 
-    const leads = await listLeadsService.execute(userId);
+    const result = await listLeadsService.execute({
+      userId,
+      page,
+      limit,
+      search,
+      stage
+    });
 
-    return res.json(leads);
+    return res.json(result);
   }
 }
 

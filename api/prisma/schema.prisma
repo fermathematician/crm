@@ -97,7 +97,7 @@ model Contact {
   user   User   @relation(fields: [userId], references: [id])
 
   leadId String
-  lead   Lead   @relation(fields: [leadId], references: [id])
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   didChageFunnel Boolean      @default(false) 
   funnelBefore   FunnelStage?
