@@ -24,10 +24,9 @@ import { Label } from "../components/ui/label";
 
 type LeadTag = 'frio' | 'morno' | 'quente' | 'a contactar' | 'sem resposta' | 'promessa' | 'parcial' | 'completa' | 'aprovado' | 'recusado' | 'sem interesse' | 'novo';
 
-// Nova interface para representar o Histórico/Lembretes
 interface ApiContact {
   id: string;
-  type: 'EMAIL' | 'CALL' | 'MEETING' | 'NOTE' | 'REMINDER';
+  type: 'EMAIL' | 'CALL' | 'MEETING' | 'NOTE' | 'REMINDER' | 'SYSTEM_CHANGE';
   date: string;
   desc: string;
 }
@@ -45,7 +44,7 @@ interface ApiLead {
   city?: string | null;
   state?: string | null;
   cnae?: string | null; 
-  contacts?: ApiContact[]; // Adicionado contatos da API
+  contacts?: ApiContact[]; 
 }
 
 const reverseStageMap: Record<string, string> = {
@@ -102,7 +101,7 @@ interface Lead {
   city?: string | null;
   state?: string | null;
   cnae?: string | null;
-  contacts?: ApiContact[]; // Adicionado contatos locais
+  contacts?: ApiContact[]; 
 }
 
 interface Column {
@@ -241,16 +240,12 @@ export function Dashboard() {
     return selectedDate > today;
   };
 
-  const isNoteDateFuture = isFutureDate(noteDate);
-
-  // <-- NOVA LÓGICA DE NOTIFICAÇÕES INTELIGENTES -->
   function updateTodayNotifications(boardData: Record<string, Column>) {
     const todayStr = getTodayString();
     const todayNotifications: Notification[] = [];
 
     for (const colId in boardData) {
       boardData[colId].leads.forEach((lead) => {
-        // 1. Verifica Visitas agendadas para hoje
         if (lead.visitDate && lead.visitDate.startsWith(todayStr)) {
           todayNotifications.push({
             id: `visit-${lead.id}`,
@@ -261,7 +256,6 @@ export function Dashboard() {
           });
         }
         
-        // 2. Verifica Lembretes agendados para hoje
         if (lead.contacts) {
           lead.contacts.forEach(contact => {
             if (contact.type === 'REMINDER' && contact.date.startsWith(todayStr)) {
@@ -281,6 +275,19 @@ export function Dashboard() {
     setNotifications(todayNotifications);
   }
 
+  // --- NOVA FUNÇÃO PARA FORÇAR O LOG DE HISTÓRICO NO BACKEND ---
+  async function createHistoryLog(leadId: string, type: string, desc: string, didChangeFunnel: boolean = false) {
+    const token = localStorage.getItem('token');
+    const dateStr = getTodayString(); 
+    try {
+      await fetch(`http://localhost:3000/auth/leads/${leadId}/contacts`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, date: dateStr, desc, didChangeFunnel })
+      });
+    } catch (err) { console.error(err); }
+  }
+
   async function handleSaveInteraction() {
     const isReminder = activeTab === 'reminder';
     const textToSave = isReminder ? reminderText : noteText;
@@ -290,7 +297,7 @@ export function Dashboard() {
 
     const [d, m, y] = dateToSave.split('/');
     const formattedDate = `${y}-${m}-${d}`;
-    const interactionType = isReminder ? 'REMINDER' : 'NOTE';
+    const interactionType = isReminder ? 'REMINDER' : 'CALL';
 
     const newContact: ApiContact = {
       id: Date.now().toString(),
@@ -313,37 +320,22 @@ export function Dashboard() {
     setColumns(newColumns);
     updateTodayNotifications(newColumns); 
 
-    // Limpa o respectivo formulário
     if (isReminder) setReminderText('');
     else setNoteText('');
     setActiveTab('history'); 
 
     const token = localStorage.getItem('token');
     try {
-        const response = await fetch(`http://localhost:3000/auth/leads/${selectedLead.id}/contacts`, {
+        await fetch(`http://localhost:3000/auth/leads/${selectedLead.id}/contacts`, {
             method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                type: interactionType,
-                date: formattedDate,
-                desc: textToSave
-            })
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: interactionType, date: formattedDate, desc: textToSave })
         });
-
-        if (!response.ok) {
-           console.error("O backend recusou a requisição");
-        }
-    } catch(e) {
-        console.error("Erro ao tentar conectar com o backend", e);
-    }
+    } catch(e) { console.error(e); }
   }
 
   function handleNotificationClick(leadId?: string) {
     if (!leadId) return;
-    
     for (const colId in columns) {
       const foundLead = columns[colId].leads.find(l => l.id === leadId);
       if (foundLead) {
@@ -357,21 +349,12 @@ export function Dashboard() {
   async function updateLeadOnServer(leadId: string, data: { funnelStage?: string, tags?: string[], visitDate?: string | null }) {
     const token = localStorage.getItem('token');
     try {
-      const response = await fetch(`http://localhost:3000/auth/leads/update`, {
+      await fetch(`http://localhost:3000/auth/leads/update`, {
         method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          lead_id: leadId,
-          ...data
-        })
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lead_id: leadId, ...data })
       });
-      if (!response.ok) throw new Error('Erro ao salvar no servidor');
-    } catch (err) {
-      console.error("Erro ao salvar no banco:", err);
-    }
+    } catch (err) { console.error(err); }
   }
 
   useEffect(() => {
@@ -446,7 +429,6 @@ export function Dashboard() {
         setEditingVisitDate('');
       }
 
-      // Ao selecionar o lead, carrega o histórico dele na memória
       setLeadContacts(selectedLead.contacts || []);
     }
   }, [selectedLead]);
@@ -499,6 +481,7 @@ export function Dashboard() {
 
     const [removed] = sourceItems.splice(source.index, 1);
     
+    // CASO TROQUE DE FUNIL, REGISTRE NO HISTÓRICO!
     if (source.droppableId !== destination.droppableId) {
       const defaultTag = columnDefaultTags[destination.droppableId];
       removed.tag = defaultTag || removed.tag;
@@ -507,6 +490,11 @@ export function Dashboard() {
         funnelStage: reverseStageMap[destination.droppableId],
         tags: [removed.tag]
       });
+
+      const desc = `Funil alterado: ${sourceCol.title} ➔ ${destCol.title}`;
+      createHistoryLog(draggableId, 'SYSTEM_CHANGE', desc, true); // True = didChangeFunnel
+      const newLocalContact: ApiContact = { id: Date.now().toString(), type: 'SYSTEM_CHANGE', date: getTodayString(), desc };
+      removed.contacts = [newLocalContact, ...(removed.contacts || [])];
     }
 
     destItems.splice(destination.index, 0, removed);
@@ -559,8 +547,26 @@ export function Dashboard() {
       const leadIndex = column.leads.findIndex(l => l.id === selectedLead.id);
 
       if (leadIndex !== -1) {
+        const oldLead = newColumns[colId].leads[leadIndex];
+        
+        // NOVO: SALVA A TROCA DE ETIQUETA NO HISTÓRICO
+        if (oldLead.tag !== editingTag) {
+          const desc = `Etiqueta alterada: [${oldLead.tag}] ➔ [${editingTag}]`;
+          createHistoryLog(selectedLead.id, 'SYSTEM_CHANGE', desc, false);
+          const newLocalContact: ApiContact = { id: Date.now().toString(), type: 'SYSTEM_CHANGE', date: getTodayString(), desc };
+          oldLead.contacts = [newLocalContact, ...(oldLead.contacts || [])];
+        }
+
+        // NOVO: SALVA O AGENDAMENTO DE VISITA NO HISTÓRICO COMO 'MEETING' PARA CONTAR NO RELATÓRIO
+        if (formattedDateForBackend && oldLead.visitDate !== formattedDateForBackend) {
+          const desc = `Visita agendada para: ${editingVisitDate}`;
+          createHistoryLog(selectedLead.id, 'MEETING', desc, false);
+          const newLocalContact: ApiContact = { id: (Date.now()+1).toString(), type: 'MEETING', date: getTodayString(), desc };
+          oldLead.contacts = [newLocalContact, ...(oldLead.contacts || [])];
+        }
+
         newColumns[colId].leads[leadIndex] = {
-          ...newColumns[colId].leads[leadIndex],
+          ...oldLead,
           tag: editingTag,
           visitDate: formattedDateForBackend 
         };
@@ -746,7 +752,7 @@ export function Dashboard() {
                 title={c.desc}
                 className={`w-2 h-2 rounded-full ${
                   c.type === 'EMAIL' ? 'bg-blue-500' : 
-                  c.type === 'CALL' || c.type === 'NOTE' ? 'bg-green-500' : 
+                  c.type === 'CALL' ? 'bg-green-500' : 
                   c.type === 'MEETING' ? 'bg-orange-500' : 
                   c.type === 'REMINDER' ? 'bg-purple-500' : 'bg-gray-500'
                 }`}
@@ -923,8 +929,6 @@ export function Dashboard() {
           <h1 className="text-xl font-bold tracking-tight text-primary w-1/4">
             O.S <span className="text-foreground font-normal">Inteligência FInanceira</span>
           </h1>
-
-          {/* Nav do meio foi removida, o botão foi para a sidebar */}
 
           <div className="flex items-center gap-4 w-1/4 justify-end ml-auto">
             <div className="flex items-center gap-3 px-3 py-1.5 rounded-full bg-accent/20 border border-border/50 mr-2">
@@ -1242,16 +1246,16 @@ export function Dashboard() {
                            <p className="text-xs text-muted-foreground mt-1">Interações e lembretes aparecerão aqui.</p>
                          </div>
                        ) : (
-                         leadContacts.map((contact) => (
+                         leadContacts.filter(c => c.type !== 'SYSTEM_CHANGE').map((contact) => (
                            <div key={contact.id} className="flex gap-4 p-4 border border-border rounded-lg bg-card">
                              <div className={`mt-1 p-2 rounded-full h-fit
                                ${contact.type === 'EMAIL' ? 'bg-blue-100 text-blue-600' : 
-                                 contact.type === 'CALL' || contact.type === 'NOTE' ? 'bg-green-100 text-green-600' : 
+                                 contact.type === 'CALL' ? 'bg-green-100 text-green-600' : 
                                  contact.type === 'REMINDER' ? 'bg-purple-100 text-purple-600' :
                                  'bg-orange-100 text-orange-600'}`}
                              >
                                {contact.type === 'EMAIL' ? <Mail size={18} /> : 
-                                contact.type === 'CALL' || contact.type === 'NOTE' ? <Phone size={18} /> : 
+                                contact.type === 'CALL' ? <Phone size={18} /> : 
                                 contact.type === 'REMINDER' ? <Bell size={18} /> :
                                 <CalendarIcon size={18} />}
                              </div>
@@ -1259,8 +1263,9 @@ export function Dashboard() {
                                <div className="flex items-center gap-2 mb-1">
                                  <span className="font-bold text-sm">
                                    {contact.type === 'EMAIL' ? 'E-mail Enviado' : 
-                                    contact.type === 'CALL' || contact.type === 'NOTE' ? 'Registro de Ligação' : 
-                                    contact.type === 'REMINDER' ? 'Lembrete Agendado' : 'Visita Agendada'}
+                                    contact.type === 'CALL' ? 'Registro de Ligação' : 
+                                    contact.type === 'REMINDER' ? 'Lembrete Agendado' : 
+                                    'Visita Agendada'}
                                  </span>
                                  <span className="text-xs text-muted-foreground">• {formatDisplayDate(contact.date)}</span>
                                </div>

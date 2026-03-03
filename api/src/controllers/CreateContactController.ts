@@ -3,13 +3,9 @@ import { CreateContactService } from "../services/CreateContactService.js";
 
 class CreateContactController {
   async handle(req: Request, res: Response) {
-    // Usamos o "as string" para garantir ao TypeScript o formato correto
-    const leadId = req.params.id as string; 
-    
-    const { type, date, desc } = req.body;
-    
-    // Garantindo o formato do userId também
-    const userId = req.user_id as string; 
+    const { type, date, desc, didChangeFunnel } = req.body;
+    const leadId = req.params.id as string;
+    const userId = req.user_id as string;
 
     const createContactService = new CreateContactService();
 
@@ -18,7 +14,8 @@ class CreateContactController {
       userId,
       type,
       date,
-      desc
+      desc,
+      didChangeFunnel
     });
 
     return res.json(contact);

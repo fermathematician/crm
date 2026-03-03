@@ -7,10 +7,11 @@ interface CreateContactRequest {
   type: ContactType;
   date: string;
   desc: string;
+  didChangeFunnel?: boolean; 
 }
 
 class CreateContactService {
-  async execute({ leadId, userId, type, date, desc }: CreateContactRequest) {
+  async execute({ leadId, userId, type, date, desc, didChangeFunnel }: CreateContactRequest) {
     if (!leadId || !userId) {
       throw new Error("ID do Lead e do Usuário são obrigatórios.");
     }
@@ -24,7 +25,8 @@ class CreateContactService {
         type: type,
         date: isoDate, 
         description: desc,
-        observation: desc 
+        observation: desc,
+        didChageFunnel: didChangeFunnel || false 
       }
     });
 
