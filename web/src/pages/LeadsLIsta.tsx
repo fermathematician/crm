@@ -75,6 +75,10 @@ export function LeadsList() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<ApiLead | null>(null);
 
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+
   // Estado do Formulário
   const [formData, setFormData] = useState({ 
     companyName: '', 
@@ -168,6 +172,43 @@ export function LeadsList() {
       }
     } catch (error) { 
       console.error("Erro ao salvar:", error); 
+    }
+  }
+
+  async function handleImport() {
+    if (!selectedFile) return;
+
+    setIsImporting(true);
+    const token = localStorage.getItem('token');
+    
+    // FormData é necessário para enviar arquivos
+    const formDataPayload = new FormData();
+    formDataPayload.append('file', selectedFile);
+
+    try {
+      const response = await fetch('http://localhost:3000/auth/leads/import', {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}` 
+        },
+        body: formDataPayload
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`Sucesso! ${result.imported} leads foram importados do total de ${result.total}.`);
+        setIsImportModalOpen(false);
+        setSelectedFile(null);
+        fetchLeads(); 
+      } else {
+        const errorData = await response.json();
+        alert(errorData.error || "Erro na importação.");
+      }
+    } catch (error) {
+      console.error("Erro ao importar:", error);
+      alert("Erro de conexão com o servidor.");
+    } finally {
+      setIsImporting(false);
     }
   }
 
@@ -279,120 +320,168 @@ export function LeadsList() {
                 </div>
               </div>
 
-              {/* MODAL */}
-              <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogTrigger asChild>
-                    <Button onClick={openNewModal} className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground whitespace-nowrap shadow-sm">
-                        <Plus size={18} /> Novo Lead
+              <div className='flex gap-2'>
+                <Dialog open={isImportModalOpen} onOpenChange={setIsImportModalOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="gap-2 border-primary text-primary hover:bg-primary/10">
+                      <FileText size={18} /> Importar Planilha
                     </Button>
-                </DialogTrigger>
-                
-                <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                           {editingLead ? <Pencil size={18} /> : <Plus size={18} />}
-                           {editingLead ? 'Editar Lead' : 'Criar Novo Lead'}
-                        </DialogTitle>
+                      <DialogTitle className="flex items-center gap-2">
+                        <FileText className="text-primary" /> Importar Leads via CSV
+                      </DialogTitle>
                     </DialogHeader>
                     
-                    <div className="grid gap-4 py-4">
-                        {/* Linha 1: Razão Social */}
-                        <div className="grid gap-2">
-                            <Label htmlFor="name">Razão Social *</Label>
-                            <div className="relative">
-                               <Building2 className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                               <Input 
-                                  id="name" className="pl-8" placeholder="Nome da Empresa"
-                                  value={formData.companyName} onChange={e => setFormData({...formData, companyName: e.target.value})}
-                               />
-                            </div>
+                    <div className="grid gap-4 py-6">
+                      <div className="flex flex-col items-center justify-center border-2 border-dashed border-border rounded-xl p-8 bg-muted/30 gap-3">
+                        <FileText size={40} className="text-muted-foreground" />
+                        <div className="text-center">
+                          <p className="text-sm font-medium">Arraste ou selecione seu arquivo</p>
+                          <p className="text-xs text-muted-foreground mt-1">Formato aceito: .csv, .xlsx (UTF-8)</p>
                         </div>
-                        
-                        {/* Linha 2: CNPJ e CNAE (COM MÁSCARA) */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="cnpj">CNPJ</Label>
-                                <div className="relative">
-                                   <FileText className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                                   <Input 
-                                      id="cnpj" className="pl-8" placeholder="00.000.000/0000-00"
-                                      value={formData.cnpj} 
-                                      onChange={e => setFormData({...formData, cnpj: maskCNPJ(e.target.value)})}
-                                   />
-                                </div>
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="cnae">CNAE</Label>
-                                <Input 
-                                   id="cnae" placeholder="Ex: 6204-0/00"
-                                   value={formData.cnae} 
-                                   onChange={e => setFormData({...formData, cnae: maskCNAE(e.target.value)})}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Linha 3: Telefone e Email (TELEFONE COM MÁSCARA) */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="phone">Telefone / WhatsApp</Label>
-                                <div className="relative">
-                                   <Phone className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                                   <Input 
-                                      id="phone" className="pl-8" placeholder="(XX) 99999-9999"
-                                      value={formData.phone} 
-                                      onChange={e => setFormData({...formData, phone: maskPhone(e.target.value)})}
-                                   />
-                                </div>
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="email">Email</Label>
-                                <div className="relative">
-                                   <Mail className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                                   <Input 
-                                      id="email" type="email" className="pl-8" placeholder="contato@empresa.com"
-                                      value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})}
-                                   />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Linha 4: Cidade e UF */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="city">Cidade</Label>
-                                <Input 
-                                   id="city" placeholder="Sua Cidade"
-                                   value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})}
-                                />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="state">UF</Label>
-                                <Input 
-                                   id="state" placeholder="EX: SP" maxLength={2}
-                                   value={formData.state} onChange={e => setFormData({...formData, state: e.target.value.toUpperCase()})}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Linha 5: Endereço */}
-                        <div className="grid gap-2 border-b border-border pb-4">
-                            <Label htmlFor="address">Endereço</Label>
-                            <div className="relative">
-                               <MapPin className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                               <Input 
-                                  id="address" className="pl-8" placeholder="Rua, Número, Bairro"
-                                  value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})}
-                               />
-                            </div>
-                        </div>
+                        <Input 
+                          type="file" 
+                          accept=".csv, .xlsx, .xls" 
+                          className="cursor-pointer"
+                          onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                        />
+                        {selectedFile && (
+                          <p className="text-xs text-blue-500 font-semibold">
+                            Selecionado: {selectedFile.name}
+                          </p>
+                        )}
+                      </div>
                     </div>
 
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
-                        <Button onClick={handleSave}>Salvar Lead</Button>
+                      <Button variant="outline" onClick={() => setIsImportModalOpen(false)}>Cancelar</Button>
+                      <Button 
+                        onClick={handleImport} 
+                        disabled={!selectedFile || isImporting}
+                        className="gap-2"
+                      >
+                        {isImporting ? "Processando..." : "Começar Importação"}
+                      </Button>
                     </DialogFooter>
-                </DialogContent>
-              </Dialog>
+                  </DialogContent>
+                </Dialog>
+
+                <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                  <DialogTrigger asChild>
+                      <Button onClick={openNewModal} className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground whitespace-nowrap shadow-sm">
+                          <Plus size={18} /> Novo Lead
+                      </Button>
+                  </DialogTrigger>
+                  
+                  <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+                      <DialogHeader>
+                          <DialogTitle className="flex items-center gap-2">
+                            {editingLead ? <Pencil size={18} /> : <Plus size={18} />}
+                            {editingLead ? 'Editar Lead' : 'Criar Novo Lead'}
+                          </DialogTitle>
+                      </DialogHeader>
+                      
+                      <div className="grid gap-4 py-4">
+                          {/* Linha 1: Razão Social */}
+                          <div className="grid gap-2">
+                              <Label htmlFor="name">Razão Social *</Label>
+                              <div className="relative">
+                                <Building2 className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input 
+                                    id="name" className="pl-8" placeholder="Nome da Empresa"
+                                    value={formData.companyName} onChange={e => setFormData({...formData, companyName: e.target.value})}
+                                />
+                              </div>
+                          </div>
+                          
+                          {/* Linha 2: CNPJ e CNAE (COM MÁSCARA) */}
+                          <div className="grid grid-cols-2 gap-4">
+                              <div className="grid gap-2">
+                                  <Label htmlFor="cnpj">CNPJ</Label>
+                                  <div className="relative">
+                                    <FileText className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input 
+                                        id="cnpj" className="pl-8" placeholder="00.000.000/0000-00"
+                                        value={formData.cnpj} 
+                                        onChange={e => setFormData({...formData, cnpj: maskCNPJ(e.target.value)})}
+                                    />
+                                  </div>
+                              </div>
+                              <div className="grid gap-2">
+                                  <Label htmlFor="cnae">CNAE</Label>
+                                  <Input 
+                                    id="cnae" placeholder="Ex: 6204-0/00"
+                                    value={formData.cnae} 
+                                    onChange={e => setFormData({...formData, cnae: maskCNAE(e.target.value)})}
+                                  />
+                              </div>
+                          </div>
+
+                          {/* Linha 3: Telefone e Email (TELEFONE COM MÁSCARA) */}
+                          <div className="grid grid-cols-2 gap-4">
+                              <div className="grid gap-2">
+                                  <Label htmlFor="phone">Telefone / WhatsApp</Label>
+                                  <div className="relative">
+                                    <Phone className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input 
+                                        id="phone" className="pl-8" placeholder="(XX) 99999-9999"
+                                        value={formData.phone} 
+                                        onChange={e => setFormData({...formData, phone: maskPhone(e.target.value)})}
+                                    />
+                                  </div>
+                              </div>
+                              <div className="grid gap-2">
+                                  <Label htmlFor="email">Email</Label>
+                                  <div className="relative">
+                                    <Mail className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input 
+                                        id="email" type="email" className="pl-8" placeholder="contato@empresa.com"
+                                        value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})}
+                                    />
+                                  </div>
+                              </div>
+                          </div>
+
+                          {/* Linha 4: Cidade e UF */}
+                          <div className="grid grid-cols-2 gap-4">
+                              <div className="grid gap-2">
+                                  <Label htmlFor="city">Cidade</Label>
+                                  <Input 
+                                    id="city" placeholder="Sua Cidade"
+                                    value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})}
+                                  />
+                              </div>
+                              <div className="grid gap-2">
+                                  <Label htmlFor="state">UF</Label>
+                                  <Input 
+                                    id="state" placeholder="EX: SP" maxLength={2}
+                                    value={formData.state} onChange={e => setFormData({...formData, state: e.target.value.toUpperCase()})}
+                                  />
+                              </div>
+                          </div>
+
+                          {/* Linha 5: Endereço */}
+                          <div className="grid gap-2 border-b border-border pb-4">
+                              <Label htmlFor="address">Endereço</Label>
+                              <div className="relative">
+                                <MapPin className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input 
+                                    id="address" className="pl-8" placeholder="Rua, Número, Bairro"
+                                    value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})}
+                                />
+                              </div>
+                          </div>
+                      </div>
+
+                      <DialogFooter>
+                          <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
+                          <Button onClick={handleSave}>Salvar Lead</Button>
+                      </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
            </div>
 
            {/* TABELA DE DADOS */}
