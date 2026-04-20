@@ -19,6 +19,8 @@ model User {
   email    String   @unique
   name     String
   password String
+  resendApiKey String?
+  brevoApiKey String?
   role     Role     @default(SALES)
   created  DateTime @default(now())
 

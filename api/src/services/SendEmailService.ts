@@ -1,7 +1,5 @@
-import { Resend } from 'resend';
-import { prismaClient } from '../../prisma/index.js';
-
-const resend = new Resend(process.env.RESEND_API_KEY);
+import { Resend } from "resend";
+import { prismaClient } from "../../prisma/index.js";
 
 interface SendEmailRequest {
   leadId: string;
@@ -12,8 +10,18 @@ interface SendEmailRequest {
 
 class SendEmailService {
   async execute({ leadId, userId, subject, body }: SendEmailRequest) {
+    const user = await prismaClient.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) throw new Error("Usuário não encontrado");
+
+    if (!user?.resendApiKey && !user.brevoApiKey) {
+      throw new Error("Você ainda não inseriu sua API de e-mail");
+    }
+
     const lead = await prismaClient.lead.findUnique({
-      where: { id: leadId }
+      where: { id: leadId },
     });
 
     if (!lead) {
@@ -24,29 +32,79 @@ class SendEmailService {
       throw new Error("Este lead não possui um endereço de e-mail registado.");
     }
 
-    const { data, error } = await resend.emails.send({
-      from: process.env.EMAIL_FROM as string, 
-      to: lead.email, 
-      subject: subject,
-      html: `<p>${body.replace(/\n/g, '<br/>')}</p>`, 
-    });
+    const formattedBody = body.replace(/\n/g, "<br/>");
+    let messageId = "";
+    let providerUsed = "";
 
-    if (error) {
-      console.error("Erro no Resend:", error);
-      throw new Error("Falha ao enviar o e-mail pela API do Resend.");
+    if (user.resendApiKey) {
+      try {
+        const resendInstance = new Resend(user.resendApiKey);
+        const { data, error } = await resendInstance.emails.send({
+          from: user.email,
+          to: lead.email,
+          subject: subject,
+          html: `<div>${formattedBody}</div>`,
+        });
+
+        if (!error && data) {
+          messageId = data.id;
+          providerUsed = "RESEND";
+        }
+      } catch (err) {
+        console.error("Falha no envio via resend:", err);
+      }
+    }
+
+    if (!messageId && user.brevoApiKey) {
+      try {
+        const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+          method: "POST",
+          headers: {
+            accept: "application/json",
+            "api-key": user.brevoApiKey,
+            "content-type": "application/json",
+          },
+
+          body: JSON.stringify({
+            sender: { name: user.name, email: user.email },
+            to: [{ email: lead.email }],
+            subject: subject,
+            htmlContent: formattedBody,
+          }),
+        });
+
+        if (response.ok) {
+          const brevoData = await response.json();
+          messageId = brevoData.messageId;
+          providerUsed = "BREVO";
+        }
+      } catch (err) {
+        console.error("Falha no envio via BREVO:", err);
+      }
+    }
+
+    if (!messageId) {
+      throw new Error(
+        "Não foi possível enviar o email por nenhum dos provedores",
+      );
     }
 
     const contact = await prismaClient.contact.create({
       data: {
         leadId: leadId,
         userId: userId,
-        type: 'EMAIL',
-        date: new Date(), 
-        description: `Assunto: ${subject}\n\nMensagem:\n${body}`,
-      }
+        type: "EMAIL",
+        date: new Date(),
+        description: `Enviado via ${providerUsed}\nAssunto: ${subject}\n\nMensagem:\n${body}`,
+      },
     });
 
-    return { success: true, messageId: data?.id, contact };
+    return {
+      success: true,
+      messageId: messageId,
+      provider: providerUsed,
+      contact,
+    };
   }
 }
 

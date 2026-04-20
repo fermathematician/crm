@@ -74,7 +74,9 @@ interface ApiContact {
   id: string;
   type: "EMAIL" | "CALL" | "MEETING" | "NOTE" | "REMINDER" | "SYSTEM_CHANGE";
   date: string;
-  desc: string;
+  description: string; //estava description e quebrava quando recebia um descriptionri´ption
+  leadId?: string;
+  userId?: string;
 }
 
 interface ApiLead {
@@ -374,7 +376,7 @@ export function Dashboard() {
   async function createHistoryLog(
     leadId: string,
     type: string,
-    desc: string,
+    description: string,
     didChangeFunnel: boolean = false,
   ) {
     const token = localStorage.getItem("token");
@@ -386,7 +388,12 @@ export function Dashboard() {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ type, date: dateStr, desc, didChangeFunnel }),
+        body: JSON.stringify({
+          type,
+          date: dateStr,
+          description,
+          didChangeFunnel,
+        }),
       });
     } catch (err) {
       console.error(err);
@@ -408,7 +415,7 @@ export function Dashboard() {
       id: Date.now().toString(),
       type: interactionType,
       date: formattedDate,
-      desc: textToSave,
+      description: textToSave,
     };
 
     setLeadContacts((prev) => [newContact, ...prev]);
@@ -444,7 +451,7 @@ export function Dashboard() {
           body: JSON.stringify({
             type: interactionType,
             date: formattedDate,
-            desc: textToSave,
+            description: textToSave,
           }),
         },
       );
@@ -479,7 +486,7 @@ export function Dashboard() {
         const result = await response.json();
 
         if (result.contact) {
-          setLeadContacts((prev) => [result.contact, ...prev]);
+          setLeadContacts((prev) => [result.contact, ...(prev || [])]);
         }
 
         setEmailSubject("");
@@ -574,7 +581,7 @@ export function Dashboard() {
                 id: c.id,
                 type: c.type,
                 date: c.date ? c.date.toString().split("T")[0] : "",
-                desc: c.description || c.observation || "",
+                description: c.description || c.observation || "",
               }))
             : [],
         };
@@ -728,13 +735,13 @@ export function Dashboard() {
         tags: [removed.tag],
       });
 
-      const desc = `Funil alterado: ${sourceCol.title} ➔ ${destCol.title}`;
-      createHistoryLog(draggableId, "SYSTEM_CHANGE", desc, true);
+      const description = `Funil alterado: ${sourceCol.title} ➔ ${destCol.title}`;
+      createHistoryLog(draggableId, "SYSTEM_CHANGE", description, true);
       const newLocalContact: ApiContact = {
         id: Date.now().toString(),
         type: "SYSTEM_CHANGE",
         date: getTodayString(),
-        desc,
+        description,
       };
       removed.contacts = [newLocalContact, ...(removed.contacts || [])];
     }
@@ -796,13 +803,18 @@ export function Dashboard() {
         const oldLead = newColumns[colId].leads[leadIndex];
 
         if (oldLead.tag !== editingTag) {
-          const desc = `Etiqueta alterada: [${oldLead.tag}] ➔ [${editingTag}]`;
-          createHistoryLog(selectedLead.id, "SYSTEM_CHANGE", desc, false);
+          const description = `Etiqueta alterada: [${oldLead.tag}] ➔ [${editingTag}]`;
+          createHistoryLog(
+            selectedLead.id,
+            "SYSTEM_CHANGE",
+            description,
+            false,
+          );
           const newLocalContact: ApiContact = {
             id: Date.now().toString(),
             type: "SYSTEM_CHANGE",
             date: getTodayString(),
-            desc,
+            description,
           };
           oldLead.contacts = [newLocalContact, ...(oldLead.contacts || [])];
         }
@@ -811,13 +823,13 @@ export function Dashboard() {
           formattedDateForBackend &&
           oldLead.visitDate !== formattedDateForBackend
         ) {
-          const desc = `Visita agendada para: ${editingVisitDate}`;
-          createHistoryLog(selectedLead.id, "MEETING", desc, false);
+          const description = `Visita agendada para: ${editingVisitDate}`;
+          createHistoryLog(selectedLead.id, "MEETING", description, false);
           const newLocalContact: ApiContact = {
             id: (Date.now() + 1).toString(),
             type: "MEETING",
             date: getTodayString(),
-            desc,
+            description,
           };
           oldLead.contacts = [newLocalContact, ...(oldLead.contacts || [])];
         }
@@ -1032,7 +1044,7 @@ export function Dashboard() {
             {contactsToday.map((c, i) => (
               <div
                 key={i}
-                title={c.desc}
+                title={c.description}
                 className={`w-2 h-2 rounded-full ${
                   c.type === "EMAIL"
                     ? "bg-blue-500"
@@ -1253,7 +1265,7 @@ export function Dashboard() {
                                   Em:{" "}
                                   {reverseStageMap[
                                     getLeadColumnId(lead.id) || ""
-                                  ] || "Desconhecido"}
+                                  ] || "descriptiononhecido"}
                                 </p>
                               </div>
                               <Badge
@@ -1611,7 +1623,7 @@ export function Dashboard() {
                   <span className="font-semibold">
                     {selectedLead
                       ? reverseStageMap[getLeadColumnId(selectedLead.id) || ""]
-                      : "Desconhecido"}
+                      : "descriptiononhecido"}
                   </span>
                 </span>
               </p>
@@ -1735,11 +1747,14 @@ export function Dashboard() {
                             );
 
                             let subjectTitle = "Sem Assunto";
-                            let emailBody = contact.desc;
+                            let emailBody = contact.description;
 
-                            if (isEmail && contact.desc.includes("Assunto:")) {
+                            if (
+                              isEmail &&
+                              contact.description.includes("Assunto:")
+                            ) {
                               const parts =
-                                contact.desc.split("\n\nMensagem:\n");
+                                contact.description.split("\n\nMensagem:\n");
                               if (parts.length === 2) {
                                 subjectTitle = parts[0].replace(
                                   "Assunto: ",
@@ -1828,7 +1843,7 @@ export function Dashboard() {
                                     </div>
                                   ) : (
                                     <p className="text-sm text-foreground/80 whitespace-pre-wrap mt-1">
-                                      {contact.desc}
+                                      {contact.description}
                                     </p>
                                   )}
                                 </div>
