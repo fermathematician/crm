@@ -716,7 +716,14 @@ export function Dashboard() {
 
   function onDragEnd(result: DropResult) {
     const { source, destination, draggableId } = result;
-    if (!destination) return;
+    console.log("=== EVENTO DE ARRASTO ===");
+    console.log("ID do Lead:", draggableId);
+    console.log("Origem:", source.droppableId);
+    console.log("Destino:", destination?.droppableId || "FORA DE UMA COLUNA");
+    if (!destination) {
+      console.warn("O card foi solto fora de qualquer área de drop!");
+      return;
+    }
     if (
       source.droppableId === destination.droppableId &&
       source.index === destination.index
@@ -1090,6 +1097,15 @@ export function Dashboard() {
     (c) => c.type !== "SYSTEM_CHANGE",
   );
 
+  const verticalCols = [
+    "novos",
+    "contato",
+    "negociacao",
+    "cadastro",
+    "finalizado",
+  ];
+  const horizontalCols = ["arquivo", "fora_de_perfil"];
+
   //Inserindo funcao pra padronizar colunas
   const renderLeadCard = (lead: Lead, index: number, isHorizontal: boolean) => (
     <Draggable key={lead.id} draggableId={lead.id} index={index}>
@@ -1104,8 +1120,9 @@ export function Dashboard() {
           }}
           className={
             isHorizontal
-              ? "w-48 shrink-0 bg-background border border-border rounded-md p-3 shadow-sm flex flex-col gap-1 opacity-70 hover:opacity-100 cursor-pointer"
-              : `cursor-grab active:cursor-grabbing hover:shadow-md transition-all border-l-4 ${tagColors[lead.tag] || "border-l-gray-500"} ${snapshot.isDragging ? "opacity-90 scale-105 shadow-xl rotate-2" : ""}`
+              ? "w-48 h-fit shrink-0 bg-background border border-border rounded-md p-3 shadow-sm flex flex-col gap-1 opacity-70 hover:opacity-100 cursor-pointer"
+              : // ADICIONEI: bg-card, p-3, rounded-md e border para dar formato de card na vertical
+                `w-full h-fit box-border bg-card border border-border rounded-md p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-all border-l-4 ${tagColors[lead.tag] || "border-l-gray-500"} ${snapshot.isDragging ? "opacity-90 scale-105 shadow-xl rotate-2 z-50" : ""}`
           }
         >
           <div className="flex justify-between items-start mb-2">
@@ -1137,6 +1154,67 @@ export function Dashboard() {
       )}
     </Draggable>
   );
+
+  const renderColumn = (colId: string, isHorizontal: boolean) => {
+    const column = columns[colId];
+    if (!column) return null;
+
+    return (
+      <div
+        key={colId}
+        className={`flex flex-col h-full rounded-xl border border-border bg-card/40 ${
+          isHorizontal ? "h-32 border-dashed w-full" : ""
+        }`}
+      >
+        {/*Cabeçalho*/}
+        <div className="p-3 border-b border-border bg-accent/30 flex justify-between items-center">
+          <h3 className="font-bold text-sm uppercase tracking-wider">
+            {column.title}
+          </h3>
+          <Badge variant="secondary" className="text-xs">
+            {column.leads.length}
+          </Badge>
+        </div>
+
+        {/*Area de arrastar*/}
+        <Droppable
+          droppableId={colId}
+          direction={isHorizontal ? "horizontal" : "vertical"}
+        >
+          {(provided, snapshot) => (
+            <div
+              {...provided.droppableProps}
+              ref={provided.innerRef}
+              className={`flex-1 flex p-2 ${
+                isHorizontal
+                  ? "flex-row gap-4 items-center min-h-[120px] overflow-x-auto"
+                  : // REMOVI o items-stretch e deixei o gap-3 para separar os cards
+                    "flex-col gap-3 overflow-y-auto overflow-x-hidden min-h-[150px]"
+              }`}
+            >
+              {column.leads.map((lead, index) =>
+                renderLeadCard(lead, index, isHorizontal),
+              )}
+              {provided.placeholder}
+              {/* Botao de carregar mais*/}
+              {!isHorizontal && columnHasMore[colId] && (
+                <div className="pt-2 pb-1 flex justify-center w-full">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full border border-dashed border-border"
+                    onClick={() => loadMoreLeads(colId)}
+                  >
+                    Carregar mais...
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </Droppable>
+      </div>
+    );
+  };
 
   return (
     <div className="h-screen w-full flex bg-background text-foreground transition-colors duration-300 overflow-hidden">
@@ -1382,174 +1460,17 @@ export function Dashboard() {
             </Button>
           </div>
         </header>
-
-        <main className="flex-1 p-6 overflow-hidden flex flex-col bg-background/50">
+        {/*Começa aqui as colunas*/}
+        <main className="flex-1 p-6 flex flex-col bg-background/50 overflow-hidden">
           <DragDropContext onDragEnd={onDragEnd}>
-            <div className="flex flex-col h-full gap-4">
-              <div className="flex-1 grid grid-cols-5 gap-4 min-h-0">
-                {[
-                  "novos",
-                  "contato",
-                  "negociacao",
-                  "cadastro",
-                  "finalizado",
-                ].map((colId) => {
-                  const column = columns[colId];
-                  return (
-                    <div
-                      key={colId}
-                      className="flex flex-col h-full rounded-xl border border-border bg-card/40 overflow-hidden"
-                    >
-                      <div className="p-3 border-b border-border bg-accent/30 flex justify-between items-center">
-                        <h3 className="font-bold text-sm uppercase tracking-wider">
-                          {column.title}
-                        </h3>
-                        <Badge variant="secondary" className="text-xs">
-                          {column.leads.length}
-                        </Badge>
-                      </div>
-
-                      <Droppable droppableId={colId}>
-                        {(provided, snapshot) => (
-                          <div
-                            {...provided.droppableProps}
-                            ref={provided.innerRef}
-                            className={`flex-1 p-2 space-y-2 overflow-y-auto transition-colors ${
-                              snapshot.isDraggingOver ? "bg-accent/20" : ""
-                            }`}
-                          >
-                            {column.leads.map((lead, index) => (
-                              <Draggable
-                                key={lead.id}
-                                draggableId={lead.id}
-                                index={index}
-                              >
-                                {(provided, snapshot) => (
-                                  <Card
-                                    ref={provided.innerRef}
-                                    {...provided.draggableProps}
-                                    {...provided.dragHandleProps}
-                                    onDoubleClick={() => {
-                                      setSelectedLead(lead);
-                                      setIsSmallModalOpen(true);
-                                    }}
-                                    className={`
-                                      cursor-grab active:cursor-grabbing hover:shadow-md transition-all border-l-4
-                                      ${tagColors[lead.tag] || "border-l-gray-500"} 
-                                      ${snapshot.isDragging ? "opacity-90 scale-105 shadow-xl rotate-2" : ""}
-                                    `}
-                                  >
-                                    <CardContent className="p-3">
-                                      <div className="flex justify-between items-start mb-2">
-                                        <span className="font-semibold text-sm line-clamp-1">
-                                          {lead.name}
-                                        </span>
-                                        <GripVertical
-                                          size={14}
-                                          className="text-muted-foreground/50 shrink-0"
-                                        />
-                                      </div>
-
-                                      <div className="flex justify-between items-end mt-2">
-                                        <Badge
-                                          variant="outline"
-                                          className="text-[10px] px-1 py-0 h-5 font-normal uppercase"
-                                        >
-                                          {lead.tag}
-                                        </Badge>
-
-                                        {lead.visitDate && (
-                                          <div className="flex items-center gap-1.5 text-[11px] font-bold text-blue-700 bg-blue-100 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30 px-2 py-0.5 rounded-md shadow-sm">
-                                            <CalendarIcon
-                                              size={12}
-                                              strokeWidth={2.5}
-                                            />
-                                            {formatDisplayDate(lead.visitDate)}
-                                          </div>
-                                        )}
-                                      </div>
-                                    </CardContent>
-                                  </Card>
-                                )}
-                              </Draggable>
-                            ))}
-                            {provided.placeholder}
-                            {columnHasMore[colId] && (
-                              <div className="pt-2 pb-1 flex justify-center w-full">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="w-full border border-dashed border-border text-muted-foreground hover:text-primary hover:bg-primary/10"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    loadMoreLeads(colId);
-                                  }}
-                                >
-                                  Carregar mais...
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </Droppable>
-                    </div>
-                  );
-                })}
+            <div className="flex flex-col gap-4 h-full">
+              {/*Verticais*/}
+              <div className="flex-1 grid grid-cols-5 gap-1 min-h-0">
+                {verticalCols.map((id) => renderColumn(id, false))}
               </div>
-              <div className="grid grid-cols-2 gap-4 shrink-0 mt-auto">
-                {/* Coluna deitada */}
-                <div className="h-32 rounded-xl border border-border border-dashed bg-card/20 flex flex-col shrink-0 mb-4">
-                  <div className="p-2 px-4 border-b border-border/50 flex items-center gap-2">
-                    <span className="text-xs font-bold uppercase text-muted-foreground">
-                      Sem Interesse / Fora de Perfil
-                    </span>
-                  </div>
-
-                  <Droppable droppableId="arquivo" direction="horizontal">
-                    {(provided, snapshot) => (
-                      <div
-                        {...provided.droppableProps}
-                        ref={provided.innerRef}
-                        className={`flex-1 p-2 flex gap-4 overflow-x-auto items-center ${
-                          snapshot.isDraggingOver ? "bg-red-500/10" : ""
-                        }`}
-                      >
-                        {columns["arquivo"].leads.map((lead, index) =>
-                          renderLeadCard(lead, index, true),
-                        )}
-                        {provided.placeholder}
-                      </div>
-                    )}
-                  </Droppable>
-                </div>
-                {/* Outra coluna */}
-                <div className="h-32 rounded-xl border border-border border-dashed bg-card/20 flex flex-col shrink-0">
-                  <div className="p-2 px-4 border-b border-border/50 flex items-center gap-2">
-                    <span className="text-xs font-bold uppercase text-muted-foreground">
-                      Fora de Perfil
-                    </span>
-                  </div>
-
-                  <Droppable
-                    droppableId="fora_de_perfil"
-                    direction="horizontal"
-                  >
-                    {(provided, snapshot) => (
-                      <div
-                        {...provided.droppableProps}
-                        ref={provided.innerRef}
-                        className={`flex-1 p-2 flex gap-4 overflow-x-auto items-center ${
-                          snapshot.isDraggingOver ? "bg-red-500/10" : ""
-                        }`}
-                      >
-                        {columns["fora_de_perfil"].leads.map((lead, index) =>
-                          renderLeadCard(lead, index, true),
-                        )}
-                        {provided.placeholder}
-                      </div>
-                    )}
-                  </Droppable>
-                </div>
+              {/*Horizontais*/}
+              <div className="grid grid-cols-2 gap-4 shrink-0 mt-auto pb-2">
+                {horizontalCols.map((id) => renderColumn(id, true))}
               </div>
             </div>
           </DragDropContext>
