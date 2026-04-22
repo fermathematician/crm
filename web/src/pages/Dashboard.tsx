@@ -68,6 +68,7 @@ type LeadTag =
   | "aprovado"
   | "recusado"
   | "sem interesse"
+  | "fora de perfil"
   | "novo";
 
 interface ApiContact {
@@ -88,7 +89,8 @@ interface ApiLead {
     | "NEGOCIACAO"
     | "CADASTRO"
     | "FINALIZADO"
-    | "SEM_INTERESSE";
+    | "SEM_INTERESSE"
+    | "FORA_DE_PERFIL";
   tags: string[];
   phone: string | null;
   visitDate: string | null;
@@ -108,6 +110,7 @@ const reverseStageMap: Record<string, string> = {
   cadastro: "CADASTRO",
   finalizado: "FINALIZADO",
   arquivo: "SEM_INTERESSE",
+  fora_de_perfil: "FORA_DE_PERFIL",
 };
 
 const tagColors: Record<LeadTag, string> = {
@@ -123,6 +126,7 @@ const tagColors: Record<LeadTag, string> = {
   aprovado: "bg-green-600 border-green-700",
   recusado: "bg-rose-600 border-rose-700",
   "sem interesse": "bg-zinc-600 border-zinc-700",
+  "fora de perfil": "bg-zinc-600 border-zinc-700",
 };
 
 const columnDefaultTags: Record<string, LeadTag> = {
@@ -132,6 +136,7 @@ const columnDefaultTags: Record<string, LeadTag> = {
   cadastro: "promessa",
   finalizado: "aprovado",
   arquivo: "sem interesse",
+  fora_de_perfil: "fora de perfil",
 };
 
 const columnAllowedTags: Record<string, LeadTag[]> = {
@@ -141,6 +146,7 @@ const columnAllowedTags: Record<string, LeadTag[]> = {
   cadastro: ["promessa", "parcial", "completa"],
   finalizado: ["aprovado", "recusado"],
   arquivo: ["sem interesse"],
+  fora_de_perfil: ["fora de perfil"],
 };
 
 interface Lead {
@@ -171,6 +177,7 @@ const emptyBoard: Record<string, Column> = {
   cadastro: { id: "cadastro", title: "Cadastro", leads: [] },
   finalizado: { id: "finalizado", title: "Finalizado", leads: [] },
   arquivo: { id: "arquivo", title: "Sem Interesse", leads: [] },
+  fora_de_perfil: { id: "fora_de_perfil", title: "Fora de Perfil", leads: [] },
 };
 
 interface Notification {
@@ -1441,53 +1448,116 @@ export function Dashboard() {
                   );
                 })}
               </div>
+              <div className="grid grid-cols-2 gap-4 shrink-0 mt-auto">
+                {/* Coluna deitada */}
+                <div className="h-32 rounded-xl border border-border border-dashed bg-card/20 flex flex-col shrink-0 mb-4">
+                  <div className="p-2 px-4 border-b border-border/50 flex items-center gap-2">
+                    <span className="text-xs font-bold uppercase text-muted-foreground">
+                      Sem Interesse / Fora de Perfil
+                    </span>
+                  </div>
 
-              <div className="h-32 rounded-xl border border-border border-dashed bg-card/20 flex flex-col shrink-0">
-                <div className="p-2 px-4 border-b border-border/50 flex items-center gap-2">
-                  <span className="text-xs font-bold uppercase text-muted-foreground">
-                    Sem Interesse / Fora de Perfil
-                  </span>
-                </div>
-
-                <Droppable droppableId="arquivo" direction="horizontal">
-                  {(provided, snapshot) => (
-                    <div
-                      {...provided.droppableProps}
-                      ref={provided.innerRef}
-                      className={`flex-1 p-2 flex gap-4 overflow-x-auto items-center ${
-                        snapshot.isDraggingOver ? "bg-red-500/10" : ""
-                      }`}
-                    >
-                      {columns["arquivo"].leads.map((lead, index) => (
-                        <Draggable
-                          key={lead.id}
-                          draggableId={lead.id}
-                          index={index}
-                        >
-                          {(provided) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              className="w-48 bg-background border border-border rounded-md p-3 shadow-sm flex flex-col gap-1 opacity-70 hover:opacity-100"
-                            >
-                              <span className="font-bold text-xs truncate">
-                                {lead.name}
-                              </span>
-                              <Badge
-                                variant="secondary"
-                                className="text-[10px] w-fit"
+                  <Droppable droppableId="arquivo" direction="horizontal">
+                    {(provided, snapshot) => (
+                      <div
+                        {...provided.droppableProps}
+                        ref={provided.innerRef}
+                        className={`flex-1 p-2 flex gap-4 overflow-x-auto items-center ${
+                          snapshot.isDraggingOver ? "bg-red-500/10" : ""
+                        }`}
+                      >
+                        {columns["arquivo"].leads.map((lead, index) => (
+                          <Draggable
+                            key={lead.id}
+                            draggableId={lead.id}
+                            index={index}
+                          >
+                            {(provided) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                /* adicionando manulamente on clicked*/
+                                onDoubleClick={() => {
+                                  setSelectedLead(lead);
+                                  setIsSmallModalOpen(true);
+                                }}
+                                className="w-48 bg-background border border-border rounded-md p-3 shadow-sm flex flex-col gap-1 opacity-70 hover:opacity-100"
                               >
-                                {lead.tag}
-                              </Badge>
-                            </div>
-                          )}
-                        </Draggable>
-                      ))}
-                      {provided.placeholder}
-                    </div>
-                  )}
-                </Droppable>
+                                <span className="font-bold text-xs truncate">
+                                  {lead.name}
+                                </span>
+                                <Badge
+                                  variant="secondary"
+                                  className="text-[10px] w-fit"
+                                >
+                                  {lead.tag}
+                                </Badge>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </div>
+                {/* Outra coluna */}
+                <div className="h-32 rounded-xl border border-border border-dashed bg-card/20 flex flex-col shrink-0">
+                  <div className="p-2 px-4 border-b border-border/50 flex items-center gap-2">
+                    <span className="text-xs font-bold uppercase text-muted-foreground">
+                      Fora de Perfil
+                    </span>
+                  </div>
+
+                  <Droppable
+                    droppableId="fora_de_perfil"
+                    direction="horizontal"
+                  >
+                    {(provided, snapshot) => (
+                      <div
+                        {...provided.droppableProps}
+                        ref={provided.innerRef}
+                        className={`flex-1 p-2 flex gap-4 overflow-x-auto items-center ${
+                          snapshot.isDraggingOver ? "bg-red-500/10" : ""
+                        }`}
+                      >
+                        {columns["fora_de_perfil"].leads.map((lead, index) => (
+                          <Draggable
+                            key={lead.id}
+                            draggableId={lead.id}
+                            index={index}
+                          >
+                            {(provided) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                /* adicionando manulamente on clicked*/
+                                onDoubleClick={() => {
+                                  setSelectedLead(lead);
+                                  setIsSmallModalOpen(true);
+                                }}
+                                className="w-48 bg-background border border-border rounded-md p-3 shadow-sm flex flex-col gap-1 opacity-70 hover:opacity-100"
+                              >
+                                <span className="font-bold text-xs truncate">
+                                  {lead.name}
+                                </span>
+                                <Badge
+                                  variant="secondary"
+                                  className="text-[10px] w-fit"
+                                >
+                                  {lead.tag}
+                                </Badge>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </div>
               </div>
             </div>
           </DragDropContext>
