@@ -1090,6 +1090,54 @@ export function Dashboard() {
     (c) => c.type !== "SYSTEM_CHANGE",
   );
 
+  //Inserindo funcao pra padronizar colunas
+  const renderLeadCard = (lead: Lead, index: number, isHorizontal: boolean) => (
+    <Draggable key={lead.id} draggableId={lead.id} index={index}>
+      {(provided, snapshot) => (
+        <div
+          ref={provided.innerRef}
+          {...provided.draggableProps}
+          {...provided.dragHandleProps}
+          onDoubleClick={() => {
+            setSelectedLead(lead);
+            setIsSmallModalOpen(true);
+          }}
+          className={
+            isHorizontal
+              ? "w-48 shrink-0 bg-background border border-border rounded-md p-3 shadow-sm flex flex-col gap-1 opacity-70 hover:opacity-100 cursor-pointer"
+              : `cursor-grab active:cursor-grabbing hover:shadow-md transition-all border-l-4 ${tagColors[lead.tag] || "border-l-gray-500"} ${snapshot.isDragging ? "opacity-90 scale-105 shadow-xl rotate-2" : ""}`
+          }
+        >
+          <div className="flex justify-between items-start mb-2">
+            <span className="font-semibold text-sm line-clamp-1">
+              {lead.name}
+            </span>
+            {!isHorizontal && (
+              <GripVertical
+                size={14}
+                className="text-muted-foreground/50 shrink-0"
+              />
+            )}
+          </div>
+          <div className="flex justify-between items-end mt-2">
+            <Badge
+              variant="outline"
+              className="text-[10px] px-1 py-0 h-5 font-normal uppercase"
+            >
+              {lead.tag}
+            </Badge>
+            {!isHorizontal && lead.visitDate && (
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-blue-700 bg-blue-100 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30 px-2 py-0.5 rounded-md shadow-sm">
+                <CalendarIcon size={12} strokeWidth={2.5} />
+                {formatDisplayDate(lead.visitDate)}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </Draggable>
+  );
+
   return (
     <div className="h-screen w-full flex bg-background text-foreground transition-colors duration-300 overflow-hidden">
       {/* --- SIDEBAR NOTIFICAÇÕES (AJUSTADA COM SCROLL CORRETO) --- */}
@@ -1466,37 +1514,9 @@ export function Dashboard() {
                           snapshot.isDraggingOver ? "bg-red-500/10" : ""
                         }`}
                       >
-                        {columns["arquivo"].leads.map((lead, index) => (
-                          <Draggable
-                            key={lead.id}
-                            draggableId={lead.id}
-                            index={index}
-                          >
-                            {(provided) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                {...provided.dragHandleProps}
-                                /* adicionando manulamente on clicked*/
-                                onDoubleClick={() => {
-                                  setSelectedLead(lead);
-                                  setIsSmallModalOpen(true);
-                                }}
-                                className="w-48 bg-background border border-border rounded-md p-3 shadow-sm flex flex-col gap-1 opacity-70 hover:opacity-100"
-                              >
-                                <span className="font-bold text-xs truncate">
-                                  {lead.name}
-                                </span>
-                                <Badge
-                                  variant="secondary"
-                                  className="text-[10px] w-fit"
-                                >
-                                  {lead.tag}
-                                </Badge>
-                              </div>
-                            )}
-                          </Draggable>
-                        ))}
+                        {columns["arquivo"].leads.map((lead, index) =>
+                          renderLeadCard(lead, index, true),
+                        )}
                         {provided.placeholder}
                       </div>
                     )}
@@ -1522,37 +1542,9 @@ export function Dashboard() {
                           snapshot.isDraggingOver ? "bg-red-500/10" : ""
                         }`}
                       >
-                        {columns["fora_de_perfil"].leads.map((lead, index) => (
-                          <Draggable
-                            key={lead.id}
-                            draggableId={lead.id}
-                            index={index}
-                          >
-                            {(provided) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                {...provided.dragHandleProps}
-                                /* adicionando manulamente on clicked*/
-                                onDoubleClick={() => {
-                                  setSelectedLead(lead);
-                                  setIsSmallModalOpen(true);
-                                }}
-                                className="w-48 bg-background border border-border rounded-md p-3 shadow-sm flex flex-col gap-1 opacity-70 hover:opacity-100"
-                              >
-                                <span className="font-bold text-xs truncate">
-                                  {lead.name}
-                                </span>
-                                <Badge
-                                  variant="secondary"
-                                  className="text-[10px] w-fit"
-                                >
-                                  {lead.tag}
-                                </Badge>
-                              </div>
-                            )}
-                          </Draggable>
-                        ))}
+                        {columns["fora_de_perfil"].leads.map((lead, index) =>
+                          renderLeadCard(lead, index, true),
+                        )}
                         {provided.placeholder}
                       </div>
                     )}
