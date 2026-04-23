@@ -127,6 +127,7 @@ enum FunnelStage {
   CADASTRO
   FINALIZADO
   SEM_INTERESSE
+  FORA_DE_PERFIL
 }
 
 enum ContactType {
