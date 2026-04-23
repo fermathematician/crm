@@ -1208,7 +1208,7 @@ export function Dashboard() {
       <div
         key={colId}
         className={`flex flex-col h-full rounded-xl border border-border bg-card/40 ${
-          isHorizontal ? "h-24 border-dashed w-full" : ""
+          isHorizontal ? "h-26 border-dashed w-full" : ""
         }`}
       >
         {/*Cabeçalho*/}
