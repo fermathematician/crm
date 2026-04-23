@@ -115,18 +115,18 @@ const reverseStageMap: Record<string, string> = {
 
 const tagColors: Record<LeadTag, string> = {
   novo: "bg-slate-500 border-slate-600",
-  "a contactar": "bg-blue-500 border-blue-600",
+  "a contactar": "bg-zinc-300 border-zinc-400",
   "sem resposta": "bg-gray-400 border-gray-500",
   frio: "bg-cyan-500 border-cyan-600",
   morno: "bg-orange-400 border-orange-500",
   quente: "bg-red-500 border-red-600",
-  promessa: "bg-purple-500 border-purple-600",
-  parcial: "bg-yellow-400 border-yellow-500",
-  completa: "bg-emerald-500 border-emerald-600",
+  promessa: "bg-indigo-300 border-indigo-400",
+  parcial: "bg-indigo-400 border-indigo-500",
+  completa: "bg-indigo-500 border-indigo-600",
   aprovado: "bg-green-600 border-green-700",
   recusado: "bg-rose-600 border-rose-700",
-  "sem interesse": "bg-zinc-600 border-zinc-700",
-  "fora de perfil": "bg-zinc-600 border-zinc-700",
+  "sem interesse": "bg-blue-600 border-zinc-700",
+  "fora de perfil": "bg-purple-200 border-zinc-500",
 };
 
 const columnDefaultTags: Record<string, LeadTag> = {
