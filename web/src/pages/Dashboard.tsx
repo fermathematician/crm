@@ -1218,12 +1218,12 @@ export function Dashboard() {
 
           {/*Filtro de colunas*/}
           {!isHorizontal && (
-            <div className="px-2 pb-2 flex flex-wrap gap-1">
+            <div className="px-2 pb-2 flex flex-wrap gap-1 h-[30px]">
               <button
                 onClick={() =>
                   setSelectedTags((prev) => ({ ...prev, [colId]: "todas" }))
                 }
-                className={`text-[9px] px-1.5 py-0.5 rounded border font-bold transition-all ${
+                className={`text-[7px] px-1 py-0.5 rounded border font-bold transition-all ${
                   selectedTags[colId] === "todas"
                     ? "bg-primary text-primary-foreground border-primary"
                     : "bg-background/50 text-muted-foreground border-border hover:bg-background"
@@ -1237,7 +1237,7 @@ export function Dashboard() {
                   onClick={() =>
                     setSelectedTags((prev) => ({ ...prev, [colId]: tag }))
                   }
-                  className={`text-[9px] px-1.5 py-0.5 rounded border font-bold transition-all uppercase ${
+                  className={`text-[7px] px-1 py-0.5 rounded border font-bold transition-all uppercase ${
                     selectedTags[colId] === tag
                       ? `${tagColors[tag]} text-white border-transparent shadow-sm`
                       : "bg-background/50 text-muted-foreground border-border hover:bg-background"
@@ -1251,7 +1251,7 @@ export function Dashboard() {
         </div>
 
         {!isHorizontal && (
-          <div className="px-2 pb-2">
+          <div className="px-2 pb-2 pt-1 w-full">
             <div className="relative w-full">
               <AlignLeft className="absolute left-2 top-2 h-3.5 w-3.5 text-muted-foreground/50" />
               <Input
@@ -1513,7 +1513,7 @@ export function Dashboard() {
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="w-full p-4 px-6 border-b border-border flex justify-between items-center bg-card/50 backdrop-blur-sm">
+        <header className="w-full py-2 px-6 border-b border-border flex justify-between items-center bg-card/50 backdrop-blur-sm">
           <h1 className="text-xl font-bold tracking-tight text-primary w-1/4">
             O.S.{" "}
             <span className="text-foreground font-normal">
@@ -1553,7 +1553,7 @@ export function Dashboard() {
           </div>
         </header>
         {/*Começa aqui as colunas*/}
-        <main className="flex-1 p-6 flex flex-col bg-background/50 overflow-hidden">
+        <main className="flex-1 p-3 flex flex-col bg-background/50 overflow-hidden">
           <DragDropContext onDragEnd={onDragEnd}>
             <div className="flex flex-col gap-4 h-full">
               {/*Verticais*/}
