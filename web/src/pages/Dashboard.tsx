@@ -1120,9 +1120,9 @@ export function Dashboard() {
           }}
           className={
             isHorizontal
-              ? "w-48 h-fit shrink-0 bg-background border border-border rounded-md p-3 shadow-sm flex flex-col gap-1 opacity-70 hover:opacity-100 cursor-pointer"
+              ? "w-40 h-fit shrink-0 bg-background border border-border rounded-md p-1 shadow-sm flex flex-col gap-0 opacity-70 hover:opacity-100 cursor-pointer"
               : // ADICIONEI: bg-card, p-3, rounded-md e border para dar formato de card na vertical
-                `w-full h-fit box-border bg-card border border-border rounded-md p-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-all border-l-4 ${tagColors[lead.tag] || "border-l-gray-500"} ${snapshot.isDragging ? "opacity-90 scale-105 shadow-xl rotate-2 z-50" : ""}`
+                `w-full h-fit box-border bg-card border border-border rounded-md p-2 cursor-grab active:cursor-grabbing hover:shadow-md transition-all border-l-4 ${tagColors[lead.tag] || "border-l-gray-500"} ${snapshot.isDragging ? "opacity-90 scale-105 shadow-xl rotate-2 z-50" : ""}`
           }
         >
           <div className="flex justify-between items-start mb-2">
@@ -1163,11 +1163,11 @@ export function Dashboard() {
       <div
         key={colId}
         className={`flex flex-col h-full rounded-xl border border-border bg-card/40 ${
-          isHorizontal ? "h-32 border-dashed w-full" : ""
+          isHorizontal ? "h-29 border-dashed w-full" : ""
         }`}
       >
         {/*Cabeçalho*/}
-        <div className="p-3 border-b border-border bg-accent/30 flex justify-between items-center">
+        <div className="p-2 border-b border-border bg-accent/30 flex justify-between items-center">
           <h3 className="font-bold text-sm uppercase tracking-wider">
             {column.title}
           </h3>
@@ -1185,9 +1185,9 @@ export function Dashboard() {
             <div
               {...provided.droppableProps}
               ref={provided.innerRef}
-              className={`flex-1 flex p-2 ${
+              className={`flex-1 flex p-1 ${
                 isHorizontal
-                  ? "flex-row gap-4 items-center min-h-[120px] overflow-x-auto"
+                  ? "flex-row gap-4 items-center min-h-0 overflow-x-auto"
                   : // REMOVI o items-stretch e deixei o gap-3 para separar os cards
                     "flex-col gap-3 overflow-y-auto overflow-x-hidden min-h-[150px]"
               }`}
