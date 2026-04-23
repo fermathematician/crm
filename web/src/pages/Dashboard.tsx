@@ -1143,7 +1143,7 @@ export function Dashboard() {
           }}
           className={
             isHorizontal
-              ? `w-40 h-fit shrink-0 rounded-md p-1 shadow-sm flex flex-col gap-0 opacity-70 hover:opacity-100 cursor-pointer border ${
+              ? `w-40 h-12 shrink-0 rounded-md p-1 shadow-sm flex flex-col gap-0 opacity-70 hover:opacity-100 cursor-pointer border ${
                   tagColors[lead.tag] || "bg-background border-border"
                 }`
               : // ADICIONEI: bg-card, p-3, rounded-md e border para dar formato de card na vertical
@@ -1152,7 +1152,11 @@ export function Dashboard() {
                 } ${snapshot.isDragging ? "opacity-90 scale-105 shadow-xl rotate-2 z-50" : ""}`
           }
         >
-          <div className="flex justify-between items-start mb-2">
+          <div
+            className={`flex justify-between items-start ${
+              isHorizontal ? "mb-0" : "mb-1"
+            }`}
+          >
             <span className="font-semibold text-sm line-clamp-1">
               {lead.name}
             </span>
@@ -1163,7 +1167,9 @@ export function Dashboard() {
               />
             )}
           </div>
-          <div className="flex justify-between items-end mt-2">
+          <div
+            className={`flex justify-between items-end ${isHorizontal ? "mt-0.5" : "mt-1"}`}
+          >
             <Badge
               variant="outline"
               className="text-[10px] px-1 py-0 h-5 font-normal uppercase"
@@ -1202,7 +1208,7 @@ export function Dashboard() {
       <div
         key={colId}
         className={`flex flex-col h-full rounded-xl border border-border bg-card/40 ${
-          isHorizontal ? "h-29 border-dashed w-full" : ""
+          isHorizontal ? "h-24 border-dashed w-full" : ""
         }`}
       >
         {/*Cabeçalho*/}
@@ -1312,7 +1318,7 @@ export function Dashboard() {
     <div className="h-screen w-full flex bg-background text-foreground transition-colors duration-300 overflow-hidden">
       {/* --- SIDEBAR NOTIFICAÇÕES (AJUSTADA COM SCROLL CORRETO) --- */}
       <aside className="w-80 border-r border-border bg-card/30 flex flex-col hidden md:flex h-full">
-        <div className="p-6 border-b border-border flex items-center gap-2 shrink-0">
+        <div className="p-4 border-b border-border flex items-center gap-2 shrink-0">
           <Bell className="h-5 w-5 text-primary" />
           <h2 className="font-bold text-lg">Notificações</h2>
           {notifications.length > 0 && (
