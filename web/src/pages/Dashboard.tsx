@@ -125,8 +125,8 @@ const tagColors: Record<LeadTag, string> = {
   completa: "bg-indigo-500 border-indigo-600",
   aprovado: "bg-green-600 border-green-700",
   recusado: "bg-rose-600 border-rose-700",
-  "sem interesse": "bg-blue-600 border-blue-700",
-  "fora de perfil": "bg-purple-200 border-purple-500",
+  "sem interesse": "bg-zinc-500 border-zinc-600",
+  "fora de perfil": "bg-slate-500 border-slate-600",
 };
 
 const columnDefaultTags: Record<string, LeadTag> = {
