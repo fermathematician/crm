@@ -125,8 +125,8 @@ const tagColors: Record<LeadTag, string> = {
   completa: "bg-indigo-500 border-indigo-600",
   aprovado: "bg-green-600 border-green-700",
   recusado: "bg-rose-600 border-rose-700",
-  "sem interesse": "bg-blue-600 border-zinc-700",
-  "fora de perfil": "bg-purple-200 border-zinc-500",
+  "sem interesse": "bg-blue-600 border-blue-700",
+  "fora de perfil": "bg-purple-200 border-purple-500",
 };
 
 const columnDefaultTags: Record<string, LeadTag> = {
@@ -1120,9 +1120,13 @@ export function Dashboard() {
           }}
           className={
             isHorizontal
-              ? "w-40 h-fit shrink-0 bg-background border border-border rounded-md p-1 shadow-sm flex flex-col gap-0 opacity-70 hover:opacity-100 cursor-pointer"
+              ? `w-40 h-fit shrink-0 rounded-md p-1 shadow-sm flex flex-col gap-0 opacity-70 hover:opacity-100 cursor-pointer border ${
+                  tagColors[lead.tag] || "bg-background border-border"
+                }`
               : // ADICIONEI: bg-card, p-3, rounded-md e border para dar formato de card na vertical
-                `w-full h-fit box-border bg-card border border-border rounded-md p-2 cursor-grab active:cursor-grabbing hover:shadow-md transition-all border-l-4 ${tagColors[lead.tag] || "border-l-gray-500"} ${snapshot.isDragging ? "opacity-90 scale-105 shadow-xl rotate-2 z-50" : ""}`
+                `w-full h-fit box-border bg-card border border-border rounded-md p-2 cursor-grab active:cursor-grabbing hover:shadow-md transition-all border-l-4 ${
+                  tagColors[lead.tag] || "border-l-gray-500"
+                } ${snapshot.isDragging ? "opacity-90 scale-105 shadow-xl rotate-2 z-50" : ""}`
           }
         >
           <div className="flex justify-between items-start mb-2">
