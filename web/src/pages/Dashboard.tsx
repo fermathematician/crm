@@ -31,6 +31,7 @@ import {
   Pencil,
   FileText,
   ChevronDown,
+  Search,
 } from "lucide-react";
 import { useTheme } from "../hooks/useTheme";
 
@@ -255,6 +256,28 @@ function getTodayString() {
 export function Dashboard() {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
+
+  const [selectedTags, setSelectedTags] = useState<
+    Record<string, LeadTag | "todas">
+  >({
+    novos: "todas",
+    contato: "todas",
+    negociacao: "todas",
+    cadastro: "todas",
+    finalizado: "todas",
+    arquivo: "todas",
+    fora_de_perfil: "todas",
+  });
+
+  const [columnSearch, setColumnSearch] = useState<Record<string, string>>({
+    novos: "",
+    contato: "",
+    negociacao: "",
+    cadastro: "",
+    finalizado: "",
+    arquivo: "",
+    fora_de_perfil: "",
+  });
 
   const [columns, setColumns] = useState(emptyBoard);
 
@@ -1163,6 +1186,18 @@ export function Dashboard() {
     const column = columns[colId];
     if (!column) return null;
 
+    //leads filtrados por etiqueta
+    const filteredLeads = column.leads.filter((lead) => {
+      const activeFilter = selectedTags[colId];
+      const matchTag = activeFilter === "todas" || lead.tag === activeFilter;
+
+      //leads fitrados por pesquisa
+      const currentSearch = columnSearch[colId].toLowerCase();
+      const matchSearch = lead.name.toLowerCase().includes(currentSearch);
+
+      return matchTag && matchSearch;
+    });
+
     return (
       <div
         key={colId}
@@ -1171,14 +1206,68 @@ export function Dashboard() {
         }`}
       >
         {/*Cabeçalho*/}
-        <div className="p-2 border-b border-border bg-accent/30 flex justify-between items-center">
-          <h3 className="font-bold text-sm uppercase tracking-wider">
-            {column.title}
-          </h3>
-          <Badge variant="secondary" className="text-xs">
-            {column.leads.length}
-          </Badge>
+        <div className="flex flex-col border-b border-border bg-accent/30">
+          <div className="p-2 flex justify-between items-center">
+            <h3 className="font-bold text-sm uppercase tracking-wider">
+              {column.title}
+            </h3>
+            <Badge variant="secondary" className="text-xs">
+              {filteredLeads.length}
+            </Badge>
+          </div>
+
+          {/*Filtro de colunas*/}
+          {!isHorizontal && (
+            <div className="px-2 pb-2 flex flex-wrap gap-1">
+              <button
+                onClick={() =>
+                  setSelectedTags((prev) => ({ ...prev, [colId]: "todas" }))
+                }
+                className={`text-[9px] px-1.5 py-0.5 rounded border font-bold transition-all ${
+                  selectedTags[colId] === "todas"
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background/50 text-muted-foreground border-border hover:bg-background"
+                }`}
+              >
+                TODAS
+              </button>
+              {columnAllowedTags[colId]?.map((tag) => (
+                <button
+                  key={tag}
+                  onClick={() =>
+                    setSelectedTags((prev) => ({ ...prev, [colId]: tag }))
+                  }
+                  className={`text-[9px] px-1.5 py-0.5 rounded border font-bold transition-all uppercase ${
+                    selectedTags[colId] === tag
+                      ? `${tagColors[tag]} text-white border-transparent shadow-sm`
+                      : "bg-background/50 text-muted-foreground border-border hover:bg-background"
+                  }`}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
+
+        {!isHorizontal && (
+          <div className="px-2 pb-2">
+            <div className="relative w-full">
+              <AlignLeft className="absolute left-2 top-2 h-3.5 w-3.5 text-muted-foreground/50" />
+              <Input
+                placeholder="Buscar"
+                value={columnSearch[colId]}
+                onChange={(e) =>
+                  setColumnSearch((prev) => ({
+                    ...prev,
+                    [colId]: e.target.value,
+                  }))
+                }
+                className="h-7 pl-7 text-[11px] bg-background/30 border-border/50 focus-visible:ring-primary/30"
+              />
+            </div>
+          </div>
+        )}
 
         {/*Area de arrastar*/}
         <Droppable
@@ -1192,11 +1281,10 @@ export function Dashboard() {
               className={`flex-1 flex p-1 ${
                 isHorizontal
                   ? "flex-row gap-4 items-center min-h-0 overflow-x-auto"
-                  : // REMOVI o items-stretch e deixei o gap-3 para separar os cards
-                    "flex-col gap-3 overflow-y-auto overflow-x-hidden min-h-[150px]"
+                  : "flex-col gap-3 overflow-y-auto overflow-x-hidden min-h-[150px]"
               }`}
             >
-              {column.leads.map((lead, index) =>
+              {filteredLeads.map((lead, index) =>
                 renderLeadCard(lead, index, isHorizontal),
               )}
               {provided.placeholder}
