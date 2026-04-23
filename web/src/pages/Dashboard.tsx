@@ -1143,7 +1143,7 @@ export function Dashboard() {
           }}
           className={
             isHorizontal
-              ? `w-40 h-12 shrink-0 rounded-md p-1 shadow-sm flex flex-col gap-0 opacity-70 hover:opacity-100 cursor-pointer border ${
+              ? `w-40 h-14 shrink-0 rounded-md p-1 shadow-sm flex flex-col gap-0 opacity-70 hover:opacity-100 cursor-pointer border ${
                   tagColors[lead.tag] || "bg-background border-border"
                 }`
               : // ADICIONEI: bg-card, p-3, rounded-md e border para dar formato de card na vertical
@@ -1208,7 +1208,7 @@ export function Dashboard() {
       <div
         key={colId}
         className={`flex flex-col h-full rounded-xl border border-border bg-card/40 ${
-          isHorizontal ? "h-26 border-dashed w-full" : ""
+          isHorizontal ? "h-28 border-dashed w-full" : ""
         }`}
       >
         {/*Cabeçalho*/}
@@ -1318,7 +1318,7 @@ export function Dashboard() {
     <div className="h-screen w-full flex bg-background text-foreground transition-colors duration-300 overflow-hidden">
       {/* --- SIDEBAR NOTIFICAÇÕES (AJUSTADA COM SCROLL CORRETO) --- */}
       <aside className="w-80 border-r border-border bg-card/30 flex flex-col hidden md:flex h-full">
-        <div className="p-4 border-b border-border flex items-center gap-2 shrink-0">
+        <div className="h-14 px-4 border-b border-border flex items-center gap-2 shrink-0">
           <Bell className="h-5 w-5 text-primary" />
           <h2 className="font-bold text-lg">Notificações</h2>
           {notifications.length > 0 && (
@@ -1519,7 +1519,7 @@ export function Dashboard() {
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="w-full py-2 px-6 border-b border-border flex justify-between items-center bg-card/50 backdrop-blur-sm">
+        <header className="w-full h-14 px-6 border-b border-border flex justify-between items-center bg-card/50 backdrop-blur-sm">
           <h1 className="text-xl font-bold tracking-tight text-primary w-1/4">
             O.S.{" "}
             <span className="text-foreground font-normal">
@@ -1561,7 +1561,7 @@ export function Dashboard() {
         {/*Começa aqui as colunas*/}
         <main className="flex-1 p-3 flex flex-col bg-background/50 overflow-hidden">
           <DragDropContext onDragEnd={onDragEnd}>
-            <div className="flex flex-col gap-4 h-full">
+            <div className="flex flex-col gap-2 h-full">
               {/*Verticais*/}
               <div className="flex-1 grid grid-cols-5 gap-1 min-h-0">
                 {verticalCols.map((id) => renderColumn(id, false))}
