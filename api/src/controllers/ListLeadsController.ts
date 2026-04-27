@@ -1,15 +1,16 @@
-import type { Request, Response } from 'express';
-import { ListLeadsService } from '../services/ListLeadsService.js';
+import type { Request, Response } from "express";
+import { ListLeadsService } from "../services/ListLeadsService.js";
 
 class ListLeadsController {
   async handle(req: Request, res: Response) {
-    
     const userId = req.user_id;
 
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 50;
     const search = (req.query.search as string) || "";
     const stage = (req.query.stage as string) || "ALL";
+    const importBatchId = (req.query.importBatchId as string) || "";
+    const isManual = (req.query.isManual as string) || "";
 
     const listLeadsService = new ListLeadsService();
 
@@ -18,11 +19,13 @@ class ListLeadsController {
       page,
       limit,
       search,
-      stage
+      stage,
+      importBatchId,
+      isManual,
     });
 
     return res.json(result);
   }
 }
 
-export { ListLeadsController }
+export { ListLeadsController };

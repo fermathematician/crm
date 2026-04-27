@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { data, useNavigate } from "react-router-dom";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import type { DropResult } from "@hello-pangea/dnd";
 
@@ -254,6 +254,11 @@ function getTodayString() {
 }
 
 export function Dashboard() {
+  const [selectedBatchId, setSelectedBatchId] = useState<string>("all");
+  const [importBatches, setImportBatches] = useState<
+    { id: string; fileName: string }[]
+  >([]);
+
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
@@ -569,18 +574,23 @@ export function Dashboard() {
     columnId: string,
     stageName: string,
     page: number,
+    batchId: string = "all",
   ) {
     const token = localStorage.getItem("token");
     if (!token) return [];
 
     try {
-      const response = await fetch(
-        `http://localhost:3000/auth/leads?stage=${stageName}&limit=50&page=${page}`,
-        {
-          method: "GET",
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      let url = `http://localhost:3000/auth/leads?stage=${stageName}&limit=50&page=${page}`;
+      if (batchId === "manual") {
+        url += `&isManual=true`; //leads que nao sao de listas
+      } else if (batchId !== "all") {
+        url += `&importBatchId=${batchId}`;
+      }
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       if (!response.ok) return [];
 
@@ -622,6 +632,7 @@ export function Dashboard() {
     }
   }
 
+  //load initial bord
   useEffect(() => {
     async function loadInitialBoard() {
       const token = localStorage.getItem("token");
@@ -632,9 +643,25 @@ export function Dashboard() {
 
       const newBoard = JSON.parse(JSON.stringify(emptyBoard));
 
+      //inseri pro fitro global de lista
+      setColumnPages({
+        novos: 1,
+        contato: 1,
+        negociacao: 1,
+        cadastro: 1,
+        finalizado: 1,
+        arquivo: 1,
+        fora_de_perfil: 1,
+      });
+
       await Promise.all(
         Object.entries(reverseStageMap).map(async ([colId, stageName]) => {
-          const leads = await fetchColumnLeads(colId, stageName, 1);
+          const leads = await fetchColumnLeads(
+            colId,
+            stageName,
+            1,
+            selectedBatchId,
+          );
           if (newBoard[colId]) {
             newBoard[colId].leads = leads;
           }
@@ -646,7 +673,8 @@ export function Dashboard() {
     }
 
     loadInitialBoard();
-  }, [navigate]);
+  }, [navigate, selectedBatchId]);
+
   useEffect(() => {
     if (selectedLead) {
       setEditingTag(selectedLead.tag);
@@ -721,6 +749,31 @@ export function Dashboard() {
 
     fetchProfile();
   }, [navigate]);
+
+  useEffect(() => {
+    async function fetchBatches() {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      try {
+        const response = await fetch(
+          "http://localhost:3000/auth/import-batches",
+          {
+            method: "GET",
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          setImportBatches(data);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar lista: ", error);
+      }
+    }
+
+    fetchBatches();
+  }, []);
 
   function handleLogout() {
     localStorage.removeItem("token");
@@ -1520,12 +1573,29 @@ export function Dashboard() {
 
       <div className="flex-1 flex flex-col min-w-0">
         <header className="w-full h-14 px-6 border-b border-border flex justify-between items-center bg-card/50 backdrop-blur-sm">
-          <h1 className="text-xl font-bold tracking-tight text-primary w-1/4">
-            O.S.{" "}
-            <span className="text-foreground font-normal">
-              Inteligência FInanceira
-            </span>
-          </h1>
+          <div className="flex items-center gap-6 w-1/2">
+            <h1 className="text-xl font-bold tracking-tight text-primary whitespace-nowrap">
+              O.S.{" "}
+              <span className="text-foreground font-normal">
+                Inteligência FInanceira
+              </span>
+            </h1>
+            <div className="flex items-center gap-2 border-l border-border pl-6">
+              <select
+                className="flex h-8 w-56 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
+                value={selectedBatchId}
+                onChange={(e) => setSelectedBatchId(e.target.value)}
+              >
+                <option value="all">Todas as Listas</option>
+                <option value="manual">Leads Sem Lista</option>
+                {importBatches.map((batch) => (
+                  <option key={batch.id} value={batch.id}>
+                    {batch.fileName}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
 
           <div className="flex items-center gap-4 w-1/4 justify-end ml-auto">
             <div className="flex items-center gap-3 px-3 py-1.5 rounded-full bg-accent/20 border border-border/50 mr-2">
