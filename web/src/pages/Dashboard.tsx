@@ -1275,9 +1275,9 @@ export function Dashboard() {
                   tagColors[lead.tag] || "bg-background border-border"
                 }`
               : // ADICIONEI: bg-card, p-3, rounded-md e border para dar formato de card na vertical
-                `w-full h-fit box-border bg-card border border-border rounded-md p-2 cursor-grab active:cursor-grabbing hover:shadow-md transition-all border-l-4 ${
+                `w-full h-fit box-border bg-card border border-border rounded-md p-2 cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow transition-colors border-l-4 ${
                   tagColors[lead.tag] || "border-l-gray-500"
-                } ${snapshot.isDragging ? "opacity-90 scale-105 shadow-xl rotate-2 z-50" : ""}`
+                } ${snapshot.isDragging ? "opacity-90 shadow-xl z-50" : ""}`
           }
         >
           <div
