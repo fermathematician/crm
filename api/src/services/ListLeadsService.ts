@@ -50,9 +50,9 @@ class ListLeadsService {
         where: whereClause,
         skip: skip,
         take: limit,
-        orderBy: {
+        /* orderBy: {
           companyName: "asc",
-        },
+        }, */
         include: {
           contacts: {
             orderBy: {
