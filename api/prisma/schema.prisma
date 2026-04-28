@@ -80,6 +80,9 @@ model Lead {
 
   // Histórico
   contacts Contact[]
+
+  // Posicao do card que o usuario mexeu manualmente
+  position Int @default(0)
 }
 
 //------------------------------------------

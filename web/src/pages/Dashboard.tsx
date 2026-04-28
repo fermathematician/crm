@@ -900,6 +900,21 @@ export function Dashboard() {
 
     setColumns(newBoard);
     updateTodayNotifications(newBoard);
+
+    const updateLeadList = destItems.map((lead, index) => ({
+      id: lead.id,
+      position: index,
+    }));
+
+    const token = localStorage.getItem("token");
+    fetch("http://localhost:3000/auth/leads/reorder", {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ leads: updateLeadList }),
+    }).catch((err) => console.error("Erro ao salvar ordem", err));
   }
 
   function handleSaveLead() {

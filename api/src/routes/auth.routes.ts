@@ -16,6 +16,7 @@ import { GetGlobalMetricsController } from "../controllers/GetGlobalMetricsContr
 import { ImportLeadsController } from "../controllers/ImportLeadsController.js";
 import { SendEmailController } from "../controllers/SendEmailController.js";
 import { ListImportBatchesController } from "../controllers/ListImportBatchesController.js";
+import { ReorderLeadsController } from "../controllers/ReorderLeadsController.js";
 
 const router = Router();
 const upload = multer({ dest: "tmp/" });
@@ -33,6 +34,7 @@ const getGlobalMetricsController = new GetGlobalMetricsController();
 const importLeadsController = new ImportLeadsController();
 const sendEmailController = new SendEmailController();
 const listImportBatchesController = new ListImportBatchesController();
+const reorderLeadsController = new ReorderLeadsController();
 
 router.get("/me", ensureAuthenticated, detailUserController.handle);
 router.get("/leads", ensureAuthenticated, listLeadsController.handle);
@@ -52,6 +54,8 @@ router.get(
   ensureAuthenticated,
   listImportBatchesController.handle,
 );
+
+//////////////////////////////////////////////////////
 
 router.post("/login", AuthenticateUserController.handle);
 router.post("/register", CreateUserController.handle);
@@ -73,12 +77,21 @@ router.post(
   sendEmailController.handle,
 );
 
+//////////////////////////////////////////////////////////
+
 router.put("/leads/update", ensureAuthenticated, updateLeadController.handle);
+router.put(
+  "/leads/reorder",
+  ensureAuthenticated,
+  reorderLeadsController.handle,
+);
+
 router.delete(
   "/leads/:lead_id",
   ensureAuthenticated,
   deleteLeadController.handle,
 );
+
 router.patch(
   "/users/:id/role",
   ensureAuthenticated,

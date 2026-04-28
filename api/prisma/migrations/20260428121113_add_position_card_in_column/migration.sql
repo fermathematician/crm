@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Lead" ADD COLUMN     "position" INTEGER NOT NULL DEFAULT 0;
