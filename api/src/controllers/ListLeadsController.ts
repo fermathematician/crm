@@ -11,6 +11,7 @@ class ListLeadsController {
     const stage = (req.query.stage as string) || "ALL";
     const importBatchId = (req.query.importBatchId as string) || "";
     const isManual = (req.query.isManual as string) || "";
+    const globalFilter = (req.query.globalFilter as string) || "";
 
     const listLeadsService = new ListLeadsService();
 
@@ -22,6 +23,7 @@ class ListLeadsController {
       stage,
       importBatchId,
       isManual,
+      globalFilter,
     });
 
     return res.json(result);

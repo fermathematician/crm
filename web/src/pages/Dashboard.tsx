@@ -299,6 +299,8 @@ export function Dashboard() {
     { id: string; fileName: string }[]
   >([]);
 
+  const [globalFilter, setGlobalFilter] = useState<string>("all");
+
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
@@ -631,6 +633,10 @@ export function Dashboard() {
         url += `&importBatchId=${batchId}`;
       }
 
+      if (globalFilter !== "all") {
+        url += `&globalFilter=${globalFilter}`;
+      }
+
       const response = await fetch(url, {
         method: "GET",
         headers: { Authorization: `Bearer ${token}` },
@@ -717,7 +723,7 @@ export function Dashboard() {
     }
 
     loadInitialBoard();
-  }, [navigate, selectedBatchId]);
+  }, [navigate, selectedBatchId, globalFilter]);
 
   useEffect(() => {
     if (selectedLead) {
@@ -1265,7 +1271,7 @@ export function Dashboard() {
           }}
           className={
             isHorizontal
-              ? `w-44 h-16 shrink-0 rounded-md p-1 shadow-sm flex flex-col gap-0 opacity-70 hover:opacity-100 cursor-pointer border ${
+              ? `w-48 h-fit shrink-0 rounded-md p-1 shadow-sm flex flex-col gap-0 opacity-70 hover:opacity-100 cursor-pointer border ${
                   tagColors[lead.tag] || "bg-background border-border"
                 }`
               : // ADICIONEI: bg-card, p-3, rounded-md e border para dar formato de card na vertical
@@ -1700,6 +1706,14 @@ export function Dashboard() {
                     {batch.fileName}
                   </option>
                 ))}
+              </select>
+              <select
+                className="flex h-8 w-48 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
+                value={globalFilter}
+                onChange={(e) => setGlobalFilter(e.target.value)}
+              >
+                <option value="all">Todos</option>
+                <option value="overdue"> Atrasados (+30 dias)</option>
               </select>
             </div>
           </div>

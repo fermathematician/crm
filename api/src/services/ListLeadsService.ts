@@ -8,6 +8,7 @@ interface ListLeadsParams {
   stage: string;
   importBatchId?: string;
   isManual?: string;
+  globalFilter?: string;
 }
 
 class ListLeadsService {
@@ -19,6 +20,7 @@ class ListLeadsService {
     stage,
     importBatchId,
     isManual,
+    globalFilter,
   }: ListLeadsParams) {
     const skip = (page - 1) * limit;
 
@@ -43,6 +45,22 @@ class ListLeadsService {
       whereClause.ImportbatchId = null;
     } else if (importBatchId && importBatchId != "all") {
       whereClause.ImportBatchId = importBatchId;
+    }
+
+    if (globalFilter === "overdue") {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      whereClause.createdAt = {
+        lte: thirtyDaysAgo,
+      };
+
+      whereClause.contacts = {
+        none: {
+          type: { not: "SYSTEM_CHANGE" },
+          date: { gte: thirtyDaysAgo },
+        },
+      };
     }
 
     const [leads, totalCount] = await Promise.all([
