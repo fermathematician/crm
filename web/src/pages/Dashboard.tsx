@@ -1212,7 +1212,7 @@ export function Dashboard() {
           }}
           className={
             isHorizontal
-              ? `w-40 h-16 shrink-0 rounded-md p-1 shadow-sm flex flex-col gap-0 opacity-70 hover:opacity-100 cursor-pointer border ${
+              ? `w-44 h-16 shrink-0 rounded-md p-1 shadow-sm flex flex-col gap-0 opacity-70 hover:opacity-100 cursor-pointer border ${
                   tagColors[lead.tag] || "bg-background border-border"
                 }`
               : // ADICIONEI: bg-card, p-3, rounded-md e border para dar formato de card na vertical
@@ -1229,12 +1229,20 @@ export function Dashboard() {
             <span className="font-semibold text-sm line-clamp-1">
               {lead.name}
             </span>
-            {!isHorizontal && (
-              <GripVertical
-                size={14}
-                className="text-muted-foreground/50 shrink-0"
-              />
-            )}
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 shrink-0 text-zinc-100 hover:text-primary hover:bg-primary/10"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedLead(lead);
+                setActiveTab("email");
+                setIsDetailsModalOpen(true);
+              }}
+            >
+              <Mail size={12} />
+            </Button>
           </div>
           <div
             className={`flex justify-between items-end ${isHorizontal ? "mt-1" : "mt-1"}`}
