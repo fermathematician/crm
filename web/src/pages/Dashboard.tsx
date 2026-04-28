@@ -61,8 +61,9 @@ type LeadTag =
   | "frio"
   | "morno"
   | "quente"
-  | "a contactar"
+  | "a qualificar"
   | "sem resposta"
+  | "respondido"
   | "promessa"
   | "parcial"
   | "completa"
@@ -116,8 +117,9 @@ const reverseStageMap: Record<string, string> = {
 
 const tagColors: Record<LeadTag, string> = {
   novo: "bg-slate-500 border-slate-600",
-  "a contactar": "bg-zinc-300 border-zinc-400",
+  "a qualificar": "bg-zinc-300 border-zinc-400",
   "sem resposta": "bg-gray-400 border-gray-500",
+  respondido: "bg-yellow-400 border-amber-500",
   frio: "bg-cyan-500 border-cyan-600",
   morno: "bg-orange-400 border-orange-500",
   quente: "bg-red-500 border-red-600",
@@ -132,7 +134,7 @@ const tagColors: Record<LeadTag, string> = {
 
 const columnDefaultTags: Record<string, LeadTag> = {
   novos: "novo",
-  contato: "a contactar",
+  contato: "sem resposta",
   negociacao: "frio",
   cadastro: "promessa",
   finalizado: "aprovado",
@@ -142,7 +144,7 @@ const columnDefaultTags: Record<string, LeadTag> = {
 
 const columnAllowedTags: Record<string, LeadTag[]> = {
   novos: ["novo"],
-  contato: ["a contactar", "sem resposta"],
+  contato: ["a qualificar", "sem resposta", "respondido"],
   negociacao: ["frio", "morno", "quente"],
   cadastro: ["promessa", "parcial", "completa"],
   finalizado: ["aprovado", "recusado"],
@@ -335,6 +337,10 @@ export function Dashboard() {
     finalizado: true,
     arquivo: true,
   });
+
+  const [isLoadingColumn, setIsLoadingColumn] = useState<
+    Record<string, boolean>
+  >({});
   const [noteText, setNoteText] = useState("");
   const [noteDate, setNoteDate] = useState(getTodayDDMMYYYY());
   const [reminderText, setReminderText] = useState("");
@@ -693,12 +699,21 @@ export function Dashboard() {
   }, [selectedLead]);
 
   async function loadMoreLeads(colId: string) {
+    if (isLoadingColumn[colId]) return;
+
+    setIsLoadingColumn((prev) => ({ ...prev, [colId]: true }));
+
     const nextPage = columnPages[colId] + 1;
     const stageName = reverseStageMap[colId];
 
     if (!stageName) return;
 
-    const newLeads = await fetchColumnLeads(colId, stageName, nextPage);
+    const newLeads = await fetchColumnLeads(
+      colId,
+      stageName,
+      nextPage,
+      selectedBatchId,
+    );
 
     if (newLeads.length > 0) {
       setColumns((prev) => {
@@ -719,6 +734,7 @@ export function Dashboard() {
       });
       setColumnPages((prev) => ({ ...prev, [colId]: nextPage }));
     }
+    setIsLoadingColumn((prev) => ({ ...prev, [colId]: false }));
   }
 
   useEffect(() => {
@@ -1196,7 +1212,7 @@ export function Dashboard() {
           }}
           className={
             isHorizontal
-              ? `w-40 h-14 shrink-0 rounded-md p-1 shadow-sm flex flex-col gap-0 opacity-70 hover:opacity-100 cursor-pointer border ${
+              ? `w-40 h-16 shrink-0 rounded-md p-1 shadow-sm flex flex-col gap-0 opacity-70 hover:opacity-100 cursor-pointer border ${
                   tagColors[lead.tag] || "bg-background border-border"
                 }`
               : // ADICIONEI: bg-card, p-3, rounded-md e border para dar formato de card na vertical
@@ -1207,7 +1223,7 @@ export function Dashboard() {
         >
           <div
             className={`flex justify-between items-start ${
-              isHorizontal ? "mb-0" : "mb-1"
+              isHorizontal ? "mb-1" : "mb-1"
             }`}
           >
             <span className="font-semibold text-sm line-clamp-1">
@@ -1221,7 +1237,7 @@ export function Dashboard() {
             )}
           </div>
           <div
-            className={`flex justify-between items-end ${isHorizontal ? "mt-0.5" : "mt-1"}`}
+            className={`flex justify-between items-end ${isHorizontal ? "mt-1" : "mt-1"}`}
           >
             <Badge
               variant="outline"
@@ -1261,7 +1277,9 @@ export function Dashboard() {
       <div
         key={colId}
         className={`flex flex-col h-full rounded-xl border border-border bg-card/40 ${
-          isHorizontal ? "h-28 border-dashed w-full" : ""
+          isHorizontal
+            ? "h-32 border-dashed w-full shrink-0"
+            : "min-h-0 overflow-hidden"
         }`}
       >
         {/*Cabeçalho*/}
@@ -1328,7 +1346,7 @@ export function Dashboard() {
           </div>
         )}
 
-        {/*Area de arrastar*/}
+        {/*Area de arrastar e scroll*/}
         <Droppable
           droppableId={colId}
           direction={isHorizontal ? "horizontal" : "vertical"}
@@ -1337,10 +1355,23 @@ export function Dashboard() {
             <div
               {...provided.droppableProps}
               ref={provided.innerRef}
+              onScroll={(e) => {
+                if (
+                  !isHorizontal &&
+                  columnHasMore[colId] &&
+                  !isLoadingColumn[colId]
+                ) {
+                  const { scrollTop, clientHeight, scrollHeight } =
+                    e.currentTarget;
+                  if (scrollHeight - scrollTop <= clientHeight + 10) {
+                    loadMoreLeads(colId);
+                  }
+                }
+              }}
               className={`flex-1 flex p-1 ${
                 isHorizontal
                   ? "flex-row gap-4 items-center min-h-0 overflow-x-auto"
-                  : "flex-col gap-3 overflow-y-auto overflow-x-hidden min-h-[150px]"
+                  : "flex-col gap-3 overflow-y-auto overflow-x-hidden min-h-0"
               }`}
             >
               {filteredLeads.map((lead, index) =>
@@ -1577,7 +1608,7 @@ export function Dashboard() {
             <h1 className="text-xl font-bold tracking-tight text-primary whitespace-nowrap">
               O.S.{" "}
               <span className="text-foreground font-normal">
-                Inteligência FInanceira
+                Inteligência Financeira
               </span>
             </h1>
             <div className="flex items-center gap-2 border-l border-border pl-6">
@@ -1631,7 +1662,7 @@ export function Dashboard() {
         {/*Começa aqui as colunas*/}
         <main className="flex-1 p-3 flex flex-col bg-background/50 overflow-hidden">
           <DragDropContext onDragEnd={onDragEnd}>
-            <div className="flex flex-col gap-2 h-full">
+            <div className="flex flex-col gap-2 h-full min-h-0">
               {/*Verticais*/}
               <div className="flex-1 grid grid-cols-5 gap-1 min-h-0">
                 {verticalCols.map((id) => renderColumn(id, false))}
