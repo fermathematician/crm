@@ -255,6 +255,44 @@ function getTodayString() {
   return `${year}-${month}-${day}`;
 }
 
+function getActivityStatus(contacts?: ApiContact[]) {
+  //conta atividade somente interações
+  const validContatcs =
+    contacts?.filter((c) => c.type !== "SYSTEM_CHANGE") || [];
+
+  if (validContatcs.length === 0) {
+    return {
+      text: "SEM ATIVIDADE",
+      color: "bg-slate-100 text-slate-500 border-slate-200",
+    };
+  }
+
+  const lastContactDate = validContatcs.reduce((latest, current) => {
+    const currentDate = new Date(current.date);
+    return currentDate > latest ? currentDate : latest;
+  }, new Date(0));
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  lastContactDate.setHours(0, 0, 0, 0);
+
+  const diffTime = today.getTime() - lastContactDate.getTime();
+  const diffDays = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+
+  if (diffDays <= 30) {
+    return {
+      text: `${diffDays}d`,
+      color: "bg-green-100 text-green-700 border-green-300",
+    };
+  } else {
+    const overdueDays = diffDays - 30;
+    return {
+      text: `${overdueDays}d (atraso)`,
+      color: "bg-red-100 text-red-700 border-red-300",
+    };
+  }
+}
+
 export function Dashboard() {
   const [selectedBatchId, setSelectedBatchId] = useState<string>("all");
   const [importBatches, setImportBatches] = useState<
@@ -1247,12 +1285,27 @@ export function Dashboard() {
           <div
             className={`flex justify-between items-end ${isHorizontal ? "mt-1" : "mt-1"}`}
           >
-            <Badge
-              variant="outline"
-              className="text-[10px] px-1 py-0 h-5 font-normal uppercase"
-            >
-              {lead.tag}
-            </Badge>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <Badge
+                variant="outline"
+                className="text-[10px] px-1 py-0 h-5 font-normal uppercase"
+              >
+                {lead.tag}
+              </Badge>
+
+              {(() => {
+                const activity = getActivityStatus(lead.contacts);
+                return (
+                  <div
+                    className={`flex items-center gap-1 text-[9px] font-bold px-1.5 h-5 rounded border shadow-sm uppercase ${activity.color}`}
+                  >
+                    <Clock size={10} strokeWidth={2.5} />
+                    {activity.text}
+                  </div>
+                );
+              })()}
+            </div>
+
             {!isHorizontal && lead.visitDate && (
               <div className="flex items-center gap-1.5 text-[11px] font-bold text-blue-700 bg-blue-100 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30 px-2 py-0.5 rounded-md shadow-sm">
                 <CalendarIcon size={12} strokeWidth={2.5} />
