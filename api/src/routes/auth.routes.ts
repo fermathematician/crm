@@ -17,6 +17,7 @@ import { ImportLeadsController } from "../controllers/ImportLeadsController.js";
 import { SendEmailController } from "../controllers/SendEmailController.js";
 import { ListImportBatchesController } from "../controllers/ListImportBatchesController.js";
 import { ReorderLeadsController } from "../controllers/ReorderLeadsController.js";
+import { EmailWebhookController } from "../controllers/EmailWebhookController.js";
 
 const router = Router();
 const upload = multer({ dest: "tmp/" });
@@ -35,6 +36,7 @@ const importLeadsController = new ImportLeadsController();
 const sendEmailController = new SendEmailController();
 const listImportBatchesController = new ListImportBatchesController();
 const reorderLeadsController = new ReorderLeadsController();
+const emailWebhookController = new EmailWebhookController();
 
 router.get("/me", ensureAuthenticated, detailUserController.handle);
 router.get("/leads", ensureAuthenticated, listLeadsController.handle);
@@ -76,6 +78,8 @@ router.post(
   ensureAuthenticated,
   sendEmailController.handle,
 );
+
+router.post("/webhooks/email", emailWebhookController.handle);
 
 //////////////////////////////////////////////////////////
 
