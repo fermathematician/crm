@@ -103,6 +103,7 @@ interface ApiLead {
   state?: string | null;
   cnae?: string | null;
   contacts?: ApiContact[];
+  ImportBatch?: { tag: string } | null;
 }
 
 const reverseStageMap: Record<string, string> = {
@@ -165,6 +166,7 @@ interface Lead {
   state?: string | null;
   cnae?: string | null;
   contacts?: ApiContact[];
+  ImportBatch?: { tag: string } | null;
 }
 
 interface Column {
@@ -296,7 +298,7 @@ function getActivityStatus(contacts?: ApiContact[]) {
 export function Dashboard() {
   const [selectedBatchId, setSelectedBatchId] = useState<string>("all");
   const [importBatches, setImportBatches] = useState<
-    { id: string; fileName: string }[]
+    { id: string; tag: string }[]
   >([]);
 
   const [globalFilter, setGlobalFilter] = useState<string>("all");
@@ -566,6 +568,67 @@ export function Dashboard() {
       if (response.ok) {
         const result = await response.json();
 
+        const currentColId = getLeadColumnId(selectedLead.id);
+
+        if (currentColId === "novos" && selectedLead.tag === "novo") {
+          const sourceColId = "novos";
+          const destColId = "contato";
+          const newTag: LeadTag = "sem resposta";
+
+          setColumns((prev) => {
+            const newBoard = { ...prev };
+            const sourceItems = [...newBoard[sourceColId].leads];
+            const destItems = [...newBoard[destColId].leads];
+
+            const leadIndex = sourceItems.findIndex(
+              (l) => l.id === selectedLead.id,
+            );
+
+            if (leadIndex !== -1) {
+              const [movedLead] = sourceItems.splice(leadIndex, 1);
+
+              movedLead.tag = newTag;
+              const systemMsg = `Automação: E-mail enviado ➔ Movido para Contato`;
+
+              const newLocalContact: ApiContact = {
+                id: Date.now().toString(),
+                type: "SYSTEM_CHANGE",
+                date: getTodayString(),
+                description: systemMsg,
+              };
+              movedLead.contacts = [
+                newLocalContact,
+                ...(movedLead.contacts || []),
+              ];
+              destItems.unshift(movedLead);
+
+              newBoard[sourceColId] = {
+                ...newBoard[sourceColId],
+                leads: sourceItems,
+              };
+              newBoard[destColId] = {
+                ...newBoard[destColId],
+                leads: destItems,
+              };
+
+              setSelectedLead(movedLead);
+            }
+            return newBoard;
+          });
+
+          updateLeadOnServer(selectedLead.id, {
+            funnelStage: reverseStageMap[destColId],
+            tags: [newTag],
+          });
+
+          createHistoryLog(
+            selectedLead.id,
+            "SYSTEM_CHANGE",
+            `Automação: E-mail enviado ➔ Movido para Contato`,
+            true,
+          );
+        }
+
         if (result.contact) {
           setLeadContacts((prev) => [result.contact, ...(prev || [])]);
         }
@@ -666,6 +729,7 @@ export function Dashboard() {
           city: apiLead.city,
           state: apiLead.state,
           cnae: apiLead.cnae,
+          ImportBatch: apiLead.ImportBatch,
           contacts: apiLead.contacts
             ? apiLead.contacts.map((c: any) => ({
                 id: c.id,
@@ -1303,6 +1367,15 @@ export function Dashboard() {
               <Mail size={12} />
             </Button>
           </div>
+          {lead.ImportBatch?.tag && (
+            <div
+              className="text-[10px] text-muted-foreground line-clamp-1 mb-1 mt-0.5"
+              title={lead.ImportBatch.tag}
+            >
+              📋 {lead.ImportBatch.tag}
+            </div>
+          )}
+
           <div
             className={`flex justify-between items-end ${isHorizontal ? "mt-1" : "mt-1"}`}
           >
@@ -1703,7 +1776,7 @@ export function Dashboard() {
                 <option value="manual">Leads Sem Lista</option>
                 {importBatches.map((batch) => (
                   <option key={batch.id} value={batch.id}>
-                    {batch.fileName}
+                    {batch.tag}
                   </option>
                 ))}
               </select>
