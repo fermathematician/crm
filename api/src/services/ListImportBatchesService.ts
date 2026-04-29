@@ -6,6 +6,7 @@ export class ListImportBatchesService {
       select: {
         id: true,
         fileName: true,
+        tag: true,
       },
       orderBy: {
         importedAt: "desc",

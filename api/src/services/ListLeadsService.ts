@@ -42,7 +42,7 @@ class ListLeadsService {
 
     //filtro listas
     if (isManual === "true") {
-      whereClause.ImportbatchId = null;
+      whereClause.ImportBatchId = null;
     } else if (importBatchId && importBatchId != "all") {
       whereClause.ImportBatchId = importBatchId;
     }

@@ -6,12 +6,13 @@ import path from "path";
 interface ImportRequest {
   file: Express.Multer.File;
   userId: string;
+  tag: string;
 }
 
 type ExcelRow = Record<string, any>;
 
 class ImportLeadsService {
-  async execute({ file, userId }: ImportRequest) {
+  async execute({ file, userId, tag }: ImportRequest) {
     if (!file) {
       throw new Error("Arquivo não enviado.");
     }
@@ -39,15 +40,15 @@ class ImportLeadsService {
 
       const sheetName = workbook.SheetNames.at(0);
 
-        if (!sheetName) {
+      if (!sheetName) {
         throw new Error("Arquivo sem abas.");
-        }
+      }
 
-        const worksheet = workbook.Sheets[sheetName];
+      const worksheet = workbook.Sheets[sheetName];
 
-        if (!worksheet) {
+      if (!worksheet) {
         throw new Error("Não foi possível ler a aba.");
-        }
+      }
 
       const rows = XLSX.utils.sheet_to_json<ExcelRow>(worksheet, {
         defval: null,
@@ -74,12 +75,11 @@ class ImportLeadsService {
       };
 
       const normalizeValue = (value: any): string | null =>
-        value !== null && value !== undefined
-          ? String(value).trim()
-          : null;
+        value !== null && value !== undefined ? String(value).trim() : null;
 
       const batch = await prismaClient.importBatch.create({
         data: {
+          tag: tag,
           fileName: file.originalname,
           userId,
         },

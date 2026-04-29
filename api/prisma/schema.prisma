@@ -37,6 +37,7 @@ model User {
 model ImportBatch {
   id         String   @id @default(uuid())
   fileName   String // nome do arquivo
+  tag        String   @default("Lista Antiga") //para usar no filtro
   importedAt DateTime @default(now())
 
   // Quem importou
