@@ -211,6 +211,34 @@ export function LeadsList() {
     }
   }
 
+  async function handleLocalChange(
+    leadId: string,
+    field: keyof ApiLead,
+    value: string,
+  ) {
+    setLeads((prev) =>
+      prev.map((lead) =>
+        lead.id === leadId ? { ...lead, [field]: value } : lead,
+      ),
+    );
+  }
+
+  async function handleSaveCell(leadId: string, field: string, value: string) {
+    const token = localStorage.getItem("token");
+    try {
+      await fetch(`http://localhost:3000/auth/leads/update`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ lead_id: leadId, [field]: value }),
+      });
+    } catch (error) {
+      console.error("Erro ao salvar celula: ", error);
+    }
+  }
+
   async function handleSave() {
     const token = localStorage.getItem("token");
 
@@ -396,11 +424,14 @@ export function LeadsList() {
                   <SelectContent>
                     <SelectItem value="ALL">Todas as Etapas</SelectItem>
                     <SelectItem value="NOVO">Novos</SelectItem>
-                    <SelectItem value="CONTATO">Em Contato</SelectItem>
+                    <SelectItem value="CONTATO">Contato</SelectItem>
                     <SelectItem value="NEGOCIACAO">Negociação</SelectItem>
                     <SelectItem value="CADASTRO">Cadastro</SelectItem>
                     <SelectItem value="FINALIZADO">Finalizados</SelectItem>
                     <SelectItem value="SEM_INTERESSE">Sem Interesse</SelectItem>
+                    <SelectItem value="FORA_DE_PERFIL">
+                      Fora de Perfil
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -699,65 +730,257 @@ export function LeadsList() {
                     leads.map((lead) => (
                       <tr
                         key={lead.id}
-                        className="hover:bg-muted/30 transition-colors"
+                        className="hover:bg-mted/20 transition-colors group"
                       >
-                        <td className="px-4 py-4 font-medium text-foreground">
-                          {lead.companyName}
-                        </td>
-                        <td className="px-4 py-4 text-muted-foreground">
-                          {lead.cnpj || "-"}
-                        </td>
-                        <td className="px-4 py-4 text-muted-foreground">
-                          {lead.cnae || "-"}
-                        </td>
-                        <td className="px-4 py-4 text-muted-foreground">
-                          {lead.phone || "-"}
-                        </td>
-                        <td className="px-4 py-4 text-muted-foreground">
-                          {lead.email || "-"}
-                        </td>
-                        <td className="px-4 py-4 text-muted-foreground">
-                          {lead.city || "-"}
-                        </td>
-                        <td className="px-4 py-4 text-muted-foreground">
-                          {lead.state || "-"}
-                        </td>
-                        <td
-                          className="px-4 py-4 text-muted-foreground truncate max-w-[150px]"
-                          title={lead.address || ""}
-                        >
-                          {lead.address || "-"}
-                        </td>
-                        <td className="px-4 py-4">
-                          <Badge
-                            variant={
-                              lead.funnelStage === "FINALIZADO"
-                                ? "default"
-                                : lead.funnelStage === "SEM_INTERESSE"
-                                  ? "secondary"
-                                  : "outline"
+                        <td className="px-1 py-1">
+                          <Input
+                            value={lead.companyName || ""}
+                            onChange={(e) =>
+                              handleLocalChange(
+                                lead.id,
+                                "companyName",
+                                e.target.value,
+                              )
                             }
-                          >
-                            {lead.funnelStage}
-                          </Badge>
+                            onFocus={(e) => {
+                              e.target.dataset.original = e.target.value;
+                            }}
+                            onBlur={(e) => {
+                              if (
+                                e.target.value !== e.target.dataset.original
+                              ) {
+                                handleSaveCell(
+                                  lead.id,
+                                  "companyName",
+                                  e.target.value,
+                                );
+                              }
+                            }}
+                            className="h-8 min-w-[180px] border-transparent bg-transparent hover:bg-muted/50 focus:bg-background focus:border-primary focus:ring-1 shadow-none px-2 font-semibold text-foreground transition-all"
+                          />
                         </td>
-
-                        <td className="px-4 py-4 flex justify-end gap-2">
+                        <td className="px-1 py-1">
+                          <Input
+                            value={lead.cnpj || ""}
+                            onChange={(e) =>
+                              handleLocalChange(
+                                lead.id,
+                                "cnpj",
+                                maskCNPJ(e.target.value),
+                              )
+                            }
+                            onFocus={(e) => {
+                              e.target.dataset.original = e.target.value;
+                            }}
+                            onBlur={(e) => {
+                              if (
+                                e.target.value !== e.target.dataset.original
+                              ) {
+                                handleSaveCell(lead.id, "cnpj", e.target.value);
+                              }
+                            }}
+                            className="h-8 min-w-[140px] border-transparent bg-transparent hover:bg-muted/50 focus:bg-background focus:border-primary focus:ring-1 shadow-none px-2 text-muted-foreground transition-all"
+                          />
+                        </td>
+                        <td className="px-1 py-1">
+                          <Input
+                            value={lead.cnae || ""}
+                            onChange={(e) =>
+                              handleLocalChange(
+                                lead.id,
+                                "cnae",
+                                maskCNAE(e.target.value),
+                              )
+                            }
+                            onFocus={(e) => {
+                              e.target.dataset.original = e.target.value;
+                            }}
+                            onBlur={(e) => {
+                              if (
+                                e.target.value !== e.target.dataset.original
+                              ) {
+                                handleSaveCell(lead.id, "cnae", e.target.value);
+                              }
+                            }}
+                            className="h-8 min-w-[110px] border-transparent bg-transparent hover:bg-muted/50 focus:bg-background focus:border-primary focus:ring-1 shadow-none px-2 text-muted-foreground transition-all"
+                          />
+                        </td>
+                        <td className="px-1 py-1">
+                          <Input
+                            value={lead.phone || ""}
+                            onChange={(e) =>
+                              handleLocalChange(
+                                lead.id,
+                                "phone",
+                                maskPhone(e.target.value),
+                              )
+                            }
+                            onFocus={(e) => {
+                              e.target.dataset.original = e.target.value;
+                            }}
+                            onBlur={(e) => {
+                              if (
+                                e.target.value !== e.target.dataset.original
+                              ) {
+                                handleSaveCell(
+                                  lead.id,
+                                  "phone",
+                                  e.target.value,
+                                );
+                              }
+                            }}
+                            className="h-8 min-w-[140px] border-transparent bg-transparent hover:bg-muted/50 focus:bg-background focus:border-primary focus:ring-1 shadow-none px-2 text-muted-foreground transition-all"
+                          />
+                        </td>
+                        <td className="px-1 py-1">
+                          <Input
+                            value={lead.email || ""}
+                            onChange={(e) =>
+                              handleLocalChange(
+                                lead.id,
+                                "email",
+                                e.target.value,
+                              )
+                            }
+                            onFocus={(e) => {
+                              e.target.dataset.original = e.target.value;
+                            }}
+                            onBlur={(e) => {
+                              if (
+                                e.target.value !== e.target.dataset.original
+                              ) {
+                                handleSaveCell(
+                                  lead.id,
+                                  "email",
+                                  e.target.value,
+                                );
+                              }
+                            }}
+                            className="h-8 min-w-[180px] border-transparent bg-transparent hover:bg-muted/50 focus:bg-background focus:border-primary focus:ring-1 shadow-none px-2 text-muted-foreground transition-all"
+                          />
+                        </td>
+                        <td className="px-1 py-1">
+                          <Input
+                            value={lead.city || ""}
+                            onChange={(e) =>
+                              handleLocalChange(lead.id, "city", e.target.value)
+                            }
+                            onFocus={(e) => {
+                              e.target.dataset.original = e.target.value;
+                            }}
+                            onBlur={(e) => {
+                              if (
+                                e.target.value !== e.target.dataset.original
+                              ) {
+                                handleSaveCell(lead.id, "city", e.target.value);
+                              }
+                            }}
+                            className="h-8 min-w-[120px] border-transparent bg-transparent hover:bg-muted/50 focus:bg-background focus:border-primary focus:ring-1 shadow-none px-2 text-muted-foreground transition-all"
+                          />
+                        </td>
+                        <td className="px-1 py-1">
+                          <Input
+                            value={lead.state || ""}
+                            maxLength={2}
+                            onChange={(e) =>
+                              handleLocalChange(
+                                lead.id,
+                                "state",
+                                e.target.value.toUpperCase(),
+                              )
+                            }
+                            onFocus={(e) => {
+                              e.target.dataset.original = e.target.value;
+                            }}
+                            onBlur={(e) => {
+                              if (
+                                e.target.value !== e.target.dataset.original
+                              ) {
+                                handleSaveCell(
+                                  lead.id,
+                                  "state",
+                                  e.target.value,
+                                );
+                              }
+                            }}
+                            className="h-8 min-w-[60px] border-transparent bg-transparent hover:bg-muted/50 focus:bg-background focus:border-primary focus:ring-1 shadow-none px-2 text-muted-foreground transition-all text-center"
+                          />
+                        </td>
+                        <td className="px-1 py-1">
+                          <Input
+                            value={lead.address || ""}
+                            onChange={(e) =>
+                              handleLocalChange(
+                                lead.id,
+                                "address",
+                                e.target.value,
+                              )
+                            }
+                            onFocus={(e) => {
+                              e.target.dataset.original = e.target.value;
+                            }}
+                            onBlur={(e) => {
+                              if (
+                                e.target.value !== e.target.dataset.original
+                              ) {
+                                handleSaveCell(
+                                  lead.id,
+                                  "address",
+                                  e.target.value,
+                                );
+                              }
+                            }}
+                            className="h-8 min-w-[200px] border-transparent bg-transparent hover:bg-muted/50 focus:bg-background focus:border-primary focus:ring-1 shadow-none px-2 text-muted-foreground transition-all"
+                          />
+                        </td>
+                        <td className="px-2 py-1">
+                          <Select
+                            value={lead.funnelStage}
+                            onValueChange={(val) => {
+                              handleLocalChange(lead.id, "funnelStage", val);
+                              handleSaveCell(lead.id, "funnelStage", val);
+                            }}
+                          >
+                            <SelectTrigger className="h-8 border-transparent bg-transparent hover:bg-muted/50 focus:ring-1 shadow-none px-2 w-[140px] text-xs font-semibold">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="NOVO">NOVO</SelectItem>
+                              <SelectItem value="CONTATO">CONTATO</SelectItem>
+                              <SelectItem value="NEGOCIACAO">
+                                NEGOCIAÇÃO
+                              </SelectItem>
+                              <SelectItem value="CADASTRO">CADASTRO</SelectItem>
+                              <SelectItem value="FINALIZADO">
+                                FINALIZADO
+                              </SelectItem>
+                              <SelectItem value="SEM_INTERESSE">
+                                SEM INTERESSE
+                              </SelectItem>
+                              <SelectItem value="FORA_DE_PERFIL">
+                                FORA DE PERFIL
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </td>
+                        <td className="px-2 py-1 flex justify-end gap-1 items-center h-[40px]">
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-100 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-900/40"
+                            className="h-7 w-7 text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity"
                             onClick={() => openEditModal(lead)}
+                            title="Abrir Modal Completo"
                           >
-                            <Pencil size={16} />
+                            <Pencil size={14} />
                           </Button>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-100 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/40"
+                            className="h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40"
                             onClick={() => handleDelete(lead.id)}
+                            title="Excluir lead"
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={14} />
                           </Button>
                         </td>
                       </tr>

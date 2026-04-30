@@ -120,7 +120,7 @@ const tagColors: Record<LeadTag, string> = {
   novo: "bg-slate-500 border-slate-600",
   "a qualificar": "bg-zinc-300 border-zinc-400",
   "sem resposta": "bg-gray-400 border-gray-500",
-  respondido: "bg-yellow-400 border-amber-500",
+  respondido: "bg-yellow-400 border-yellow-600",
   frio: "bg-cyan-500 border-cyan-600",
   morno: "bg-orange-400 border-orange-500",
   quente: "bg-red-500 border-red-600",
