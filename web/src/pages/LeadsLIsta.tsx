@@ -318,6 +318,80 @@ export function LeadsList() {
     }
   }
 
+  async function handleExport() {
+    const token = localStorage.getItem("token");
+    setLoading(true);
+
+    try {
+      const queryParams = new URLSearchParams({
+        page: "1",
+        limit: "9999",
+        search: activeSearch,
+        stage: filterStage,
+      });
+
+      const response = await fetch(
+        `http://localhost:3000/auth/leads?${queryParams}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      const data = await response.json();
+      const leadsToExport = data.leads || [];
+
+      if (leadsToExport.length === 0) {
+        alert("Nao ha dados para exportar com os filtros atuais");
+        return;
+      }
+
+      const headers = [
+        "Razão Social",
+        "CNPJ",
+        "CNAE",
+        "Telefone",
+        "Email",
+        "Cidade",
+        "UF",
+        "Endereço",
+        "Etapa",
+      ];
+
+      const csvRows = leadsToExport.map((l: ApiLead) =>
+        [
+          `"${l.companyName || ""}"`,
+          `"${l.cnpj || ""}"`,
+          `"${l.cnae || ""}"`,
+          `"${l.phone || ""}"`,
+          `"${l.email || ""}"`,
+          `"${l.city || ""}"`,
+          `"${l.state || ""}"`,
+          `"${l.address || ""}"`,
+          `"${l.funnelStage || ""}"`,
+        ].join(","),
+      );
+
+      const csvContent = "\uFEFF" + [headers.join(","), ...csvRows].join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute(
+        "download",
+        `export_leads_${filterStage.toLowerCase()}_${new Date().toLocaleDateString()}.csv`,
+      );
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("Erro ao exportar: ", error);
+      alert("Falha ao gerar exportação");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   // --- FUNÇÕES AUXILIARES DO MODAL ---
   function openNewModal() {
     setEditingLead(null);
@@ -439,6 +513,14 @@ export function LeadsList() {
 
             <div className="flex gap-2">
               {/* Modais omitidos para brevidade (MANTENHA OS SEUS AQUI) */}
+              <Button
+                variant="outline"
+                className="gap-2 border-green-600 text-green-600 hover:bg-green-600/1"
+                onClick={handleExport}
+                disabled={loading || leads.length === 0}
+              >
+                <FileText size={18} /> Exportar CSV
+              </Button>
               <Dialog
                 open={isImportModalOpen}
                 onOpenChange={setIsImportModalOpen}
