@@ -1,14 +1,26 @@
-import type { Request, Response } from 'express';
-import { SendEmailService } from '../services/SendEmailService.js';
+import type { Request, Response } from "express";
+import { SendEmailService } from "../services/SendEmailService.js";
 
 class SendEmailController {
   async handle(req: Request, res: Response) {
-    const leadId = req.params.id as string; 
-    const userId = req.user_id;   
-    const { subject, body } = req.body;
+    const leadId = req.params.id as string;
+    const userId = req.user_id;
+    const { subject, body, targetEmails } = req.body;
 
     if (!subject || !body) {
-      return res.status(400).json({ error: "O assunto e a mensagem são obrigatórios." });
+      return res
+        .status(400)
+        .json({ error: "O assunto e a mensagem são obrigatórios." });
+    }
+
+    if (
+      !targetEmails ||
+      !Array.isArray(targetEmails) ||
+      targetEmails.length === 0
+    ) {
+      return res
+        .status(400)
+        .json({ error: "nenhum email de destino foi informado" });
     }
 
     const sendEmailService = new SendEmailService();
@@ -18,7 +30,8 @@ class SendEmailController {
         leadId,
         userId,
         subject,
-        body
+        body,
+        targetEmails,
       });
 
       return res.json(result);

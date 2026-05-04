@@ -356,6 +356,19 @@ export function Dashboard() {
   const [emailBody, setEmailBody] = useState("");
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [expandedHistory, setExpandedHistory] = useState<string[]>([]);
+  //multiplos emails
+  const [selectedTargetEmails, setSelectedTargetEmails] = useState<string[]>(
+    [],
+  );
+
+  //separar emails por "," ou ";"
+  function getLeadEmails(emailString?: string | null) {
+    if (!emailString) return [];
+    return emailString
+      .split(/[,;]/)
+      .map((e) => e.trim())
+      .filter((e) => e.length > 0);
+  }
 
   function toggleHistoryExpand(id: string) {
     setExpandedHistory((prev) =>
@@ -549,6 +562,11 @@ export function Dashboard() {
       return;
     }
 
+    if (selectedTargetEmails.length === 0) {
+      alert("Selecine ao menos um e-mail de destino");
+      return;
+    }
+
     setIsSendingEmail(true);
     const token = localStorage.getItem("token");
 
@@ -561,7 +579,11 @@ export function Dashboard() {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ subject: emailSubject, body: emailBody }),
+          body: JSON.stringify({
+            subject: emailSubject,
+            body: emailBody,
+            targetEmails: selectedTargetEmails,
+          }),
         },
       );
 
@@ -788,6 +810,13 @@ export function Dashboard() {
 
     loadInitialBoard();
   }, [navigate, selectedBatchId, globalFilter]);
+
+  //define email padrao ser pra todos os emails
+  useEffect(() => {
+    if (selectedLead && activeTab === "email") {
+      setSelectedTargetEmails(getLeadEmails(selectedLead.email));
+    }
+  }, [selectedLead, activeTab]);
 
   useEffect(() => {
     if (selectedLead) {
@@ -2203,6 +2232,41 @@ export function Dashboard() {
                         className="m-0 flex flex-col h-full space-y-4"
                       >
                         <div className="space-y-2">
+                          <Label>
+                            Destinatários ({selectedTargetEmails.length}{" "}
+                            selecionado
+                            {selectedTargetEmails.length !== 1 ? "s" : ""})
+                          </Label>
+                          {getLeadEmails(selectedLead?.email).length > 0 ? (
+                            <div className="flex flex-wrap gap-2">
+                              {getLeadEmails(selectedLead?.email).map((em) => {
+                                const isSelected =
+                                  selectedTargetEmails.includes(em);
+                                return (
+                                  <Badge
+                                    key={em}
+                                    variant={isSelected ? "default" : "outline"}
+                                    className={`cursor-pointer transition-colors px-3 py-1 ${isSelected ? "bg-primary" : "hover:bg-muted text-muted-foreground"}`}
+                                    onClick={() => {
+                                      setSelectedTargetEmails((prev) =>
+                                        prev.includes(em)
+                                          ? prev.filter((e) => e !== em)
+                                          : [...prev, em],
+                                      );
+                                    }}
+                                  >
+                                    {em}
+                                  </Badge>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div className="text-xs text-orange-600 bg-orange-50 dark:bg-orange-950/30 dark:text-orange-400 p-2 rounded border border-orange-200 dark:border-orange-900/50">
+                              Nenhum e-mail cadastrado para este Lead
+                            </div>
+                          )}
+                        </div>
+                        <div className="space-y-2">
                           <Label>Assunto</Label>
                           <Input
                             placeholder="Assunto do e-mail"
@@ -2479,9 +2543,8 @@ export function Dashboard() {
                   <Mail className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="edit-email"
-                    type="email"
                     className="pl-8"
-                    placeholder="contato@empresa.com"
+                    placeholder="contato@empresa.com, outro@empresa.com"
                     value={formData.email}
                     onChange={(e) =>
                       setFormData({ ...formData, email: e.target.value })

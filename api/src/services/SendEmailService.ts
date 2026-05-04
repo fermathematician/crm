@@ -6,10 +6,17 @@ interface SendEmailRequest {
   userId: string;
   subject: string;
   body: string;
+  targetEmails: string[];
 }
 
 class SendEmailService {
-  async execute({ leadId, userId, subject, body }: SendEmailRequest) {
+  async execute({
+    leadId,
+    userId,
+    subject,
+    body,
+    targetEmails,
+  }: SendEmailRequest) {
     const user = await prismaClient.user.findUnique({
       where: { id: userId },
     });
@@ -57,6 +64,8 @@ class SendEmailService {
 
     if (!messageId && user.brevoApiKey) {
       try {
+        const brevoFormat = targetEmails.map((email) => ({ email }));
+
         const response = await fetch("https://api.brevo.com/v3/smtp/email", {
           method: "POST",
           headers: {
@@ -67,7 +76,7 @@ class SendEmailService {
 
           body: JSON.stringify({
             sender: { name: user.name, email: user.email },
-            to: [{ email: lead.email }],
+            to: brevoFormat,
             subject: subject,
             htmlContent: formattedBody,
           }),
@@ -95,7 +104,7 @@ class SendEmailService {
         userId: userId,
         type: "EMAIL",
         date: new Date(),
-        description: `Enviado via ${providerUsed}\nAssunto: ${subject}\n\nMensagem:\n${body}`,
+        description: `Enviado via ${providerUsed}\nPara: ${targetEmails.join(", ")}`,
       },
     });
 
