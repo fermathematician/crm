@@ -104,6 +104,13 @@ export function LeadsList() {
   const [activeSearch, setActiveSearch] = useState(""); // A busca que foi enviada pro backend
   const [filterStage, setFilterStage] = useState("ALL");
 
+  //filtro por listas
+
+  const [selectedBatchId, setSelectedBatchId] = useState<string>("all");
+  const [importedBatches, setImportedBatches] = useState<
+    { id: string; tag: string }[]
+  >([]);
+
   // Estados do Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<ApiLead | null>(null);
@@ -143,6 +150,13 @@ export function LeadsList() {
         stage: filterStage,
       });
 
+      //parametros do outro filtro
+      if (selectedBatchId === "manual") {
+        queryParams.append("isManual", "true");
+      } else if (selectedBatchId !== "all") {
+        queryParams.append("importBatchId", selectedBatchId);
+      }
+
       const response = await fetch(
         `http://localhost:3000/auth/leads?${queryParams}`,
         {
@@ -172,7 +186,7 @@ export function LeadsList() {
     } finally {
       setLoading(false);
     }
-  }, [navigate, currentPage, activeSearch, filterStage]);
+  }, [navigate, currentPage, activeSearch, filterStage, selectedBatchId]);
 
   // Recarrega os leads sempre que a página, a busca ativa ou o estágio mudarem
   useEffect(() => {
@@ -182,7 +196,33 @@ export function LeadsList() {
   // Reseta a página para 1 sempre que trocar o filtro de estágio
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterStage, activeSearch]);
+  }, [filterStage, activeSearch, selectedBatchId]);
+
+  // buscar listas pro filtro
+  useEffect(() => {
+    async function fetchBatches() {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      try {
+        const response = await fetch(
+          "http://localhost:3000/auth/import-batches",
+          {
+            method: "GET",
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          setImportedBatches(data);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar lista: ", error);
+      }
+    }
+
+    fetchBatches();
+  }, []);
 
   function handleSearchSubmit(e?: React.FormEvent) {
     if (e) e.preventDefault();
@@ -329,6 +369,12 @@ export function LeadsList() {
         search: activeSearch,
         stage: filterStage,
       });
+
+      if (selectedBatchId === "manual") {
+        queryParams.append("isManual", "true");
+      } else if (selectedBatchId !== "all") {
+        queryParams.append("importBatchId", selectedBatchId);
+      }
 
       const response = await fetch(
         `http://localhost:3000/auth/leads?${queryParams}`,
@@ -508,6 +554,22 @@ export function LeadsList() {
                     </SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="relative w-full md:w-56">
+                <Filter className="absolute left-2 top-3 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />
+                <select
+                  className="flex h-10 w-56 rounded-md border border-input bg-background px-8 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
+                  value={selectedBatchId}
+                  onChange={(e) => setSelectedBatchId(e.target.value)}
+                >
+                  <option value="all">Todas as Listas</option>
+                  <option value="manual">Sem Listas</option>
+                  {importedBatches.map((batch) => (
+                    <option key={batch.id} value={batch.id}>
+                      {batch.tag}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
