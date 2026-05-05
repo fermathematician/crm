@@ -257,6 +257,18 @@ function getTodayString() {
   return `${year}-${month}-${day}`;
 }
 
+const maskTime = (value: string) => {
+  let v = value.replace(/\D/g, "");
+
+  v = v.slice(0, 4);
+
+  if (v.length > 2) {
+    v = `${v.slice(0, 2)}:${v.slice(2)}`;
+  }
+
+  return v;
+};
+
 function getActivityStatus(contacts?: ApiContact[]) {
   //conta atividade somente interações
   const validContatcs =
@@ -338,6 +350,8 @@ export function Dashboard() {
   const [editingTag, setEditingTag] = useState<LeadTag | null>(null);
   const [editingVisitDate, setEditingVisitDate] = useState<string>("");
   const [dateError, setDateError] = useState<string | null>(null);
+
+  const [editingVisitTime, setEditingVisitTime] = useState<string>("");
 
   const [formData, setFormData] = useState({
     companyName: "",
@@ -438,10 +452,18 @@ export function Dashboard() {
     for (const colId in boardData) {
       boardData[colId].leads.forEach((lead) => {
         if (lead.visitDate && lead.visitDate.startsWith(todayStr)) {
+          let timeString = "Hoje";
+
+          if (lead.visitDate?.includes("T")) {
+            const extractedTime = lead.visitDate.split("T")[1].slice(0, 5);
+            if (extractedTime !== "00:00") {
+              timeString = `Hoje às ${extractedTime}`;
+            }
+          }
           todayNotifications.push({
             id: `visit-${lead.id}`,
             title: `Visita Agendada: ${lead.name}`,
-            time: "Hoje",
+            time: timeString,
             type: "warning",
             leadId: lead.id,
           });
@@ -824,11 +846,18 @@ export function Dashboard() {
       setDateError(null);
 
       if (selectedLead.visitDate) {
-        const datePart = selectedLead.visitDate.split("T")[0];
+        const [datePart, timePart] = selectedLead.visitDate.split("T");
         const [year, month, day] = datePart.split("-");
         setEditingVisitDate(`${day}/${month}/${year}`);
+
+        if (timePart) {
+          setEditingVisitTime(timePart.slice(0, 5));
+        } else {
+          setEditingVisitTime("");
+        }
       } else {
         setEditingVisitDate("");
+        setEditingVisitTime("");
       }
 
       setLeadContacts(selectedLead.contacts || []);
@@ -1049,7 +1078,8 @@ export function Dashboard() {
     let formattedDateForBackend = null;
     if (editingVisitDate && editingVisitDate.length === 10) {
       const [day, month, year] = editingVisitDate.split("/");
-      formattedDateForBackend = `${year}-${month}-${day}`;
+      const time = editingVisitTime.length === 5 ? editingVisitTime : "00:00";
+      formattedDateForBackend = `${year}-${month}-${day}T${time}:00`;
     }
 
     const newColumns = { ...columns };
@@ -1079,9 +1109,13 @@ export function Dashboard() {
 
         if (
           formattedDateForBackend &&
-          oldLead.visitDate !== formattedDateForBackend
+          oldLead.visitDate != formattedDateForBackend
         ) {
-          const description = `Visita agendada para: ${editingVisitDate}`;
+          const timeToDisplay =
+            editingVisitTime && editingVisitTime.length === 5
+              ? editingVisitTime
+              : "00:00";
+          const description = `Visita agendada para: ${editingVisitDate} às ${timeToDisplay || "00:00"}`;
           createHistoryLog(selectedLead.id, "MEETING", description, false);
           const newLocalContact: ApiContact = {
             id: (Date.now() + 1).toString(),
@@ -1334,7 +1368,7 @@ export function Dashboard() {
 
   const showVisitDate =
     currentLeadColumnId &&
-    ["negociacao", "cadastro", "finalizado"].includes(currentLeadColumnId);
+    ["contato", "negociacao", "cadastro"].includes(currentLeadColumnId);
 
   // Variável utilitária para o histórico filtrado
   const visibleContacts = leadContacts.filter(
@@ -1760,12 +1794,32 @@ export function Dashboard() {
                                 <h4 className="font-bold text-lg">
                                   {lead.name}
                                 </h4>
-                                <p className="text-sm text-muted-foreground">
-                                  Em:{" "}
-                                  {reverseStageMap[
-                                    getLeadColumnId(lead.id) || ""
-                                  ] || "descriptiononhecido"}
-                                </p>
+                                <div className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
+                                  <span>
+                                    Em:{" "}
+                                    <span className="font-semibold">
+                                      {
+                                        reverseStageMap[
+                                          getLeadColumnId(lead.id) ||
+                                            "" ||
+                                            "Desconhecido"
+                                        ]
+                                      }
+                                    </span>
+                                  </span>
+
+                                  {lead.visitDate &&
+                                    lead.visitDate.includes("T") &&
+                                    lead.visitDate.split("T")[1].slice(0, 5) !==
+                                      "00:00" && (
+                                      <span className="flex items-center text-blue-600 dark:text-blue-400 font-bold bg-blue-100 dark:bg-blue-900/40 px-1.5 py-0.5 rounded text-xs border border-blue-200 dark:border-blue-800">
+                                        <Clock size={12} className="mr-1" />
+                                        {lead.visitDate
+                                          .split("T")[1]
+                                          .slice(0, 5)}
+                                      </span>
+                                    )}
+                                </div>
                               </div>
                               <Badge
                                 variant="outline"
@@ -1926,6 +1980,26 @@ export function Dashboard() {
                       className={`flex h-10 w-full rounded-md border bg-card px-3 py-2 pl-10 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${dateError ? "border-red-500 focus-visible:ring-red-500" : "border-input"}`}
                     />
                   </div>
+
+                  <div className="w-24 realtive">
+                    <Clock
+                      size={16}
+                      className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none"
+                    />
+                    <Input
+                      type="text"
+                      placeholder="00:00"
+                      maxLength={5}
+                      value={editingVisitTime}
+                      onChange={(e) => {
+                        const masked = maskTime(e.target.value);
+                        e.target.value = masked;
+                        setEditingVisitTime(masked);
+                      }}
+                      className="flex h-10 w-full rounded-md border bg-card px-3 pl-9 text-sm border-input focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+
                   {editingVisitDate && (
                     <Button
                       variant="ghost"
