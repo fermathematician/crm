@@ -276,7 +276,7 @@ function getActivityStatus(contacts?: ApiContact[]) {
 
   if (validContatcs.length === 0) {
     return {
-      text: "SEM ATIVIDADE",
+      text: "SEM ATIV.",
       color: "bg-slate-100 text-slate-500 border-slate-200",
     };
   }
@@ -1445,7 +1445,7 @@ export function Dashboard() {
             <div className="flex items-center gap-1.5 flex-wrap">
               <Badge
                 variant="outline"
-                className="text-[10px] px-1 py-0 h-5 font-normal uppercase"
+                className="text-[8px] px-1 py-0 h-4 font-normal uppercase"
               >
                 {lead.tag}
               </Badge>
@@ -1454,7 +1454,7 @@ export function Dashboard() {
                 const activity = getActivityStatus(lead.contacts);
                 return (
                   <div
-                    className={`flex items-center gap-1 text-[9px] font-bold px-1.5 h-5 rounded border shadow-sm uppercase ${activity.color}`}
+                    className={`flex items-center gap-1 text-[9px] font-bold px-1.5 h-4 rounded border shadow-sm uppercase ${activity.color}`}
                   >
                     <Clock size={10} strokeWidth={2.5} />
                     {activity.text}
@@ -1464,7 +1464,7 @@ export function Dashboard() {
             </div>
 
             {!isHorizontal && lead.visitDate && (
-              <div className="flex items-center gap-1.5 text-[11px] font-bold text-blue-700 bg-blue-100 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30 px-2 py-0.5 rounded-md shadow-sm">
+              <div className="flex items-center gap-1.5 text-[9px] font-bold text-blue-700 bg-blue-100 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30 px-2 py-0.5 rounded-md shadow-sm">
                 <CalendarIcon size={12} strokeWidth={2.5} />
                 {formatDisplayDate(lead.visitDate)}
               </div>
@@ -2006,6 +2006,7 @@ export function Dashboard() {
                       size="sm"
                       onClick={() => {
                         setEditingVisitDate("");
+                        setEditingVisitTime("");
                         setDateError(null);
                       }}
                       className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
