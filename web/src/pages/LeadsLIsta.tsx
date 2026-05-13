@@ -88,6 +88,33 @@ const maskCNAE = (value: string) => {
   return value;
 };
 
+const ALL_TAGS = [
+  "novo",
+  "a qualificar",
+  "sem resposta",
+  "respondido",
+  "frio",
+  "morno",
+  "quente",
+  "promessa",
+  "parcial",
+  "completa",
+  "aprovado",
+  "recusado",
+  "sem interesse",
+  "fora de perfil",
+];
+
+const allowedTagsByStage: Record<string, string[]> = {
+  NOVO: ["novo"],
+  CONTATO: ["a qualificar", "sem resposta", "respondido"],
+  NEGOCIACAO: ["frio", "morno", "quente"],
+  CADASTRO: ["promessa", "parcial", "completa"],
+  FINALIZADO: ["aprovado", "recusado"],
+  SEM_INTERESSE: ["sem interesse"],
+  FORA_DE_PERFIL: ["fora de perfil"],
+};
+
 export function LeadsList() {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
@@ -103,6 +130,7 @@ export function LeadsList() {
   const [searchInput, setSearchInput] = useState(""); // O que o usuário digita
   const [activeSearch, setActiveSearch] = useState(""); // A busca que foi enviada pro backend
   const [filterStage, setFilterStage] = useState("ALL");
+  const [filterTag, setFilterTag] = useState("ALL");
 
   //filtro por listas
 
@@ -150,6 +178,10 @@ export function LeadsList() {
         stage: filterStage,
       });
 
+      if (filterTag != "ALL") {
+        queryParams.append("tag", filterTag);
+      }
+
       //parametros do outro filtro
       if (selectedBatchId === "manual") {
         queryParams.append("isManual", "true");
@@ -186,7 +218,14 @@ export function LeadsList() {
     } finally {
       setLoading(false);
     }
-  }, [navigate, currentPage, activeSearch, filterStage, selectedBatchId]);
+  }, [
+    navigate,
+    currentPage,
+    activeSearch,
+    filterStage,
+    selectedBatchId,
+    filterTag,
+  ]);
 
   // Recarrega os leads sempre que a página, a busca ativa ou o estágio mudarem
   useEffect(() => {
@@ -196,7 +235,7 @@ export function LeadsList() {
   // Reseta a página para 1 sempre que trocar o filtro de estágio
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterStage, activeSearch, selectedBatchId]);
+  }, [filterStage, activeSearch, selectedBatchId, filterTag]);
 
   // buscar listas pro filtro
   useEffect(() => {
@@ -254,7 +293,7 @@ export function LeadsList() {
   async function handleLocalChange(
     leadId: string,
     field: keyof ApiLead,
-    value: string,
+    value: any,
   ) {
     setLeads((prev) =>
       prev.map((lead) =>
@@ -263,7 +302,7 @@ export function LeadsList() {
     );
   }
 
-  async function handleSaveCell(leadId: string, field: string, value: string) {
+  async function handleSaveCell(leadId: string, field: string, value: any) {
     const token = localStorage.getItem("token");
     try {
       await fetch(`http://localhost:3000/auth/leads/update`, {
@@ -394,26 +433,28 @@ export function LeadsList() {
       const headers = [
         "Razão Social",
         "CNPJ",
-        "CNAE",
+        // "CNAE",
         "Telefone",
         "Email",
         "Cidade",
         "UF",
         "Endereço",
         "Etapa",
+        "Etiqueta",
       ];
 
       const csvRows = leadsToExport.map((l: ApiLead) =>
         [
           `"${l.companyName || ""}"`,
           `"${l.cnpj || ""}"`,
-          `"${l.cnae || ""}"`,
+          // `"${l.cnae || ""}"`,
           `"${l.phone || ""}"`,
           `"${l.email || ""}"`,
           `"${l.city || ""}"`,
           `"${l.state || ""}"`,
           `"${l.address || ""}"`,
           `"${l.funnelStage || ""}"`,
+          `"${(l.tags && l.tags[0]) || ""}"`,
         ].join(","),
       );
 
@@ -555,6 +596,28 @@ export function LeadsList() {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="relative w-full md:w-56">
+                <Filter className="absolute left-2 top-3 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />
+                <Select value={filterTag} onValueChange={setFilterTag}>
+                  <SelectTrigger className="pl-9 h-10 w-full bg-card border-border uppercase text-xs">
+                    <SelectValue placeholder="Filtrar por etiqueta" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">TODAS AS ETIQUETAS</SelectItem>
+                    {ALL_TAGS.map((tag) => (
+                      <SelectItem
+                        key={tag}
+                        value={tag}
+                        className="uppercase text-xs"
+                      >
+                        {tag}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="relative w-full md:w-56">
                 <Filter className="absolute left-2 top-3 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />
                 <select
@@ -841,13 +904,13 @@ export function LeadsList() {
                   <tr>
                     <th className="px-4 py-3 font-medium">Razão Social</th>
                     <th className="px-4 py-3 font-medium">CNPJ</th>
-                    <th className="px-4 py-3 font-medium">CNAE</th>
                     <th className="px-4 py-3 font-medium">Telefone</th>
                     <th className="px-4 py-3 font-medium">Email</th>
                     <th className="px-4 py-3 font-medium">Cidade</th>
                     <th className="px-4 py-3 font-medium">UF</th>
                     <th className="px-4 py-3 font-medium">Endereço</th>
                     <th className="px-4 py-3 font-medium">Etapa</th>
+                    <th className="px-4 py-3 font-medium">Etiqueta</th>
                     <th className="px-4 py-3 text-right font-medium">Ações</th>
                   </tr>
                 </thead>
@@ -924,29 +987,6 @@ export function LeadsList() {
                               }
                             }}
                             className="h-8 min-w-[140px] border-transparent bg-transparent hover:bg-muted/50 focus:bg-background focus:border-primary focus:ring-1 shadow-none px-2 text-muted-foreground transition-all"
-                          />
-                        </td>
-                        <td className="px-1 py-1">
-                          <Input
-                            value={lead.cnae || ""}
-                            onChange={(e) =>
-                              handleLocalChange(
-                                lead.id,
-                                "cnae",
-                                maskCNAE(e.target.value),
-                              )
-                            }
-                            onFocus={(e) => {
-                              e.target.dataset.original = e.target.value;
-                            }}
-                            onBlur={(e) => {
-                              if (
-                                e.target.value !== e.target.dataset.original
-                              ) {
-                                handleSaveCell(lead.id, "cnae", e.target.value);
-                              }
-                            }}
-                            className="h-8 min-w-[110px] border-transparent bg-transparent hover:bg-muted/50 focus:bg-background focus:border-primary focus:ring-1 shadow-none px-2 text-muted-foreground transition-all"
                           />
                         </td>
                         <td className="px-1 py-1">
@@ -1107,6 +1147,34 @@ export function LeadsList() {
                             </SelectContent>
                           </Select>
                         </td>
+
+                        <td className="px-2 py-1">
+                          <Select
+                            value={lead.tags?.[0] || ""}
+                            onValueChange={(val) => {
+                              handleLocalChange(lead.id, "tags", [val]);
+                              handleSaveCell(lead.id, "tags", [val]);
+                            }}
+                          >
+                            <SelectTrigger className="h-8 border-transparent bg-transparent hover:bg-muted/50 focus:ring-1 shadow-none px-2 w-[140px] text-xs font-semibold uppercase">
+                              <SelectValue placeholder="SEM ETIQUETA" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {(allowedTagsByStage[lead.funnelStage] || []).map(
+                                (tag) => (
+                                  <SelectItem
+                                    key={tag}
+                                    value={tag}
+                                    className="uppercase text-xs font-medium"
+                                  >
+                                    {tag}
+                                  </SelectItem>
+                                ),
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </td>
+
                         <td className="px-2 py-1 flex justify-end gap-1 items-center h-[40px]">
                           <Button
                             variant="ghost"
