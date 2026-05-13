@@ -125,6 +125,7 @@ export function UserReport() {
         if (meResponse.ok) {
           const meData = await meResponse.json();
           targetId = meData.id;
+          console.log("ID do usuário logado é:", targetId);
         } else {
           console.error("Erro ao indentificar o usuario logado");
           setData(null);
@@ -132,7 +133,7 @@ export function UserReport() {
           return;
         }
       }
-      const url = `http://localhost:3000/auth/users/${id}/metrics?startDate=${apiStartDate}&endDate=${apiEndDate}&visitMode=${visitMode}`;
+      const url = `http://localhost:3000/auth/users/${targetId}/metrics?startDate=${apiStartDate}&endDate=${apiEndDate}&visitMode=${visitMode}`;
       const response = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
