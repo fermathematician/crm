@@ -1,12 +1,12 @@
-import { Login } from './pages/Login';
-import { Register } from './pages/Register';
-import { Dashboard } from './pages/Dashboard';
-import { PrivateRoute } from './components/PrivateRoute';
-import { LeadsList } from './pages/LeadsLIsta';
-import { UserReport } from './pages/UserReport';  
+import { Login } from "./pages/Login";
+import { Register } from "./pages/Register";
+import { Dashboard } from "./pages/Dashboard";
+import { PrivateRoute } from "./components/PrivateRoute";
+import { LeadsList } from "./pages/LeadsLIsta";
+import { UserReport } from "./pages/UserReport";
 
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { Reports } from './pages/Reports';
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Reports } from "./pages/Reports";
 
 function App() {
   return (
@@ -17,45 +17,52 @@ function App() {
         <Route path="/register" element={<Register />} />
 
         {/* Rotas privadas  */}
-        <Route 
-          path="/dashboard" 
+        <Route
+          path="/dashboard"
           element={
             <PrivateRoute>
               <Dashboard />
             </PrivateRoute>
-          } 
+          }
         />
-        <Route 
-          path="/leads-list" 
+        <Route
+          path="/leads-list"
           element={
             <PrivateRoute>
               <LeadsList />
             </PrivateRoute>
-          } 
+          }
         />
 
-        <Route 
-          path="/reports" 
+        <Route
+          path="/reports"
           element={
             <PrivateRoute>
               <Reports />
             </PrivateRoute>
-          } 
+          }
         />
-        
-        <Route 
-          path="/reports/user/:id" 
+
+        <Route
+          path="/user-report"
           element={
             <PrivateRoute>
               <UserReport />
             </PrivateRoute>
-          } 
+          }
         />
-        
+
+        <Route
+          path="/reports/user/:id"
+          element={
+            <PrivateRoute>
+              <UserReport />
+            </PrivateRoute>
+          }
+        />
       </Routes>
     </BrowserRouter>
   );
-
 }
 
 export default App;

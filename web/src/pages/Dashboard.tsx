@@ -32,6 +32,7 @@ import {
   FileText,
   ChevronDown,
   Search,
+  BarChart,
 } from "lucide-react";
 import { useTheme } from "../hooks/useTheme";
 
@@ -1682,17 +1683,6 @@ export function Dashboard() {
             Gerenciar Leads
           </Button>
 
-          {userProfile.role === "ADMIN" && (
-            <Button
-              variant="ghost"
-              className="w-full gap-2 justify-start h-12 text-md border border-dashed border-border hover:bg-accent hover:border-solid"
-              onClick={() => navigate("/reports")}
-            >
-              <FileText size={18} />
-              Relatórios
-            </Button>
-          )}
-
           <Dialog
             open={isCalendarOpen}
             onOpenChange={(open) => {
@@ -1837,6 +1827,26 @@ export function Dashboard() {
               )}
             </DialogContent>
           </Dialog>
+          <div className="p-4 border-t border-border flex flex-col gap-3 shrink-0">
+            <Button
+              variant="ghost"
+              className="w-full gap-2 justify-start h-12 text-md border border-dashed border-border hover:bg-accent hover:border-solid"
+              onClick={() => navigate("/user-report")}
+            >
+              <BarChart size={18} />
+              Resumo Geral
+            </Button>
+            {userProfile.role === "ADMIN" && (
+              <Button
+                variant="ghost"
+                className="w-full gap-2 justify-start h-12 text-md border border-dashed border-border hover:bg-accent hover:border-solid"
+                onClick={() => navigate("/reports")}
+              >
+                <FileText size={18} />
+                Relatório de Equipe
+              </Button>
+            )}
+          </div>
         </div>
       </aside>
 
