@@ -171,7 +171,12 @@ class GetUserMetricsService {
       }
     });
 
-    const analyticalTable = Array.from(leadStatsMap.values());
+    const analyticalTable = Array.from(leadStatsMap.values()).filter(
+      (lead) =>
+        lead.timesContacted > 0 ||
+        lead.funnelChanges > 0 ||
+        lead.statusChanges > 0,
+    );
 
     return {
       user,

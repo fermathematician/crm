@@ -344,12 +344,12 @@ export function UserReport() {
                   </h3>
                 </div>
 
-                <div className="rounded-md border border-border bg-card overflow-hidden shadow-sm flex flex-col h-[500px]">
-                  <ScrollArea className="flex-1">
-                    <table className="w-full text-sm text-left whitespace-nowrap">
+                <div className="rounded-md border border-border bg-card overflow-x-auto shadow-sm flex flex-col h-[500px]">
+                  <ScrollArea className="h-full">
+                    <table className="w-full text-sm text-left whitespace-nowrap min-w-max">
                       <thead className="text-xs text-muted-foreground uppercase bg-muted/50 border-b border-border sticky top-0 backdrop-blur-sm z-10">
                         <tr>
-                          <th className="px-6 py-4 font-medium">
+                          <th className="px-6 py-4 font-medium w-[300px] max-w-[300px]">
                             Nome do Lead
                           </th>
                           <th className="px-6 py-4 font-medium">
@@ -385,7 +385,7 @@ export function UserReport() {
                               key={row.leadId}
                               className="hover:bg-muted/30 transition-colors"
                             >
-                              <td className="px-6 py-4 font-semibold text-foreground">
+                              <td className="px-6 py-4 font-semibold text-foreground max-w-[300px] truncate">
                                 {row.leadName}
                               </td>
                               <td className="px-6 py-4">
