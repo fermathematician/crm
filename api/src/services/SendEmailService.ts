@@ -1,5 +1,10 @@
-import { Resend } from "resend";
+import path from "path";
 import { prismaClient } from "../../prisma/index.js";
+import { google } from "googleapis";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 interface SendEmailRequest {
   leadId: string;
@@ -23,8 +28,8 @@ class SendEmailService {
 
     if (!user) throw new Error("Usuário não encontrado");
 
-    if (!user?.resendApiKey && !user.brevoApiKey) {
-      throw new Error("Você ainda não inseriu sua API de e-mail");
+    if (!user.email) {
+      throw new Error("Este usuário nao possui um endereço de email");
     }
 
     const lead = await prismaClient.lead.findUnique({
@@ -41,60 +46,51 @@ class SendEmailService {
 
     const formattedBody = body.replace(/\n/g, "<br/>");
     let messageId = "";
-    let providerUsed = "";
 
-    if (user.resendApiKey) {
-      try {
-        const resendInstance = new Resend(user.resendApiKey);
-        const { data, error } = await resendInstance.emails.send({
-          from: user.email,
-          to: lead.email,
-          subject: subject,
-          html: `<div>${formattedBody}</div>`,
-        });
+    try {
+      const keyFilePath = path.join(
+        __dirname,
+        "..",
+        "..",
+        "google-credentials.json",
+      );
 
-        if (!error && data) {
-          messageId = data.id;
-          providerUsed = "RESEND";
-        }
-      } catch (err) {
-        console.error("Falha no envio via resend:", err);
-      }
-    }
+      const auth = new google.auth.JWT({
+        keyFile: keyFilePath,
+        scopes: ["https://www.googleapis.com/auth/gmail.send"],
+        subject: user.email,
+      });
 
-    if (!messageId && user.brevoApiKey) {
-      try {
-        const brevoFormat = targetEmails.map((email) => ({ email }));
+      const gmail = google.gmail({ version: "v1", auth });
+      const destinatario = targetEmails.join(", ");
 
-        const response = await fetch("https://api.brevo.com/v3/smtp/email", {
-          method: "POST",
-          headers: {
-            accept: "application/json",
-            "api-key": user.brevoApiKey,
-            "content-type": "application/json",
-          },
+      const messageParts = [
+        `From: <${user.email}>`,
+        `To: ${destinatario}`,
+        `Subject: ${subject}`,
+        `Content-Type: text/html; charset=UTF-8`,
+        `Mime-Version: 1.0`,
+        "",
+        `<div>${formattedBody}</div>`,
+      ];
 
-          body: JSON.stringify({
-            sender: { name: user.name, email: user.email },
-            to: brevoFormat,
-            subject: subject,
-            htmlContent: formattedBody,
-          }),
-        });
+      const message = messageParts.join("\n");
+      const encodedMessage = Buffer.from(message)
+        .toString("base64")
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=+$/, "");
 
-        if (response.ok) {
-          const brevoData = await response.json();
-          messageId = brevoData.messageId;
-          providerUsed = "BREVO";
-        }
-      } catch (err) {
-        console.error("Falha no envio via BREVO:", err);
-      }
-    }
+      const response = await gmail.users.messages.send({
+        userId: "me",
+        requestBody: { raw: encodedMessage },
+      });
 
-    if (!messageId) {
+      messageId = response.data.id as string;
+    } catch (err: any) {
+      console.error("Falha no envio do email", err.message);
       throw new Error(
-        "Não foi possível enviar o email por nenhum dos provedores",
+        "Não foi posspivel enviar o email pelo servidor da Google",
       );
     }
 
@@ -104,14 +100,14 @@ class SendEmailService {
         userId: userId,
         type: "EMAIL",
         date: new Date(),
-        description: `Enviado via ${providerUsed}\nPara: ${targetEmails.join(", ")}`,
+        description: `Enviado via GMAIL\nPara: ${targetEmails.join(", ")}`,
       },
     });
 
     return {
       success: true,
       messageId: messageId,
-      provider: providerUsed,
+      provider: "GMAIL",
       contact,
     };
   }
