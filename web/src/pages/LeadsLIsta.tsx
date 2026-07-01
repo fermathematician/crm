@@ -190,7 +190,7 @@ export function LeadsList() {
       }
 
       const response = await fetch(
-        `http://localhost:3000/auth/leads?${queryParams}`,
+        `\`${import.meta.env.VITE_API_URL}/auth/leads?${queryParams}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -244,7 +244,7 @@ export function LeadsList() {
       if (!token) return;
       try {
         const response = await fetch(
-          "http://localhost:3000/auth/import-batches",
+          `${import.meta.env.VITE_API_URL}/auth/import-batches`,
           {
             method: "GET",
             headers: { Authorization: `Bearer ${token}` },
@@ -275,7 +275,7 @@ export function LeadsList() {
 
     const token = localStorage.getItem("token");
     try {
-      const response = await fetch(`http://localhost:3000/auth/leads/${id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/leads/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -305,7 +305,7 @@ export function LeadsList() {
   async function handleSaveCell(leadId: string, field: string, value: any) {
     const token = localStorage.getItem("token");
     try {
-      await fetch(`http://localhost:3000/auth/leads/update`, {
+      await fetch(`${import.meta.env.VITE_API_URL}/auth/leads/update`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -323,8 +323,8 @@ export function LeadsList() {
 
     const isEditing = !!editingLead;
     const url = isEditing
-      ? `http://localhost:3000/auth/leads/update`
-      : `http://localhost:3000/auth/leads`;
+      ? `${import.meta.env.VITE_API_URL}/auth/leads/update`
+      : `${import.meta.env.VITE_API_URL}/auth/leads`;
 
     const method = isEditing ? "PUT" : "POST";
 
@@ -369,7 +369,7 @@ export function LeadsList() {
     formDataPayload.append("tag", importTag);
 
     try {
-      const response = await fetch("http://localhost:3000/auth/leads/import", {
+      const response = await fetch("${import.meta.env.VITE_API_URL}/auth/leads/import", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -416,7 +416,7 @@ export function LeadsList() {
       }
 
       const response = await fetch(
-        `http://localhost:3000/auth/leads?${queryParams}`,
+        `${import.meta.env.VITE_API_URL}/auth/leads?${queryParams}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },

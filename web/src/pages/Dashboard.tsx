@@ -501,7 +501,7 @@ export function Dashboard() {
     const token = localStorage.getItem("token");
     const dateStr = getTodayString();
     try {
-      await fetch(`http://localhost:3000/auth/leads/${leadId}/contacts`, {
+      await fetch(`${import.meta.env.VITE_API_URL}/auth/leads/${leadId}/contacts`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -560,7 +560,7 @@ export function Dashboard() {
     const token = localStorage.getItem("token");
     try {
       await fetch(
-        `http://localhost:3000/auth/leads/${selectedLead.id}/contacts`,
+        `${import.meta.env.VITE_API_URL}/auth/leads/${selectedLead.id}/contacts`,
         {
           method: "POST",
           headers: {
@@ -595,7 +595,7 @@ export function Dashboard() {
 
     try {
       const response = await fetch(
-        `http://localhost:3000/auth/leads/${selectedLead.id}/email`,
+        `${import.meta.env.VITE_API_URL}/auth/leads/${selectedLead.id}/email`,
         {
           method: "POST",
           headers: {
@@ -711,7 +711,7 @@ export function Dashboard() {
   ) {
     const token = localStorage.getItem("token");
     try {
-      await fetch(`http://localhost:3000/auth/leads/update`, {
+      await fetch(`${import.meta.env.VITE_API_URL}/auth/leads/update`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -734,7 +734,7 @@ export function Dashboard() {
     if (!token) return [];
 
     try {
-      let url = `http://localhost:3000/auth/leads?stage=${stageName}&limit=50&page=${page}`;
+      let url = `${import.meta.env.VITE_API_URL}/auth/leads?stage=${stageName}&limit=50&page=${page}`;
       if (batchId === "manual") {
         url += `&isManual=true`; //leads que nao sao de listas
       } else if (batchId !== "all") {
@@ -913,7 +913,7 @@ export function Dashboard() {
       }
 
       try {
-        const response = await fetch("http://localhost:3000/auth/me", {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/me`, {
           method: "GET",
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -939,7 +939,7 @@ export function Dashboard() {
       if (!token) return;
       try {
         const response = await fetch(
-          "http://localhost:3000/auth/import-batches",
+          `${import.meta.env.VITE_API_URL}/auth/import-batches`,
           {
             method: "GET",
             headers: { Authorization: `Bearer ${token}` },
@@ -1036,7 +1036,7 @@ export function Dashboard() {
     }));
 
     const token = localStorage.getItem("token");
-    fetch("http://localhost:3000/auth/leads/reorder", {
+    fetch(`${import.meta.env.VITE_API_URL}/auth/leads/reorder`, {
       method: "PUT",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -1151,7 +1151,7 @@ export function Dashboard() {
     const token = localStorage.getItem("token");
 
     try {
-      const response = await fetch(`http://localhost:3000/auth/leads/update`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/leads/update`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,

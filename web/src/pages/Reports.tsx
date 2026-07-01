@@ -41,7 +41,7 @@ export function Reports() {
 
       try {
         // 1. Puxa o Perfil
-        const profileRes = await fetch('http://localhost:3000/auth/me', {
+        const profileRes = await fetch(`${import.meta.env.VITE_API_URL}/auth/me`, {
           method: 'GET',
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -57,7 +57,7 @@ export function Reports() {
         setUserProfile({ name: userData.name, role: userData.role });
 
         // 2. Se for Admin, puxa a lista de usuários
-        const usersRes = await fetch('http://localhost:3000/auth/users', {
+        const usersRes = await fetch(`${import.meta.env.VITE_API_URL}/auth/users`, {
           method: 'GET',
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -68,7 +68,7 @@ export function Reports() {
         }
 
         // 3. Puxa as Métricas Globais da Empresa
-        const metricsRes = await fetch('http://localhost:3000/auth/metrics/global', {
+        const metricsRes = await fetch(`${import.meta.env.VITE_API_URL}/auth/metrics/global`, {
           method: 'GET',
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -97,7 +97,7 @@ export function Reports() {
   async function handleRoleChange(userId: string, newRole: string) {
     const token = localStorage.getItem('token');
     try {
-      const response = await fetch(`http://localhost:3000/auth/users/${userId}/role`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/users/${userId}/role`, {
         method: 'PATCH',
         headers: { 
           'Authorization': `Bearer ${token}`,

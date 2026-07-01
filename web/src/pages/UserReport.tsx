@@ -118,7 +118,7 @@ export function UserReport() {
     try {
       let targetId = id;
       if (!targetId) {
-        const meResponse = await fetch("http://localhost:3000/auth/me", {
+        const meResponse = await fetch(`${import.meta.env.VITE_API_URL}/auth/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -133,7 +133,7 @@ export function UserReport() {
           return;
         }
       }
-      const url = `http://localhost:3000/auth/users/${targetId}/metrics?startDate=${apiStartDate}&endDate=${apiEndDate}&visitMode=${visitMode}`;
+      const url = `${import.meta.env.VITE_API_URL}/auth/users/${targetId}/metrics?startDate=${apiStartDate}&endDate=${apiEndDate}&visitMode=${visitMode}`;
       const response = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
