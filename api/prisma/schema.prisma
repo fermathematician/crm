@@ -7,7 +7,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL") 
+  url      = env("DATABASE_URL")
 }
 
 //------------------------------------------
@@ -15,14 +15,14 @@ datasource db {
 //------------------------------------------
 
 model User {
-  id       String   @id @default(uuid())
-  email    String   @unique
-  name     String
-  password String
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String
+  password     String
   resendApiKey String?
-  brevoApiKey String?
-  role     Role     @default(SALES)
-  created  DateTime @default(now())
+  brevoApiKey  String?
+  role         Role     @default(SALES)
+  created      DateTime @default(now())
 
   // Relacionamentos
   leads   Lead[]        @relation("LeadOwner") // Leads do usuário
@@ -91,10 +91,10 @@ model Lead {
 //------------------------------------------
 
 model Contact {
-  id          String   @id @default(uuid())
-  createdAt   DateTime @default(now())
-  
-  date        DateTime @default(now()) 
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+
+  date DateTime @default(now())
 
   type        ContactType
   description String?
@@ -105,14 +105,16 @@ model Contact {
   leadId String
   lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
-  didChageFunnel Boolean      @default(false) 
+  didChageFunnel Boolean      @default(false)
   funnelBefore   FunnelStage?
   funnelAfter    FunnelStage?
 
   didChangeOwner Boolean @default(false)
   ownerBeforeId  String?
 
-  observation String? 
+  observation String?
+
+  opened Boolean @default(false)
 }
 
 //------------------------------------------
@@ -141,5 +143,5 @@ enum ContactType {
   MEETING
   SYSTEM_CHANGE
   NOTE
-  REMINDER 
+  REMINDER
 }

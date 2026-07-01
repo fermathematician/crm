@@ -47,6 +47,20 @@ class SendEmailService {
     const formattedBody = body.replace(/\n/g, "<br/>");
     let messageId = "";
 
+    const contact = await prismaClient.contact.create({
+      data: {
+        leadId: leadId,
+        userId: userId,
+        type: "EMAIL",
+        date: new Date(),
+        description: `Enviado via GMAIL\nPara: ${targetEmails.join(", ")}`,
+      },
+    });
+
+    console.log(
+      `🚀 Contato criado com sucesso! ID para o Pixel: ${contact.id}`,
+    );
+
     try {
       const keyFilePath = path.join(
         __dirname,
@@ -64,6 +78,8 @@ class SendEmailService {
       const gmail = google.gmail({ version: "v1", auth });
       const destinatario = targetEmails.join(", ");
 
+      const apiUrl = process.env.API_URL || "https://sua-api-producao.com";
+      const trackingPixel = `<img src="${apiUrl}/auth/emails/track/${contact.id}" alt="" width="1" height="1" style="display:none;" />`;
       const messageParts = [
         `From: <${user.email}>`,
         `To: ${destinatario}`,
@@ -71,7 +87,7 @@ class SendEmailService {
         `Content-Type: text/html; charset=UTF-8`,
         `Mime-Version: 1.0`,
         "",
-        `<div>${formattedBody}</div>`,
+        `<div>${formattedBody}</div>${trackingPixel}`,
       ];
 
       const message = messageParts.join("\n");
@@ -90,19 +106,9 @@ class SendEmailService {
     } catch (err: any) {
       console.error("Falha no envio do email", err.message);
       throw new Error(
-        "Não foi posspivel enviar o email pelo servidor da Google",
+        "Não foi possível enviar o email pelo servidor da Google",
       );
     }
-
-    const contact = await prismaClient.contact.create({
-      data: {
-        leadId: leadId,
-        userId: userId,
-        type: "EMAIL",
-        date: new Date(),
-        description: `Enviado via GMAIL\nPara: ${targetEmails.join(", ")}`,
-      },
-    });
 
     return {
       success: true,
