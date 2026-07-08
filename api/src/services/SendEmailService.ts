@@ -78,7 +78,7 @@ class SendEmailService {
       const gmail = google.gmail({ version: "v1", auth });
       const destinatario = targetEmails.join(", ");
 
-      const apiUrl = process.env.API_URL || "https://sua-api-producao.com";
+      const apiUrl = process.env.API_URL;
       const trackingPixel = `<img src="${apiUrl}/auth/emails/track/${contact.id}" alt="" width="1" height="1" style="display:none;" />`;
       const messageParts = [
         `From: <${user.email}>`,
