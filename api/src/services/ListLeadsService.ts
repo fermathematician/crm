@@ -24,9 +24,7 @@ class ListLeadsService {
   }: ListLeadsParams) {
     const skip = (page - 1) * limit;
 
-    const whereClause: any = {
-      ownerId: userId,
-    };
+    const whereClause: any = {};
 
     if (search) {
       whereClause.OR = [

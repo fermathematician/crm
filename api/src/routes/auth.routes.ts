@@ -20,6 +20,7 @@ import { ReorderLeadsController } from "../controllers/ReorderLeadsController.js
 import { EmailWebhookController } from "../controllers/EmailWebhookController.js";
 import { TrackEmailController } from "../controllers/TrackEmailController.js";
 import { GmailWebhookController } from "../controllers/GmailWebhookController.js";
+import { CheckBouncesController } from "../services/CheckBouncesController.js";
 
 const router = Router();
 const upload = multer({ dest: "tmp/" });
@@ -41,6 +42,7 @@ const reorderLeadsController = new ReorderLeadsController();
 const emailWebhookController = new EmailWebhookController();
 const trackEmailController = new TrackEmailController();
 const gmailWebhookController = new GmailWebhookController();
+const checkBouncesController = new CheckBouncesController();
 
 router.get("/me", ensureAuthenticated, detailUserController.handle);
 router.get("/leads", ensureAuthenticated, listLeadsController.handle);
@@ -87,6 +89,12 @@ router.post(
 router.post("/webhooks/email", emailWebhookController.handle);
 
 router.post("/webhooks/gmail-bounce", gmailWebhookController.handle);
+
+router.post(
+  "/emails/bounces/check",
+  ensureAuthenticated,
+  checkBouncesController.handle,
+);
 //////////////////////////////////////////////////////////
 
 router.put("/leads/update", ensureAuthenticated, updateLeadController.handle);
