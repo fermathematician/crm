@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import { ListImportBatchesService } from "../services/ListImportBatchesService.js";
 
 export class ListImportBatchesController {
-  async handle(eq: Request, res: Response) {
+  async handle(req: Request, res: Response) {
     try {
       const listImportBatchesService = new ListImportBatchesService();
       const batches = await listImportBatchesService.execute();

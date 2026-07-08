@@ -190,7 +190,7 @@ export function LeadsList() {
       }
 
       const response = await fetch(
-        `\`${import.meta.env.VITE_API_URL}/auth/leads?${queryParams}`,
+        `${import.meta.env.VITE_API_URL}/auth/leads?${queryParams}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -369,7 +369,7 @@ export function LeadsList() {
     formDataPayload.append("tag", importTag);
 
     try {
-      const response = await fetch("${import.meta.env.VITE_API_URL}/auth/leads/import", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/leads/import`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
