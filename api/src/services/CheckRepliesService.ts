@@ -75,7 +75,12 @@ class CheckRepliesService {
 
       //veja que ele pega o primeiro pelo email
       const lead = await prismaClient.lead.findFirst({
-        where: { email: emailDoCliente },
+        where: {
+          email: {
+            contains: emailDoCliente,
+            mode: "insensitive",
+          },
+        },
       });
 
       console.log(
