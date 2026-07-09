@@ -43,6 +43,9 @@ class CheckRepliesService {
     });
 
     const messages = response.data.messages || [];
+    console.log(
+      `[🔎 GMAIL API] Encontradas ${messages.length} mensagens com 'Re:' para ${user.email}`,
+    );
     let respostasProcessadas = 0;
 
     for (const msg of messages) {

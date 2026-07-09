@@ -25,7 +25,9 @@ export function initCheckBouncesCron() {
 
       for (const user of users) {
         try {
-          console.log(`[⏰ CRON] Verificando e-mails de: ${user.email}`);
+          console.log(
+            `[⏰ CRON] Verificando bounce de e-mails de: ${user.email}`,
+          );
 
           const resultBounce = await checkBouncesService.execute({
             userId: user.id,
@@ -35,6 +37,17 @@ export function initCheckBouncesCron() {
               `[⏰ CRON] Sucesso! ${resultBounce.bouncesProcessados} bounces limpos para ${user.email}`,
             );
           }
+        } catch (error: any) {
+          console.error(
+            `[❌ CRON ERRO] Falha ao verificar bounce de e-mails de ${user.email}:`,
+            error.message,
+          );
+        }
+
+        try {
+          console.log(
+            `[⏰ CRON] Verificando respostas de e-mails de: ${user.email}`,
+          );
 
           const resultReplies = await checkRepliesService.execute({
             userId: user.id,
@@ -46,7 +59,7 @@ export function initCheckBouncesCron() {
           }
         } catch (error: any) {
           console.error(
-            `[❌ CRON ERRO] Falha ao verificar e-mails de ${user.email}:`,
+            `[❌ CRON ERRO] Falha ao verificar respostas de e-mails de ${user.email}:`,
             error.message,
           );
         }
