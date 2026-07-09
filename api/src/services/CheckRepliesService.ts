@@ -67,12 +67,20 @@ class CheckRepliesService {
       const emailMatch = fromHeader.match(/<([^>]+)>/) || [null, fromHeader];
       const emailDoCliente = emailMatch[1]?.trim().toLowerCase();
 
+      console.log(
+        `[🔎 ESPIÃO 1] Cabeçalho: "${fromHeader}" | E-mail Extraído: "${emailDoCliente}"`,
+      );
+
       if (!emailDoCliente) continue;
 
       //veja que ele pega o primeiro pelo email
       const lead = await prismaClient.lead.findFirst({
         where: { email: emailDoCliente },
       });
+
+      console.log(
+        `[🔎 ESPIÃO 2] Lead Encontrado no Banco? ${!!lead} | Estágio atual do funil: ${lead?.funnelStage || "N/A"}`,
+      );
 
       if (lead && ["NOVO", "CONTATO"].includes(lead.funnelStage)) {
         await prismaClient.lead.update({
