@@ -1,9 +1,10 @@
 import cron from "node-cron";
 import { prismaClient } from "../../prisma/index.js";
 import { CheckBouncesService } from "../services/CheckBouncesService.js";
+import { CheckRepliesService } from "../services/CheckRepliesService.js";
 
 export function initCheckBouncesCron() {
-  cron.schedule("*/5 * * * *", async () => {
+  cron.schedule("* * * * *", async () => {
     console.log("Iniciando varrefura automatizada de Bounces...");
 
     try {
@@ -20,15 +21,27 @@ export function initCheckBouncesCron() {
       }
 
       const checkBouncesService = new CheckBouncesService();
+      const checkRepliesService = new CheckRepliesService();
 
       for (const user of users) {
         try {
           console.log(`[⏰ CRON] Verificando e-mails de: ${user.email}`);
 
-          const result = await checkBouncesService.execute({ userId: user.id });
-          if (result.bouncesProcessados > 0) {
+          const resultBounce = await checkBouncesService.execute({
+            userId: user.id,
+          });
+          if (resultBounce.bouncesProcessados > 0) {
             console.log(
-              `[⏰ CRON] Sucesso! ${result.bouncesProcessados} bounces limpos para ${user.email}`,
+              `[⏰ CRON] Sucesso! ${resultBounce.bouncesProcessados} bounces limpos para ${user.email}`,
+            );
+          }
+
+          const resultReplies = await checkRepliesService.execute({
+            userId: user.id,
+          });
+          if (resultReplies.respostasProcessadas > 0) {
+            console.log(
+              `[⏰ CRON] Sucesso! ${resultReplies.respostasProcessadas} respostas processadas para ${user.email}`,
             );
           }
         } catch (error: any) {
