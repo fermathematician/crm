@@ -3,7 +3,7 @@ import { prismaClient } from "../../prisma/index.js";
 import { CheckBouncesService } from "../services/CheckBouncesService.js";
 
 export function initCheckBouncesCron() {
-  cron.schedule("* * * * *", async () => {
+  cron.schedule("*/5 * * * *", async () => {
     console.log("Iniciando varrefura automatizada de Bounces...");
 
     try {
