@@ -1,4 +1,5 @@
 import { prismaClient } from "../../prisma/index.js";
+import { validateEmailDomain } from "../utils/dnsValidator.js";
 
 interface LeadRequest {
   companyName: string;
@@ -9,10 +10,16 @@ interface LeadRequest {
   city?: string;
   state?: string;
   address?: string;
-  funnelStage?: "NOVO" | "CONTATO" | "NEGOCIACAO" | "CADASTRO" | "FINALIZADO" | "SEM_INTERESSE";
+  funnelStage?:
+    | "NOVO"
+    | "CONTATO"
+    | "NEGOCIACAO"
+    | "CADASTRO"
+    | "FINALIZADO"
+    | "SEM_INTERESSE";
   tags?: string[];
-  visitDate?: string; 
-  ownerId: string; 
+  visitDate?: string;
+  ownerId: string;
 }
 
 class CreateLeadService {
@@ -25,23 +32,30 @@ class CreateLeadService {
     city,
     state,
     address,
-    funnelStage = "NOVO", 
-    tags = ["novo"],   
+    funnelStage = "NOVO",
+    tags = ["novo"],
     visitDate,
-    ownerId
+    ownerId,
   }: LeadRequest) {
-    
     if (!companyName) {
       throw new Error("O nome da empresa (Razão Social) é obrigatório.");
     }
 
     if (cnpj) {
       const leadExists = await prismaClient.lead.findUnique({
-        where: { cnpj }
+        where: { cnpj },
       });
 
       if (leadExists) {
         throw new Error("Já existe um Lead cadastrado com este CNPJ.");
+      }
+    }
+
+    let finalTags = tags;
+    if (email && email.trim() !== "") {
+      const isDomainValid = await validateEmailDomain(email);
+      if (!isDomainValid) {
+        finalTags = ["a qualificar"];
       }
     }
 
@@ -56,10 +70,10 @@ class CreateLeadService {
         state: state || null,
         address: address || null,
         funnelStage,
-        tags,
+        tags: finalTags,
         visitDate: visitDate ? new Date(visitDate) : null, // <-- 3. CONVERSÃO ADICIONADA AQUI
-        ownerId 
-      }
+        ownerId,
+      },
     });
 
     return lead;

@@ -72,6 +72,7 @@ type LeadTag =
   | "recusado"
   | "sem interesse"
   | "fora de perfil"
+  | "aberto"
   | "novo";
 
 interface ApiContact {
@@ -122,6 +123,7 @@ const tagColors: Record<LeadTag, string> = {
   "a qualificar": "bg-zinc-300 border-zinc-400",
   "sem resposta": "bg-gray-400 border-gray-500",
   respondido: "bg-yellow-400 border-yellow-600",
+  aberto: "bg-orange-300 border-orange-500",
   frio: "bg-cyan-500 border-cyan-600",
   morno: "bg-orange-400 border-orange-500",
   quente: "bg-red-500 border-red-600",
@@ -145,8 +147,8 @@ const columnDefaultTags: Record<string, LeadTag> = {
 };
 
 const columnAllowedTags: Record<string, LeadTag[]> = {
-  novos: ["novo"],
-  contato: ["a qualificar", "sem resposta", "respondido"],
+  novos: ["novo", "a qualificar"],
+  contato: ["sem resposta", "aberto", "respondido"],
   negociacao: ["frio", "morno", "quente"],
   cadastro: ["promessa", "parcial", "completa"],
   finalizado: ["aprovado", "recusado"],
