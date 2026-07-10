@@ -372,6 +372,11 @@ export function Dashboard() {
   const [emailSubject, setEmailSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [templates, setTemplates] = useState<{id: string; name: string; subject: string;body: string}[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
+
+
+
   const [expandedHistory, setExpandedHistory] = useState<string[]>([]);
   //multiplos emails
   const [selectedTargetEmails, setSelectedTargetEmails] = useState<string[]>(
@@ -847,6 +852,8 @@ export function Dashboard() {
     if (selectedLead) {
       setEditingTag(selectedLead.tag);
       setDateError(null);
+      //reseta o select
+      setSelectedTemplateId("");
 
       if (selectedLead.visitDate) {
         const [datePart, timePart] = selectedLead.visitDate.split("T");
@@ -959,6 +966,56 @@ export function Dashboard() {
 
     fetchBatches();
   }, []);
+
+  useEffect(() => {
+    async function fetchTemplates() {
+      const token = localStorage.getItem("token");
+      if(!token) return;
+      try {
+          const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/emails/templates`, {
+            method: "GET",
+            headers: {Authorization: `Bearer ${token}` },
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            setTemplates(data);
+          }
+      } catch (error) {
+        console.error("Erro ao carregar modelos de email: ", error)
+      }
+    }
+    fetchTemplates();
+  }, []);
+
+  function handleTemplateChange(templateId: string) {
+    setSelectedTemplateId(templateId);
+
+    if (!templateId) {
+      setEmailSubject("");
+      setEmailBody("");
+      return;
+    }
+
+    const template = templates.find((t) => t.id === templateId);
+    if (template && selectedLead) {
+      //converte html em texto
+      let cleanBody = template.body.replace(/<br\s*\/?>/gi, "\n");
+      const clientName = selectedLead.name || "Cliente";
+      const userName = userProfile.name || "Consultor";
+      const userPhone = "(41) 99213-4459";
+
+      const processedSubject = template.subject.replace(/{{leadName}}/g, clientName);
+      const processedBody = cleanBody
+          .replace(/{{leadName}}/g, clientName)
+          .replace(/{{userName}}/g, userName)
+          .replace(/{{userPhone}}/g, userPhone);
+
+      setEmailSubject(processedSubject);
+      setEmailBody(processedBody);
+
+    }
+  }
 
   function handleLogout() {
     localStorage.removeItem("token");
@@ -1966,9 +2023,9 @@ export function Dashboard() {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">
+                <div className="text-sm text-muted-foreground">
                   Nenhuma etiqueta disponível para esta coluna.
-                </p>
+                </div>
               )}
             </div>
 
@@ -2318,6 +2375,23 @@ export function Dashboard() {
                         value="email"
                         className="m-0 flex flex-col h-full space-y-4"
                       >
+                        <div className="space-y-2">
+                          <Label htmlFor="template-select">Modelo de E-mail</Label>
+                          <select
+                              id="template-select"
+                              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
+                              value={selectedTemplateId}
+                              onChange={(e) => handleTemplateChange(e.target.value)}
+                          >
+                            <option value="">Texto Livre (Sem modelo)</option>
+                            {templates.map((t) => (
+                                <option key={t.id} value={t.id}>
+                                  {t.name}
+                                </option>
+                            ))}
+                          </select>
+                        </div>
+
                         <div className="space-y-2">
                           <Label>
                             Destinatários ({selectedTargetEmails.length}{" "}

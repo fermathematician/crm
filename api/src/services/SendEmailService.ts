@@ -44,7 +44,15 @@ class SendEmailService {
       throw new Error("Este lead não possui um endereço de e-mail registado.");
     }
 
-    const formattedBody = body.replace(/\n/g, "<br/>");
+    const processedBody = body
+      .replace(/{{leadName}}/g, lead.companyName || "Cliente")
+      .replace(/{{userName}}/g, user.name || "Consultor")
+      .replace(/{{userPhone}}/g, "(41) 99213-4459"); // Puxa o celular do usuário ou um padrão
+
+    const formattedBody =
+      processedBody.includes("<br/>") || processedBody.includes("<p>")
+        ? processedBody
+        : processedBody.replace(/\n/g, "<br/>");
 
     let messageId = "";
 

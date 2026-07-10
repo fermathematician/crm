@@ -21,6 +21,7 @@ import { EmailWebhookController } from "../controllers/EmailWebhookController.js
 import { TrackEmailController } from "../controllers/TrackEmailController.js";
 import { GmailWebhookController } from "../controllers/GmailWebhookController.js";
 import { CheckBouncesController } from "../services/CheckBouncesController.js";
+import { prismaClient } from "../../prisma/index.js";
 
 const router = Router();
 const upload = multer({ dest: "tmp/" });
@@ -63,6 +64,21 @@ router.get(
   listImportBatchesController.handle,
 );
 router.get("/emails/track/:id", trackEmailController.handle);
+
+//router rotas de email
+router.get("/emails/templates", async (req, res) => {
+  try {
+    const templates = await prismaClient.emailTemplate.findMany({
+      orderBy: {
+        name: "asc",
+      },
+    });
+    return res.json(templates);
+  } catch (error) {
+    console.error("Erro ao buscar modelo", error);
+    return res.status(500).json({ error: "Erro interno ao buscar modelos" });
+  }
+});
 
 //////////////////////////////////////////////////////
 

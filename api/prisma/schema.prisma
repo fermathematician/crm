@@ -117,6 +117,14 @@ model Contact {
   opened Boolean @default(false)
 }
 
+model EmailTemplate {
+  id        String   @id @default(uuid())
+  name      String //"Agendamento", "Sem Interesse"
+  subject   String //Assunto
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+}
+
 //------------------------------------------
 // 6. Enums
 //------------------------------------------
