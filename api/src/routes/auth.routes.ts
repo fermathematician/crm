@@ -20,7 +20,7 @@ import { ReorderLeadsController } from "../controllers/ReorderLeadsController.js
 import { EmailWebhookController } from "../controllers/EmailWebhookController.js";
 import { TrackEmailController } from "../controllers/TrackEmailController.js";
 import { GmailWebhookController } from "../controllers/GmailWebhookController.js";
-import { CheckBouncesController } from "../services/CheckBouncesController.js";
+import { CheckBouncesController } from "../controllers/CheckBouncesController.js";
 import { prismaClient } from "../../prisma/index.js";
 
 const router = Router();

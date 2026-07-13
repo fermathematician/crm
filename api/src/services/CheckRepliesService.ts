@@ -54,9 +54,10 @@ class CheckRepliesService {
       const msgData = await gmail.users.messages.get({
         userId: "me",
         id: msg.id,
-        format: "metadata",
-        metadataHeaders: ["From"],
+        format: "full",
       });
+
+      const payload = msgData.data.payload;
 
       const fromHeader = msgData.data.payload?.headers?.find(
         (h) => h.name === "From",
@@ -64,6 +65,11 @@ class CheckRepliesService {
 
       if (!fromHeader) continue;
       // Limpa o formato do cabeçalho (ex: "Nome <cliente@email.com>" vira "cliente@email.com")
+
+      const subjectHeader =
+        payload?.headers?.find((h) => h.name === "Subject")?.value ||
+        "Re: Sem Assunto";
+
       const emailMatch = fromHeader.match(/<([^>]+)>/) || [null, fromHeader];
       const emailDoCliente = emailMatch[1]?.trim().toLowerCase();
 
@@ -87,19 +93,49 @@ class CheckRepliesService {
         `[🔎 ESPIÃO 2] Lead Encontrado no Banco? ${!!lead} | Estágio atual do funil: ${lead?.funnelStage || "N/A"}`,
       );
 
-      if (lead && ["NOVO", "CONTATO"].includes(lead.funnelStage)) {
-        await prismaClient.lead.update({
-          where: { id: lead.id },
+      if (lead) {
+        let corpoEmail = msgData.data.snippet || "";
+        if (payload?.body?.data) {
+          corpoEmail = Buffer.from(payload.body.data, "base64").toString(
+            "utf-8",
+          );
+        } else if (payload?.parts) {
+          const textPart = payload.parts.find(
+            (p) => p.mimeType === "text/plain",
+          );
+          if (textPart?.body?.data) {
+            corpoEmail = Buffer.from(textPart.body.data, "base64").toString(
+              "utf-8",
+            );
+          }
+        }
+        await prismaClient.contact.create({
           data: {
-            funnelStage: "CONTATO",
-            tags: ["respondido"],
+            leadId: lead.id,
+            userId: userId,
+            type: "EMAIL",
+            date: new Date(),
+            description: `Assunto: ${subjectHeader}\n\nMensagem:\n${corpoEmail}\n\nRecebido via GMAIL`,
+            observation: corpoEmail,
+            didChageFunnel: false,
           },
         });
-        console.log(
-          `[📥 RESPOSTA] Lead ${lead.companyName} atualizado para RESPONDIDO.`,
-        );
+
+        if (["NOVO", "CONTATO"].includes(lead.funnelStage)) {
+          await prismaClient.lead.update({
+            where: { id: lead.id },
+            data: {
+              funnelStage: "CONTATO",
+              tags: ["respondido"],
+            },
+          });
+          console.log(
+            `[📥 RESPOSTA] Lead ${lead.companyName} atualizado para RESPONDIDO e histórico salvo.`,
+          );
+        }
         respostasProcessadas++;
       }
+
       await gmail.users.messages.modify({
         userId: "me",
         id: msg.id,

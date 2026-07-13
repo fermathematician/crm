@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { CheckBouncesService } from "./CheckBouncesService.js";
+import { CheckBouncesService } from "../services/CheckBouncesService.js";
 
 class CheckBouncesController {
   async handle(req: Request, res: Response) {
