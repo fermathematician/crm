@@ -94,7 +94,7 @@ class SendEmailService {
         userId: userId,
         type: "EMAIL",
         date: new Date(),
-        description: `Enviado via GMAIL\nPara: ${targetEmails.join(", ")}`,
+        description: `Assunto: ${subject}\n\nMensagem:\n${body}\n\nEnviado via GMAIL\nPara: ${targetEmails.join(", ")}`,
       },
     });
 

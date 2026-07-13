@@ -2138,7 +2138,7 @@ export function Dashboard() {
                 <Building2 className="text-primary" />
                 {selectedLead?.name || "Nome da Empresa"}
               </DialogTitle>
-              <p className="text-sm text-muted-foreground mt-1 flex items-center gap-2">
+              <div className="text-sm text-muted-foreground mt-1 flex items-center gap-2">
                 <Badge variant="outline">
                   {selectedLead?.tag || "SEM ETIQUETA"}
                 </Badge>
@@ -2150,7 +2150,7 @@ export function Dashboard() {
                       : "descriptiononhecido"}
                   </span>
                 </span>
-              </p>
+              </div>
             </div>
           </DialogHeader>
 
@@ -2280,20 +2280,19 @@ export function Dashboard() {
                             );
 
                             let subjectTitle = "Sem Assunto";
-                            let emailBody = contact.description;
+                            let emailBody = contact.description || "";
 
                             if (
                               isEmail &&
                               contact.description.includes("Assunto:")
                             ) {
-                              const parts =
-                                contact.description.split("\n\nMensagem:\n");
-                              if (parts.length === 2) {
-                                subjectTitle = parts[0].replace(
-                                  "Assunto: ",
-                                  "",
-                                );
-                                emailBody = parts[1];
+                              const match = contact.description.match(/Assunto:\s*(.*?)\r?\n\r?\nMensagem:\r?\n([\s\S]*)/i);
+
+                              if (match) {
+                                subjectTitle = match[1].trim();
+                                emailBody = match[2].trim();
+                              }else {
+                                emailBody = contact.description;
                               }
                             }
 
