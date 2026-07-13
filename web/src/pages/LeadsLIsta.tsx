@@ -48,6 +48,7 @@ interface ApiLead {
   cnae: string | null;
   phone: string | null;
   email: string | null;
+  financeiro: string | null;
   city: string | null;
   state: string | null;
   address: string | null;
@@ -155,6 +156,7 @@ export function LeadsList() {
     cnae: "",
     phone: "",
     email: "",
+    financeiro: "",
     city: "",
     state: "",
     address: "",
@@ -436,6 +438,7 @@ export function LeadsList() {
         // "CNAE",
         "Telefone",
         "Email",
+        "financeiro",
         "Cidade",
         "UF",
         "Endereço",
@@ -450,6 +453,7 @@ export function LeadsList() {
           // `"${l.cnae || ""}"`,
           `"${l.phone || ""}"`,
           `"${l.email || ""}"`,
+          `"${l.financeiro || ""}"`,
           `"${l.city || ""}"`,
           `"${l.state || ""}"`,
           `"${l.address || ""}"`,
@@ -488,6 +492,7 @@ export function LeadsList() {
       cnae: "",
       phone: "",
       email: "",
+      financeiro: "",
       city: "",
       state: "",
       address: "",
@@ -504,6 +509,7 @@ export function LeadsList() {
       cnae: lead.cnae || "",
       phone: lead.phone || "",
       email: lead.email || "",
+      financeiro: lead.financeiro || "",
       city: lead.city || "",
       state: lead.state || "",
       address: lead.address || "",
@@ -556,8 +562,8 @@ export function LeadsList() {
         {/* CONTEÚDO */}
         <main className="flex-1 p-8 overflow-hidden flex flex-col bg-background/50">
           {/* BARRA DE FERRAMENTAS */}
-          <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-            <div className="flex gap-2 w-full md:w-auto flex-1">
+          <div className="flex flex-wrap items-center justify-start mb-6 gap-3">
+            <div className="flex flex-wrap gap-2 items-center">
               <form
                 onSubmit={handleSearchSubmit}
                 className="relative w-full md:w-96 flex gap-2"
@@ -621,7 +627,7 @@ export function LeadsList() {
               <div className="relative w-full md:w-56">
                 <Filter className="absolute left-2 top-3 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />
                 <select
-                  className="flex h-10 w-56 rounded-md border border-input bg-background px-8 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
+                  className="flex h-10 w-40 rounded-md border border-input bg-background px-8 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
                   value={selectedBatchId}
                   onChange={(e) => setSelectedBatchId(e.target.value)}
                 >
@@ -644,7 +650,7 @@ export function LeadsList() {
                 onClick={handleExport}
                 disabled={loading || leads.length === 0}
               >
-                <FileText size={18} /> Exportar CSV
+                <FileText size={18} /> Exportar
               </Button>
               <Dialog
                 open={isImportModalOpen}
@@ -655,7 +661,7 @@ export function LeadsList() {
                     variant="outline"
                     className="gap-2 border-primary text-primary hover:bg-primary/10"
                   >
-                    <FileText size={18} /> Importar Planilha
+                    <FileText size={18} /> Importar
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-[425px]">
@@ -831,6 +837,27 @@ export function LeadsList() {
                           />
                         </div>
                       </div>
+
+                      <div className="grid gap-2">
+                        <Label htmlFor="email">Financeiro</Label>
+                        <div className="relative">
+                          <Mail className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                          <Input
+                              id="financeiro"
+                              type="financeiro"
+                              className="pl-8"
+                              placeholder="Nome financeiro"
+                              value={formData.financeiro}
+                              onChange={(e) =>
+                                  setFormData({
+                                    ...formData,
+                                    financeiro: e.target.value,
+                                  })
+                              }
+                          />
+                        </div>
+                      </div>
+
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -906,6 +933,7 @@ export function LeadsList() {
                     <th className="px-4 py-3 font-medium">CNPJ</th>
                     <th className="px-4 py-3 font-medium">Telefone</th>
                     <th className="px-4 py-3 font-medium">Email</th>
+                    <th className="px-4 py-3 font-medium">Financeiro</th>
                     <th className="px-4 py-3 font-medium">Cidade</th>
                     <th className="px-4 py-3 font-medium">UF</th>
                     <th className="px-4 py-3 font-medium">Endereço</th>
@@ -918,7 +946,7 @@ export function LeadsList() {
                   {loading ? (
                     <tr>
                       <td
-                        colSpan={10}
+                        colSpan={11}
                         className="px-6 py-8 text-center text-muted-foreground"
                       >
                         Carregando leads...
@@ -927,7 +955,7 @@ export function LeadsList() {
                   ) : leads.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={10}
+                        colSpan={11}
                         className="px-6 py-8 text-center text-muted-foreground"
                       >
                         Nenhum lead encontrado.
@@ -986,7 +1014,7 @@ export function LeadsList() {
                                 handleSaveCell(lead.id, "cnpj", e.target.value);
                               }
                             }}
-                            className="h-8 min-w-[140px] border-transparent bg-transparent hover:bg-muted/50 focus:bg-background focus:border-primary focus:ring-1 shadow-none px-2 text-muted-foreground transition-all"
+                            className="h-8 min-w-[120px] border-transparent bg-transparent hover:bg-muted/50 focus:bg-background focus:border-primary focus:ring-1 shadow-none px-2 text-muted-foreground transition-all"
                           />
                         </td>
                         <td className="px-1 py-1">
@@ -1013,7 +1041,7 @@ export function LeadsList() {
                                 );
                               }
                             }}
-                            className="h-8 min-w-[140px] border-transparent bg-transparent hover:bg-muted/50 focus:bg-background focus:border-primary focus:ring-1 shadow-none px-2 text-muted-foreground transition-all"
+                            className="h-8 min-w-[100px] border-transparent bg-transparent hover:bg-muted/50 focus:bg-background focus:border-primary focus:ring-1 shadow-none px-2 text-muted-foreground transition-all"
                           />
                         </td>
                         <td className="px-1 py-1">
@@ -1040,9 +1068,38 @@ export function LeadsList() {
                                 );
                               }
                             }}
-                            className="h-8 min-w-[180px] border-transparent bg-transparent hover:bg-muted/50 focus:bg-background focus:border-primary focus:ring-1 shadow-none px-2 text-muted-foreground transition-all"
+                            className="h-8 min-w-[160px] border-transparent bg-transparent hover:bg-muted/50 focus:bg-background focus:border-primary focus:ring-1 shadow-none px-2 text-muted-foreground transition-all"
                           />
                         </td>
+
+                        <td className="px-1 py-1">
+                          <Input
+                              value={lead.financeiro || ""}
+                              onChange={(e) =>
+                                  handleLocalChange(
+                                      lead.id,
+                                      "financeiro",
+                                      e.target.value,
+                                  )
+                              }
+                              onFocus={(e) => {
+                                e.target.dataset.original = e.target.value;
+                              }}
+                              onBlur={(e) => {
+                                if (
+                                    e.target.value !== e.target.dataset.original
+                                ) {
+                                  handleSaveCell(
+                                      lead.id,
+                                      "financeiro",
+                                      e.target.value,
+                                  );
+                                }
+                              }}
+                              className="h-8 min-w-[120px] border-transparent bg-transparent hover:bg-muted/50 focus:bg-background focus:border-primary focus:ring-1 shadow-none px-2 text-muted-foreground transition-all"
+                          />
+                        </td>
+
                         <td className="px-1 py-1">
                           <Input
                             value={lead.city || ""}
@@ -1087,7 +1144,7 @@ export function LeadsList() {
                                 );
                               }
                             }}
-                            className="h-8 min-w-[60px] border-transparent bg-transparent hover:bg-muted/50 focus:bg-background focus:border-primary focus:ring-1 shadow-none px-2 text-muted-foreground transition-all text-center"
+                            className="h-8 min-w-[40px] border-transparent bg-transparent hover:bg-muted/50 focus:bg-background focus:border-primary focus:ring-1 shadow-none px-2 text-muted-foreground transition-all text-center"
                           />
                         </td>
                         <td className="px-1 py-1">
@@ -1114,7 +1171,7 @@ export function LeadsList() {
                                 );
                               }
                             }}
-                            className="h-8 min-w-[200px] border-transparent bg-transparent hover:bg-muted/50 focus:bg-background focus:border-primary focus:ring-1 shadow-none px-2 text-muted-foreground transition-all"
+                            className="h-8 min-w-[160px] border-transparent bg-transparent hover:bg-muted/50 focus:bg-background focus:border-primary focus:ring-1 shadow-none px-2 text-muted-foreground transition-all"
                           />
                         </td>
                         <td className="px-2 py-1">
