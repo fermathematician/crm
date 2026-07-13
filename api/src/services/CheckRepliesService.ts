@@ -39,7 +39,7 @@ class CheckRepliesService {
 
     const response = await gmail.users.messages.list({
       userId: "me",
-      q: 'to:me -from:me is:unread subject:"Re:"',
+      q: "to:me -from:me is:unread",
     });
 
     const messages = response.data.messages || [];
@@ -109,6 +109,14 @@ class CheckRepliesService {
             );
           }
         }
+
+        corpoEmail = corpoEmail
+          .split("\n")
+          .filter((linha) => {
+            return !linha.trim().startsWith(">");
+          })
+          .join("\n");
+
         await prismaClient.contact.create({
           data: {
             leadId: lead.id,

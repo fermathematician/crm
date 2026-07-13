@@ -2330,7 +2330,9 @@ export function Dashboard() {
                                   <div className="flex items-center gap-2 mb-1">
                                     <span className="font-bold text-sm">
                                       {contact.type === "EMAIL"
-                                        ? "E-mail Enviado"
+                                        ? contact.description?.includes("Recebido")
+                                          ? "E-mail Recebido"
+                                          : "E-mail Enviado"
                                         : contact.type === "CALL" ||
                                             contact.type === "NOTE"
                                           ? "Registro de Ligação"
