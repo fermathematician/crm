@@ -2353,7 +2353,7 @@ export function Dashboard() {
                                           toggleHistoryExpand(contact.id)
                                         }
                                       >
-                                        <span className="truncate flex-1">
+                                        <span className="truncate block max-w-xs sm:max-w-md md:max-w-lg">
                                           Assunto: {subjectTitle}
                                         </span>
                                         {isExpanded ? (
