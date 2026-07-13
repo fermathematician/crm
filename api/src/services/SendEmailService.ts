@@ -44,10 +44,42 @@ class SendEmailService {
       throw new Error("Este lead não possui um endereço de e-mail registado.");
     }
 
-    const processedBody = body
-      .replace(/{{leadName}}/g, lead.companyName || "Cliente")
-      .replace(/{{userName}}/g, user.name || "Consultor")
-      .replace(/{{userPhone}}/g, "(41) 99213-4459"); // Puxa o celular do usuário ou um padrão
+    if (!lead.companyName) {
+      throw new Error("Este lead não possui razão social");
+    }
+
+    if (!user.name) {
+      throw new Error("Este usuário não tem nome!");
+    }
+
+    const financeiro = lead.financeiro;
+
+    const processedSubject = subject.replace(
+      /{{leadName}}/g,
+      financeiro || lead.companyName,
+    );
+    const encodedSubject = `=?utf-8?B?${Buffer.from(processedSubject).toString("base64")}?=`;
+
+    let processedBody = body;
+
+    const dateCumprimento = new Date().getHours();
+
+    let cumprimento = "Bom dia";
+    if (dateCumprimento > 12) {
+      cumprimento = "Boa tarde";
+    }
+
+    if (financeiro) {
+      processedBody = processedBody.replace(/{{leadName}}/g, financeiro);
+    } else {
+      processedBody = processedBody
+        .replace(/Olá,?\s*{{leadName}}!?/gi, cumprimento)
+        .replace(/{{leadName}}/g, lead.companyName);
+    }
+
+    processedBody = processedBody
+      .replace(/{{userName}}/g, user.name)
+      .replace(/{{userPhone}}/g, "(41) 99213-4459");
 
     const formattedBody =
       processedBody.includes("<br/>") || processedBody.includes("<p>")

@@ -65,6 +65,9 @@ model Lead {
   state       String?
   address     String?
 
+  //nome pra contactar
+  financeiro  String?
+
   funnelStage FunnelStage @default(NOVO)
   tags        String[]
   visitDate   DateTime?

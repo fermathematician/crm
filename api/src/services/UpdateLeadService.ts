@@ -10,9 +10,16 @@ interface UpdateLeadRequest {
   city?: string;
   state?: string;
   address?: string;
-  funnelStage?: "NOVO" | "CONTATO" | "NEGOCIACAO" | "CADASTRO" | "FINALIZADO" | "SEM_INTERESSE";
+  financeiro?: string;
+  funnelStage?:
+    | "NOVO"
+    | "CONTATO"
+    | "NEGOCIACAO"
+    | "CADASTRO"
+    | "FINALIZADO"
+    | "SEM_INTERESSE";
   tags?: string[];
-  visitDate?: string | null; 
+  visitDate?: string | null;
 }
 
 class UpdateLeadService {
@@ -26,11 +33,11 @@ class UpdateLeadService {
     city,
     state,
     address,
+    financeiro,
     funnelStage,
     tags,
-    visitDate 
+    visitDate,
   }: UpdateLeadRequest) {
-    
     if (!lead_id) {
       throw new Error("ID do Lead não fornecido.");
     }
@@ -45,18 +52,19 @@ class UpdateLeadService {
     if (city !== undefined) dataToUpdate.city = city;
     if (state !== undefined) dataToUpdate.state = state;
     if (address !== undefined) dataToUpdate.address = address;
+    if (financeiro !== undefined) dataToUpdate.financeiro = financeiro;
     if (funnelStage !== undefined) dataToUpdate.funnelStage = funnelStage;
     if (tags !== undefined) dataToUpdate.tags = tags;
-    
+
     if (visitDate !== undefined) {
       dataToUpdate.visitDate = visitDate ? new Date(visitDate) : null;
     }
 
     const lead = await prismaClient.lead.update({
       where: {
-        id: lead_id
+        id: lead_id,
       },
-      data: dataToUpdate
+      data: dataToUpdate,
     });
 
     return lead;

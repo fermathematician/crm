@@ -104,6 +104,7 @@ interface ApiLead {
   city?: string | null;
   state?: string | null;
   cnae?: string | null;
+  financeiro?: string | null;
   contacts?: ApiContact[];
   ImportBatch?: { tag: string } | null;
 }
@@ -168,6 +169,7 @@ interface Lead {
   city?: string | null;
   state?: string | null;
   cnae?: string | null;
+  financeiro?: string | null;
   contacts?: ApiContact[];
   ImportBatch?: { tag: string } | null;
 }
@@ -356,6 +358,7 @@ export function Dashboard() {
 
   const [editingVisitTime, setEditingVisitTime] = useState<string>("");
 
+
   const [formData, setFormData] = useState({
     companyName: "",
     cnpj: "",
@@ -365,6 +368,7 @@ export function Dashboard() {
     city: "",
     state: "",
     address: "",
+    financeiro: "",
     funnelStage: "NOVO",
   });
 
@@ -1237,6 +1241,7 @@ export function Dashboard() {
               city: formData.city,
               state: formData.state,
               address: formData.address,
+              financeiro: formData.financeiro,
             };
             setColumns(updatedColumns);
             setSelectedLead(updatedColumns[colId].leads[leadIndex]);
@@ -1263,6 +1268,7 @@ export function Dashboard() {
       city: selectedLead.city || "",
       state: selectedLead.state || "",
       address: selectedLead.address || "",
+      financeiro: selectedLead.financeiro || "",
       funnelStage:
         (reverseStageMap[getLeadColumnId(selectedLead.id) || ""] as any) ||
         "NOVO",
@@ -2181,6 +2187,15 @@ export function Dashboard() {
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground">
+                    Financeiro
+                  </Label>
+                  <p className="text-sm font-medium flex items-center gap-2">
+                    <User size={14} className="text-muted-foreground" />{" "}
+                    {selectedLead?.financeiro || "-"}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">
                     Endereço
                   </Label>
                   <p className="text-sm font-medium flex items-start gap-2 mt-1">
@@ -2647,6 +2662,7 @@ export function Dashboard() {
               </div>
             </div>
 
+
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="edit-cnpj">CNPJ</Label>
@@ -2698,6 +2714,28 @@ export function Dashboard() {
                   />
                 </div>
               </div>
+
+              <div className="grid gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-financeiro">Financeiro</Label>
+                  <div className="relative">
+                    <User className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        id="edit-financeiro"
+                        className="pl-8"
+                        placeholder="Nome do financeiro"
+                        value={formData.financeiro}
+                        onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              financeiro: e.target.value,
+                            })
+                        }
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="grid gap-2">
                 <Label htmlFor="edit-email">Email</Label>
                 <div className="relative">
