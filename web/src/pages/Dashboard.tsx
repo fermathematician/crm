@@ -2376,7 +2376,7 @@ export function Dashboard() {
                                       )}
                                     </div>
                                   ) : (
-                                    <p className="text-sm text-foreground/80 whitespace-pre-wrap mt-1">
+                                    <p className="text-sm text-foreground/80 whitespace-pre-wrap break-all mt-1">
                                       {contact.description}
                                     </p>
                                   )}
