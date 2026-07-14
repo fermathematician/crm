@@ -73,7 +73,8 @@ type LeadTag =
   | "sem interesse"
   | "fora de perfil"
   | "aberto"
-  | "novo";
+  | "novo"
+  | "bloqueado";
 
 interface ApiContact {
   id: string;
@@ -107,6 +108,7 @@ interface ApiLead {
   cnae?: string | null;
   contacts?: ApiContact[];
   ImportBatch?: { tag: string } | null;
+  unsubscribed?: boolean;
 }
 
 const reverseStageMap: Record<string, string> = {
@@ -121,6 +123,7 @@ const reverseStageMap: Record<string, string> = {
 
 const tagColors: Record<LeadTag, string> = {
   novo: "bg-slate-500 border-slate-600",
+  bloqueado: "bg-red-200 border-red-300",
   "a qualificar": "bg-zinc-300 border-zinc-400",
   "sem resposta": "bg-gray-400 border-gray-500",
   respondido: "bg-yellow-400 border-yellow-600",
@@ -148,7 +151,7 @@ const columnDefaultTags: Record<string, LeadTag> = {
 };
 
 const columnAllowedTags: Record<string, LeadTag[]> = {
-  novos: ["novo", "a qualificar"],
+  novos: ["novo", "a qualificar", "bloqueado"],
   contato: ["sem resposta", "aberto", "respondido"],
   negociacao: ["frio", "morno", "quente"],
   cadastro: ["promessa", "parcial", "completa"],
@@ -172,6 +175,7 @@ interface Lead {
   financeiro?: string | null;
   contacts?: ApiContact[];
   ImportBatch?: { tag: string } | null;
+  unsubscribed?: boolean;
 }
 
 interface Column {
@@ -736,7 +740,7 @@ export function Dashboard() {
 
   async function updateLeadOnServer(
     leadId: string,
-    data: { funnelStage?: string; tags?: string[]; visitDate?: string | null },
+    data: { funnelStage?: string; tags?: string[]; visitDate?: string | null; unsubscribed?: boolean },
   ) {
     const token = localStorage.getItem("token");
     try {
@@ -790,7 +794,9 @@ export function Dashboard() {
       }));
 
       return leadsArray.map((apiLead) => {
-        const tag = (apiLead.tags[0] as LeadTag) || columnDefaultTags[columnId];
+        const tag = apiLead.unsubscribed
+            ?"bloqueado"
+            : (apiLead.tags[0] as LeadTag) || columnDefaultTags[columnId];
         return {
           id: apiLead.id,
           name: apiLead.companyName,
@@ -813,6 +819,7 @@ export function Dashboard() {
                 description: c.description || c.observation || "",
               }))
             : [],
+          unsubscribed: apiLead.unsubscribed,
         };
       });
     } catch (error) {
@@ -1085,9 +1092,12 @@ export function Dashboard() {
       const defaultTag = columnDefaultTags[destination.droppableId];
       removed.tag = defaultTag || removed.tag;
 
+      removed.unsubscribed = removed.tag === "bloqueado";
+
       updateLeadOnServer(draggableId, {
         funnelStage: reverseStageMap[destination.droppableId],
         tags: [removed.tag],
+        unsubscribed: removed.unsubscribed,
       });
 
       const description = `Funil alterado: ${sourceCol.title} ➔ ${destCol.title}`;
@@ -1130,6 +1140,8 @@ export function Dashboard() {
 
   function handleSaveLead() {
     if (!selectedLead || !editingTag) return;
+
+    const isUnsubscribing = editingTag === "bloqueado";
 
     if (editingVisitDate && editingVisitDate.length > 0) {
       if (editingVisitDate.length < 10) {
@@ -1213,6 +1225,7 @@ export function Dashboard() {
           ...oldLead,
           tag: editingTag,
           visitDate: formattedDateForBackend,
+          unsubscribed: isUnsubscribing,
         };
         break;
       }
@@ -1221,6 +1234,7 @@ export function Dashboard() {
     updateLeadOnServer(selectedLead.id, {
       tags: [editingTag],
       visitDate: formattedDateForBackend,
+      unsubscribed: isUnsubscribing,
     });
 
     setColumns(newColumns);

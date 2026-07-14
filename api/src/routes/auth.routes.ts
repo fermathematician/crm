@@ -21,6 +21,7 @@ import { EmailWebhookController } from "../controllers/EmailWebhookController.js
 import { TrackEmailController } from "../controllers/TrackEmailController.js";
 import { GmailWebhookController } from "../controllers/GmailWebhookController.js";
 import { CheckBouncesController } from "../controllers/CheckBouncesController.js";
+import { UnsubscribeLeadController } from "../controllers/UnsubscribeLeadController.js";
 import { prismaClient } from "../../prisma/index.js";
 
 const router = Router();
@@ -44,6 +45,7 @@ const emailWebhookController = new EmailWebhookController();
 const trackEmailController = new TrackEmailController();
 const gmailWebhookController = new GmailWebhookController();
 const checkBouncesController = new CheckBouncesController();
+const unsubscribeLeadController = new UnsubscribeLeadController();
 
 router.get("/me", ensureAuthenticated, detailUserController.handle);
 router.get("/leads", ensureAuthenticated, listLeadsController.handle);
@@ -79,6 +81,8 @@ router.get("/emails/templates", async (req, res) => {
     return res.status(500).json({ error: "Erro interno ao buscar modelos" });
   }
 });
+
+router.get("/public/unsubscribe", unsubscribeLeadController.handle);
 
 //////////////////////////////////////////////////////
 

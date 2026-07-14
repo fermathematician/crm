@@ -60,6 +60,7 @@ interface ApiLead {
     | "FINALIZADO"
     | "SEM_INTERESSE";
   tags: string[];
+  unsubscribed?: boolean;
 }
 
 // --- FUNÇÕES DE MÁSCARA ---

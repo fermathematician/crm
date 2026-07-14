@@ -87,6 +87,9 @@ model Lead {
 
   // Posicao do card que o usuario mexeu manualmente
   position Int @default(0)
+
+  //Assinatura pra proteger de spam
+  unsubscribed Boolean @default(false)
 }
 
 //------------------------------------------

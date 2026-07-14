@@ -42,6 +42,12 @@ class SendEmailService {
       throw new Error("Lead não encontrado.");
     }
 
+    if (lead.unsubscribed) {
+      throw new Error(
+        "Este lead cancelou a inscrição e não aceita mais receber o email",
+      );
+    }
+
     if (!lead.email) {
       throw new Error("Este lead não possui um endereço de e-mail registado.");
     }
@@ -121,6 +127,8 @@ class SendEmailService {
       const gmail = google.gmail({ version: "v1", auth });
       const destinatario = targetEmails.join(", ");
 
+      const apiUrl = process.env.API_URL;
+
       // Dentro do método execute do seu SendEmailService:
 
       const htmlTemplate = `
@@ -181,13 +189,18 @@ class SendEmailService {
                 <img src="https://static.wixstatic.com/media/0f36d1_75611bd36081421393b86a5b218c5a4b~mv2.png" width="580" height="102" style="width: 100%; max-width: 580px; height: auto; display: block;" alt="O.S. Inteligência Financeira - Great Place To Work">
               </td>
             </tr>
+            
+            <tr>
+              <td colspan="2" style="padding-top: 25px; text-align: center; font-size: 11px; color: #888888; line-height: 1.5; font-family: Arial, sans-serif;">
+                Se não deseja mais receber nossos e-mails, 
+                <a href="${apiUrl}/public/unsubscribe?leadId=${leadId}" style="color: #0056b3; text-decoration: underline;">clique aqui para cancelar sua inscrição</a>.
+              </td>
+            </tr>
           </table>
       
         </div>
       `;
-      const encodedSubject = `=?utf-8?B?${Buffer.from(subject).toString("base64")}?=`;
 
-      const apiUrl = process.env.API_URL;
       const trackingPixel = `<img src="${apiUrl}/auth/emails/track/${contact.id}" alt="" width="1" height="1" style="display:none;" />`;
       const messageParts = [
         `From: <${user.email}>`,
