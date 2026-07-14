@@ -37,10 +37,29 @@ class CheckRepliesService {
 
     const gmail = google.gmail({ version: "v1", auth });
 
+    const oldestLead = await prismaClient.lead.findFirst({
+      orderBy: { createdAt: "asc" },
+      select: { createdAt: true },
+    });
+
+    let gmailQuery = "to:me  -from:me is: unread";
+
+    if (oldestLead) {
+      const dateLimit = new Date(oldestLead.createdAt);
+      const formattedDate = `${dateLimit.getFullYear()}/${String(
+        dateLimit.getMonth() + 1,
+      ).padStart(2, "0")}/${String(dateLimit.getDate()).padStart(2, "0")}`;
+      gmailQuery += ` after:${formattedDate}`;
+    }
+
+    console.log(`[🔎 GMAIL API] Executando busca com query: "${gmailQuery}"`);
+
     const response = await gmail.users.messages.list({
       userId: "me",
-      q: "to:me -from:me is:unread",
+      q: gmailQuery,
     });
+
+    console.log(`[🔎 GMAIL API] Executando busca com query: "${gmailQuery}"`);
 
     const messages = response.data.messages || [];
     console.log(

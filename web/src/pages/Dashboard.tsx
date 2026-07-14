@@ -212,6 +212,24 @@ function formatDisplayDate(dateString: string) {
   return dateString;
 }
 
+function formatDisplayDateTime(dateString: string) {
+  if (!dateString) return "";
+  try {
+    const dateObj = new Date(dateString);
+    if (isNaN(dateObj.getTime())) {
+      return dateString; // Fallback caso seja um texto plano
+    }
+    const day = String(dateObj.getDate()).padStart(2, "0");
+    const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+    const year = dateObj.getFullYear();
+    const hours = String(dateObj.getHours()).padStart(2, "0");
+    const minutes = String(dateObj.getMinutes()).padStart(2, "0");
+    return `${day}/${month}/${year} às ${hours}:${minutes}`;
+  } catch (error) {
+    return dateString;
+  }
+}
+
 const maskDate = (value: string) => {
   value = value.replace(/\D/g, "");
   if (value.length > 8) value = value.slice(0, 8);
@@ -791,7 +809,7 @@ export function Dashboard() {
             ? apiLead.contacts.map((c: any) => ({
                 id: c.id,
                 type: c.type,
-                date: c.date ? c.date.toString().split("T")[0] : "",
+                date: c.date ? c.date.toString() : "",
                 description: c.description || c.observation || "",
               }))
             : [],
@@ -2342,7 +2360,7 @@ export function Dashboard() {
                                             : "Visita Agendada"}
                                     </span>
                                     <span className="text-xs text-muted-foreground">
-                                      • {formatDisplayDate(contact.date)}
+                                      • {formatDisplayDateTime(contact.date)}
                                     </span>
                                   </div>
 
