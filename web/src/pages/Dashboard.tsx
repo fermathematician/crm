@@ -101,10 +101,10 @@ interface ApiLead {
   cnpj?: string | null;
   email?: string | null;
   address?: string | null;
+  financeiro?: string | null;
   city?: string | null;
   state?: string | null;
   cnae?: string | null;
-  financeiro?: string | null;
   contacts?: ApiContact[];
   ImportBatch?: { tag: string } | null;
 }
@@ -782,6 +782,7 @@ export function Dashboard() {
           cnpj: apiLead.cnpj,
           email: apiLead.email,
           address: apiLead.address,
+          financeiro: apiLead.financeiro,
           city: apiLead.city,
           state: apiLead.state,
           cnae: apiLead.cnae,
@@ -1005,7 +1006,7 @@ export function Dashboard() {
     if (template && selectedLead) {
       //converte html em texto
       let cleanBody = template.body.replace(/<br\s*\/?>/gi, "\n");
-      const clientName = selectedLead.name || "Cliente";
+      const clientName = selectedLead.financeiro || selectedLead.name || "Cliente";
       const userName = userProfile.name || "Consultor";
       const userPhone = "(41) 99213-4459";
 
@@ -2348,7 +2349,7 @@ export function Dashboard() {
                                   {isEmail ? (
                                     <div className="mt-2 border border-border rounded-md overflow-hidden">
                                       <div
-                                        className="bg-muted/30 p-2 px-3 text-sm font-semibold cursor-pointer flex justify-between items-center hover:bg-muted/50 transition-colors"
+                                        className="bg-muted/30 p-2 px-3 text-sm font-semibold cursor-pointer flex justify-between items-center hover:bg-muted/50 transition-colors min-w-0"
                                         onClick={() =>
                                           toggleHistoryExpand(contact.id)
                                         }

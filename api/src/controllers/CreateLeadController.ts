@@ -1,5 +1,5 @@
-import type { Request, Response } from 'express';
-import { CreateLeadService } from '../services/CreateLeadService.js';
+import type { Request, Response } from "express";
+import { CreateLeadService } from "../services/CreateLeadService.js";
 
 class CreateLeadController {
   async handle(req: Request, res: Response) {
@@ -12,9 +12,10 @@ class CreateLeadController {
       city,
       state,
       address,
+      financeiro,
       funnelStage,
       tags,
-      visitDate 
+      visitDate,
     } = req.body;
 
     const ownerId = req.user_id;
@@ -30,10 +31,11 @@ class CreateLeadController {
       city,
       state,
       address,
+      financeiro,
       funnelStage,
       tags,
-      visitDate, 
-      ownerId
+      visitDate,
+      ownerId,
     });
 
     return res.json(lead);

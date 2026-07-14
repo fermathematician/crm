@@ -36,6 +36,8 @@ class SendEmailService {
       where: { id: leadId },
     });
 
+    console.log("Lead recuperado do banco:", lead);
+
     if (!lead) {
       throw new Error("Lead não encontrado.");
     }

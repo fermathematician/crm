@@ -1,21 +1,22 @@
-import type { Request, Response } from 'express';
-import { UpdateLeadService } from '../services/UpdateLeadService.js';
+import type { Request, Response } from "express";
+import { UpdateLeadService } from "../services/UpdateLeadService.js";
 
 class UpdateLeadController {
   async handle(req: Request, res: Response) {
-    const { 
-      lead_id, 
-      companyName, 
-      cnpj, 
-      cnae, 
-      phone, 
-      email, 
-      city, 
-      state, 
-      address, 
-      funnelStage, 
+    const {
+      lead_id,
+      companyName,
+      cnpj,
+      cnae,
+      phone,
+      email,
+      city,
+      state,
+      address,
+      financeiro,
+      funnelStage,
       tags,
-      visitDate 
+      visitDate,
     } = req.body;
 
     const updateLeadService = new UpdateLeadService();
@@ -30,9 +31,10 @@ class UpdateLeadController {
       city,
       state,
       address,
+      financeiro,
       funnelStage,
       tags,
-      visitDate 
+      visitDate,
     });
 
     return res.json(lead);
