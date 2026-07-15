@@ -93,6 +93,7 @@ const maskCNAE = (value: string) => {
 const ALL_TAGS = [
   "novo",
   "a qualificar",
+  "bloqueado",
   "sem resposta",
   "respondido",
   "frio",
@@ -108,13 +109,23 @@ const ALL_TAGS = [
 ];
 
 const allowedTagsByStage: Record<string, string[]> = {
-  NOVO: ["novo"],
-  CONTATO: ["a qualificar", "sem resposta", "respondido"],
+  NOVO: ["novo", "a qualificar", "bloqueado"],
+  CONTATO: ["sem resposta", "aberto", "respondido"],
   NEGOCIACAO: ["frio", "morno", "quente"],
   CADASTRO: ["promessa", "parcial", "completa"],
   FINALIZADO: ["aprovado", "recusado"],
   SEM_INTERESSE: ["sem interesse"],
   FORA_DE_PERFIL: ["fora de perfil"],
+};
+
+const defaultTagsByStage: Record<string, string> = {
+  NOVO: "novo",
+  CONTATO: "sem resposta",
+  NEGOCIACAO: "frio",
+  CADASTRO: "promessa",
+  FINALIZADO: "aprovado",
+  SEM_INTERESSE: "sem interesse",
+  FORA_DE_PERFIL: "fora de perfil",
 };
 
 export function LeadsList() {
@@ -162,6 +173,7 @@ export function LeadsList() {
     state: "",
     address: "",
     funnelStage: "NOVO",
+    unsubscribed: false,
   });
 
   const fetchLeads = useCallback(async () => {
@@ -498,6 +510,7 @@ export function LeadsList() {
       state: "",
       address: "",
       funnelStage: "NOVO",
+      unsubscribed: false,
     });
     setIsModalOpen(true);
   }
@@ -515,6 +528,7 @@ export function LeadsList() {
       state: lead.state || "",
       address: lead.address || "",
       funnelStage: lead.funnelStage,
+      unsubscribed: lead.unsubscribed || false,
     });
     setIsModalOpen(true);
   }

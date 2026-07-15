@@ -193,7 +193,7 @@ class SendEmailService {
             <tr>
               <td colspan="2" style="padding-top: 25px; text-align: center; font-size: 11px; color: #888888; line-height: 1.5; font-family: Arial, sans-serif;">
                 Se não deseja mais receber nossos e-mails, 
-                <a href="${apiUrl}/public/unsubscribe?leadId=${leadId}" style="color: #0056b3; text-decoration: underline;">clique aqui para cancelar sua inscrição</a>.
+                <a href="${apiUrl}/auth/public/unsubscribe?leadId=${leadId}" style="color: #0056b3; text-decoration: underline;">clique aqui para cancelar sua inscrição</a>.
               </td>
             </tr>
           </table>
