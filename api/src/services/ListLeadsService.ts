@@ -9,6 +9,7 @@ interface ListLeadsParams {
   importBatchId?: string;
   isManual?: string;
   globalFilter?: string;
+  ownerId?: string;
 }
 
 class ListLeadsService {
@@ -21,44 +22,70 @@ class ListLeadsService {
     importBatchId,
     isManual,
     globalFilter,
+    ownerId,
   }: ListLeadsParams) {
     const skip = (page - 1) * limit;
 
     const whereClause: any = {};
+    const andCondition: any[] = [];
 
     if (search) {
-      whereClause.OR = [
-        { companyName: { contains: search, mode: "insensitive" } },
-        { cnpj: { contains: search } },
-        { phone: { contains: search } },
-      ];
+      andCondition.push({
+        OR: [
+          { companyName: { contains: search, mode: "insensitive" } },
+          { cnpj: { contains: search } },
+          { phone: { contains: search } },
+        ],
+      });
     }
 
     if (stage && stage !== "ALL") {
-      whereClause.funnelStage = stage;
+      andCondition.push({ funnelStage: stage });
     }
 
     //filtro listas
     if (isManual === "true") {
-      whereClause.ImportBatchId = null;
+      andCondition.push({ ImportBatchId: null });
     } else if (importBatchId && importBatchId != "all") {
-      whereClause.ImportBatchId = importBatchId;
+      andCondition.push({ ImportBatchId: importBatchId });
     }
 
     if (globalFilter === "overdue") {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      whereClause.createdAt = {
-        lte: thirtyDaysAgo,
-      };
-
-      whereClause.contacts = {
-        none: {
-          type: { not: "SYSTEM_CHANGE" },
-          date: { gte: thirtyDaysAgo },
+      andCondition.push({
+        createdAt: {
+          lte: thirtyDaysAgo,
         },
-      };
+      });
+
+      andCondition.push({
+        contacs: {
+          none: {
+            type: { not: "SYSTEM_CHANGE" },
+            date: { gte: thirtyDaysAgo },
+          },
+        },
+      });
+    }
+
+    if (ownerId && ownerId !== "all") {
+      if (ownerId === "unassigned") {
+        andCondition.push({ ownerId: null });
+      } else {
+        andCondition.push({
+          OR: [
+            { ownerId: ownerId }, // Pertence ao vendedor selecionado
+            { ownerId: null }, // OU está livre na fila esperando atendimento
+          ],
+        });
+      }
+    }
+
+    // Acopla todas as condições geradas com segurança no whereClause do Prisma
+    if (andCondition.length > 0) {
+      whereClause.AND = andCondition;
     }
 
     const [leads, totalCount] = await Promise.all([
@@ -73,6 +100,11 @@ class ListLeadsService {
           contacts: {
             orderBy: {
               date: "desc",
+            },
+          },
+          ownerUser: {
+            select: {
+              name: true,
             },
           },
         },

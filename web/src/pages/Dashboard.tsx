@@ -110,6 +110,7 @@ interface ApiLead {
   ImportBatch?: { tag: string } | null;
   unsubscribed?: boolean;
   bounced?: boolean,
+  ownerUser?: {name: string} | null;
 }
 
 const reverseStageMap: Record<string, string> = {
@@ -178,6 +179,7 @@ interface Lead {
   ImportBatch?: { tag: string } | null;
   unsubscribed?: boolean;
   bounced?: boolean;
+  ownerUser?: string;
 }
 
 interface Column {
@@ -305,7 +307,7 @@ function getActivityStatus(contacts?: ApiContact[]) {
 
   if (validContatcs.length === 0) {
     return {
-      text: "SEM ATIV.",
+      text: "SEM AT.",
       color: "bg-slate-100 text-slate-500 border-slate-200",
     };
   }
@@ -330,7 +332,7 @@ function getActivityStatus(contacts?: ApiContact[]) {
   } else {
     const overdueDays = diffDays - 30;
     return {
-      text: `${overdueDays}d (atraso)`,
+      text: `${overdueDays}d`,
       color: "bg-red-100 text-red-700 border-red-300",
     };
   }
@@ -381,6 +383,9 @@ export function Dashboard() {
   const [dateError, setDateError] = useState<string | null>(null);
 
   const [editingVisitTime, setEditingVisitTime] = useState<string>("");
+
+  const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<string>("all");
 
 
   const [formData, setFormData] = useState({
@@ -692,6 +697,14 @@ export function Dashboard() {
               };
 
               setSelectedLead(movedLead);
+            } else {
+              const newBoard = {...prev};
+              if (currentColId && newBoard[currentColId]) {
+                const leadIndex = newBoard[currentColId].leads.findIndex((l) => l.id === selectedLead.id);
+                if (leadIndex !== -1) {
+                  newBoard[currentColId].leads[leadIndex].ownerUser = userProfile.name;
+                }
+              }
             }
             return newBoard;
           });
@@ -770,6 +783,10 @@ export function Dashboard() {
 
     try {
       let url = `${import.meta.env.VITE_API_URL}/auth/leads?stage=${stageName}&limit=50&page=${page}`;
+      if (selectedUserId !== "all") {
+        url += `&ownerId=${selectedUserId}`;
+      }
+
       if (batchId === "manual") {
         url += `&isManual=true`; //leads que nao sao de listas
       } else if (batchId !== "all") {
@@ -795,7 +812,7 @@ export function Dashboard() {
         [columnId]: leadsArray.length === 50,
       }));
 
-      return leadsArray.map((apiLead) => {
+      return leadsArray.map((apiLead: any) => {
         const tag = apiLead.unsubscribed
             ?"bloqueado"
             : apiLead.bounced
@@ -825,6 +842,7 @@ export function Dashboard() {
             : [],
           unsubscribed: apiLead.unsubscribed,
           bounced: apiLead.bounced,
+          ownerUser: apiLead.ownerUser?.name || "livre",
         };
       });
     } catch (error) {
@@ -874,7 +892,7 @@ export function Dashboard() {
     }
 
     loadInitialBoard();
-  }, [navigate, selectedBatchId, globalFilter]);
+  }, [navigate, selectedBatchId, globalFilter, selectedUserId]);
 
   //define email padrao ser pra todos os emails
   useEffect(() => {
@@ -1021,6 +1039,28 @@ export function Dashboard() {
       }
     }
     fetchTemplates();
+  }, []);
+
+  useEffect(() => {
+    async function fetchUsers() {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/users`, {
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setUsers(data); // Preenche a listagem do filtro
+        }
+      } catch (error) {
+        console.error("Erro ao carregar usuários de equipe: ", error);
+      }
+    }
+
+    fetchUsers();
   }, []);
 
   function handleTemplateChange(templateId: string) {
@@ -1557,6 +1597,7 @@ export function Dashboard() {
                 className="text-[8px] px-1 py-0 h-4 font-normal uppercase"
               >
                 {lead.tag}
+
               </Badge>
 
               {(() => {
@@ -1570,6 +1611,10 @@ export function Dashboard() {
                   </div>
                 );
               })()}
+
+              <div className="text-[10px] text-zinc-100 font-semibold flex items-center gap-1 h-4 uppercase">
+                👤 {lead.ownerUser || "Livre"}
+              </div>
             </div>
 
             {!isHorizontal && lead.visitDate && (
@@ -1989,14 +2034,23 @@ export function Dashboard() {
                 <option value="all">Todos</option>
                 <option value="overdue"> Atrasados (+30 dias)</option>
               </select>
+              <select
+                  className="flex h-8 w-48 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
+                  value={selectedUserId}
+                  onChange={(e) => setSelectedUserId(e.target.value)}
+              >
+                <option value="all">Todos os Usuários</option>
+                {users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                ))}
+              </select>
             </div>
           </div>
 
           <div className="flex items-center gap-4 w-1/4 justify-end ml-auto">
             <div className="flex items-center gap-3 px-3 py-1.5 rounded-full bg-accent/20 border border-border/50 mr-2">
-              <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-primary">
-                <User size={18} />
-              </div>
               <div className="flex flex-col text-right">
                 <span className="text-sm font-semibold leading-none">
                   {userProfile.name}

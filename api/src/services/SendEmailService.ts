@@ -42,6 +42,16 @@ class SendEmailService {
       throw new Error("Lead não encontrado.");
     }
 
+    if (!lead.ownerId) {
+      await prismaClient.lead.update({
+        where: { id: leadId },
+        data: { ownerId: userId },
+      });
+      console.log(
+        `[👤 LEAD ATRIBUÍDO] O usuário ${userId} assumiu o lead ${leadId} pelo primeiro e-mail.`,
+      );
+    }
+
     if (lead.bounced) {
       throw new Error("Este lead possui um email inválido");
     }

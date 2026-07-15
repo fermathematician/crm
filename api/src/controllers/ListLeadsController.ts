@@ -13,6 +13,8 @@ class ListLeadsController {
     const isManual = (req.query.isManual as string) || "";
     const globalFilter = (req.query.globalFilter as string) || "";
 
+    const ownerId = req.query.ownerId as string;
+
     const listLeadsService = new ListLeadsService();
 
     const result = await listLeadsService.execute({
@@ -24,6 +26,7 @@ class ListLeadsController {
       importBatchId,
       isManual,
       globalFilter,
+      ownerId,
     });
 
     return res.json(result);

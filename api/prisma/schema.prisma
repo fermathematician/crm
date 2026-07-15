@@ -75,8 +75,8 @@ model Lead {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  ownerId   String
-  ownerUser User   @relation("LeadOwner", fields: [ownerId], references: [id])
+  ownerId   String?
+  ownerUser User?   @relation("LeadOwner", fields: [ownerId], references: [id])
 
   // Origem (Pode ser nulo se foi cadastrado manualmente)
   ImportBatchId String?

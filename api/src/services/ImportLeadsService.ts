@@ -2,6 +2,7 @@ import { prismaClient } from "../../prisma/index.js";
 import * as XLSX from "xlsx";
 import fs from "fs";
 import path from "path";
+import { FunnelStage } from "@prisma/client";
 
 interface ImportRequest {
   file: Express.Multer.File;
@@ -104,9 +105,9 @@ class ImportLeadsService {
             state: normalizeValue(row["UF"]),
             address: normalizeValue(row["RUANUMCEP"]),
 
-            ownerId: userId,
+            ownerId: null,
             ImportBatchId: batch.id,
-            funnelStage: "NOVO" as const,
+            funnelStage: FunnelStage.NOVO,
             tags: ["novo"],
             unsubscribed: false,
             bounced: false,
