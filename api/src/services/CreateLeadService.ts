@@ -21,6 +21,8 @@ interface LeadRequest {
   tags?: string[];
   visitDate?: string;
   ownerId: string;
+  unsubscribed?: boolean;
+  bounced?: boolean;
 }
 
 class CreateLeadService {
@@ -38,6 +40,8 @@ class CreateLeadService {
     tags = ["novo"],
     visitDate,
     ownerId,
+    unsubscribed = false,
+    bounced = false,
   }: LeadRequest) {
     if (!companyName) {
       throw new Error("O nome da empresa (Razão Social) é obrigatório.");
@@ -76,6 +80,8 @@ class CreateLeadService {
         tags: finalTags,
         visitDate: visitDate ? new Date(visitDate) : null, // <-- 3. CONVERSÃO ADICIONADA AQUI
         ownerId,
+        unsubscribed: unsubscribed || false,
+        bounced: bounced || false,
       },
     });
 

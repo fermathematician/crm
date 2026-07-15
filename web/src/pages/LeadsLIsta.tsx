@@ -61,6 +61,7 @@ interface ApiLead {
     | "SEM_INTERESSE";
   tags: string[];
   unsubscribed?: boolean;
+  bounced?: boolean;
 }
 
 // --- FUNÇÕES DE MÁSCARA ---
@@ -174,6 +175,7 @@ export function LeadsList() {
     address: "",
     funnelStage: "NOVO",
     unsubscribed: false,
+    bounced: false,
   });
 
   const fetchLeads = useCallback(async () => {
@@ -511,6 +513,7 @@ export function LeadsList() {
       address: "",
       funnelStage: "NOVO",
       unsubscribed: false,
+      bounced: false,
     });
     setIsModalOpen(true);
   }
@@ -529,6 +532,7 @@ export function LeadsList() {
       address: lead.address || "",
       funnelStage: lead.funnelStage,
       unsubscribed: lead.unsubscribed || false,
+      bounced: lead.bounced || false,
     });
     setIsModalOpen(true);
   }

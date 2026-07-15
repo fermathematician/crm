@@ -18,6 +18,7 @@ class UpdateLeadController {
       tags,
       visitDate,
       unsubscribed,
+      bounced,
     } = req.body;
 
     const updateLeadService = new UpdateLeadService();
@@ -37,6 +38,7 @@ class UpdateLeadController {
       tags,
       visitDate,
       unsubscribed,
+      bounced,
     });
 
     return res.json(lead);

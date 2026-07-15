@@ -109,6 +109,7 @@ interface ApiLead {
   contacts?: ApiContact[];
   ImportBatch?: { tag: string } | null;
   unsubscribed?: boolean;
+  bounced?: boolean,
 }
 
 const reverseStageMap: Record<string, string> = {
@@ -176,6 +177,7 @@ interface Lead {
   contacts?: ApiContact[];
   ImportBatch?: { tag: string } | null;
   unsubscribed?: boolean;
+  bounced?: boolean;
 }
 
 interface Column {
@@ -740,7 +742,7 @@ export function Dashboard() {
 
   async function updateLeadOnServer(
     leadId: string,
-    data: { funnelStage?: string; tags?: string[]; visitDate?: string | null; unsubscribed?: boolean },
+    data: { funnelStage?: string; tags?: string[]; visitDate?: string | null; unsubscribed?: boolean; bounced?: boolean},
   ) {
     const token = localStorage.getItem("token");
     try {
@@ -796,7 +798,9 @@ export function Dashboard() {
       return leadsArray.map((apiLead) => {
         const tag = apiLead.unsubscribed
             ?"bloqueado"
-            : (apiLead.tags[0] as LeadTag) || columnDefaultTags[columnId];
+            : apiLead.bounced
+              ? "a qualificar"
+              : (apiLead.tags[0] as LeadTag) || columnDefaultTags[columnId];
         return {
           id: apiLead.id,
           name: apiLead.companyName,
@@ -820,6 +824,7 @@ export function Dashboard() {
               }))
             : [],
           unsubscribed: apiLead.unsubscribed,
+          bounced: apiLead.bounced,
         };
       });
     } catch (error) {
@@ -1093,11 +1098,13 @@ export function Dashboard() {
       removed.tag = defaultTag || removed.tag;
 
       removed.unsubscribed = removed.tag === "bloqueado";
+      removed.bounced = removed.tag === "a qualificar";
 
       updateLeadOnServer(draggableId, {
         funnelStage: reverseStageMap[destination.droppableId],
         tags: [removed.tag],
         unsubscribed: removed.unsubscribed,
+        bounced: removed.bounced,
       });
 
       const description = `Funil alterado: ${sourceCol.title} ➔ ${destCol.title}`;
@@ -1142,6 +1149,7 @@ export function Dashboard() {
     if (!selectedLead || !editingTag) return;
 
     const isUnsubscribing = editingTag === "bloqueado";
+    const isBouncing = editingTag === "a qualificar";
 
     if (editingVisitDate && editingVisitDate.length > 0) {
       if (editingVisitDate.length < 10) {
@@ -1226,6 +1234,7 @@ export function Dashboard() {
           tag: editingTag,
           visitDate: formattedDateForBackend,
           unsubscribed: isUnsubscribing,
+          bounced: isBouncing,
         };
         break;
       }
@@ -1235,6 +1244,7 @@ export function Dashboard() {
       tags: [editingTag],
       visitDate: formattedDateForBackend,
       unsubscribed: isUnsubscribing,
+      bounced: isBouncing,
     });
 
     setColumns(newColumns);

@@ -108,6 +108,8 @@ class ImportLeadsService {
             ImportBatchId: batch.id,
             funnelStage: "NOVO" as const,
             tags: ["novo"],
+            unsubscribed: false,
+            bounced: false,
           };
         })
         .filter((lead): lead is NonNullable<typeof lead> => lead !== null);

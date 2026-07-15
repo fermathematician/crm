@@ -21,6 +21,7 @@ interface UpdateLeadRequest {
   tags?: string[];
   visitDate?: string | null;
   unsubscribed?: boolean;
+  bounced?: boolean;
 }
 
 class UpdateLeadService {
@@ -39,6 +40,7 @@ class UpdateLeadService {
     tags,
     visitDate,
     unsubscribed,
+    bounced,
   }: UpdateLeadRequest) {
     if (!lead_id) {
       throw new Error("ID do Lead não fornecido.");
@@ -58,6 +60,7 @@ class UpdateLeadService {
     if (funnelStage !== undefined) dataToUpdate.funnelStage = funnelStage;
     if (tags !== undefined) dataToUpdate.tags = tags;
     if (unsubscribed !== undefined) dataToUpdate.unsubscribed = unsubscribed;
+    if (bounced !== undefined) dataToUpdate.bounced = bounced;
     if (visitDate !== undefined) {
       dataToUpdate.visitDate = visitDate ? new Date(visitDate) : null;
     }

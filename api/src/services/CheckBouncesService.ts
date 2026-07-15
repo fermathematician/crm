@@ -71,6 +71,25 @@ class CheckBouncesService {
         });
 
         for (const lead of leads) {
+          await prismaClient.lead.update({
+            where: { id: lead.id },
+            data: {
+              bounced: true,
+              tags: ["a qualificar"],
+              funnelStage: "NOVO",
+            },
+          });
+
+          await prismaClient.contact.create({
+            data: {
+              leadId: lead.id,
+              userId: userId,
+              type: "SYSTEM_CHANGE",
+              date: new Date(),
+              description: `Automação: E-mail de destino retornou Hard Bounce. Lead descadastrado para proteger reputação de envio SMTP.`,
+            },
+          });
+
           console.log(`Lead ID ${lead.id} atualizado por Hard Bounce.`);
         }
         bouncesProcessados++;

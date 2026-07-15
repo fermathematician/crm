@@ -42,6 +42,9 @@ class SendEmailService {
       throw new Error("Lead não encontrado.");
     }
 
+    if (lead.bounced) {
+      throw new Error("Este lead possui um email inválido");
+    }
     if (lead.unsubscribed) {
       throw new Error(
         "Este lead cancelou a inscrição e não aceita mais receber o email",
