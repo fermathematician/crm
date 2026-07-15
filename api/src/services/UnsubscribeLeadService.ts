@@ -19,6 +19,7 @@ class UnsubscribeLeadService {
       data: {
         unsubscribed: true,
         funnelStage: "NOVO",
+        tags: ["bloqueado"],
       },
     });
 
