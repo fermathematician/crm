@@ -9,10 +9,11 @@ class ListLeadsController {
     const limit = parseInt(req.query.limit as string) || 50;
     const search = (req.query.search as string) || "";
     const stage = (req.query.stage as string) || "ALL";
+
     const importBatchId = (req.query.importBatchId as string) || "";
     const isManual = (req.query.isManual as string) || "";
     const globalFilter = (req.query.globalFilter as string) || "";
-
+    const tag = (req.query.tag as string) || "";
     const ownerId = req.query.ownerId as string;
 
     const listLeadsService = new ListLeadsService();
@@ -26,6 +27,7 @@ class ListLeadsController {
       importBatchId,
       isManual,
       globalFilter,
+      tag,
       ownerId,
     });
 

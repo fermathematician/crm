@@ -10,6 +10,7 @@ interface ListLeadsParams {
   isManual?: string;
   globalFilter?: string;
   ownerId?: string;
+  tag?: string;
 }
 
 class ListLeadsService {
@@ -23,6 +24,7 @@ class ListLeadsService {
     isManual,
     globalFilter,
     ownerId,
+    tag,
   }: ListLeadsParams) {
     const skip = (page - 1) * limit;
 
@@ -67,6 +69,12 @@ class ListLeadsService {
             date: { gte: thirtyDaysAgo },
           },
         },
+      });
+    }
+
+    if (tag && tag != "ALL") {
+      andCondition.push({
+        tags: { has: tag },
       });
     }
 
