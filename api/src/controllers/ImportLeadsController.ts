@@ -5,7 +5,8 @@ class ImportLeadsController {
   async handle(req: Request, res: Response) {
     const userId = req.user_id;
     const file = req.file;
-    const { tag } = req.body;
+    const tag = req.body.tag;
+    const manualStatus = req.body.manualStatus;
 
     if (!file) {
       return res
@@ -26,6 +27,7 @@ class ImportLeadsController {
         file,
         userId,
         tag,
+        manualStatus,
       });
 
       return res.json(result);

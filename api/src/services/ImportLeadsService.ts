@@ -7,13 +7,14 @@ import { FunnelStage } from "@prisma/client";
 interface ImportRequest {
   file: Express.Multer.File;
   userId: string;
-  tag: string;
+  tag: string; //esse tag é o nome da lista, não confundir com as tags dos leads, que seria "novo", "frio", etc
+  manualStatus: string;
 }
 
 type ExcelRow = Record<string, any>;
 
 class ImportLeadsService {
-  async execute({ file, userId, tag }: ImportRequest) {
+  async execute({ file, userId, tag, manualStatus = "novo" }: ImportRequest) {
     if (!file) {
       throw new Error("Arquivo não enviado.");
     }
@@ -108,9 +109,9 @@ class ImportLeadsService {
             ownerId: null,
             ImportBatchId: batch.id,
             funnelStage: FunnelStage.NOVO,
-            tags: ["novo"],
-            unsubscribed: false,
-            bounced: false,
+            tags: [manualStatus],
+            unsubscribed: manualStatus === "bloqueado",
+            bounced: manualStatus === "a qualificar",
           };
         })
         .filter((lead): lead is NonNullable<typeof lead> => lead !== null);

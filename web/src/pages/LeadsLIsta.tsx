@@ -162,6 +162,7 @@ export function LeadsList() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [importTag, setImportTag] = useState("");
+  const [importManualStatus, setImportManualStatus] = useState<"novo" | "a qualificar">("novo");
 
   // Estado do Formulário
   const [formData, setFormData] = useState({
@@ -385,6 +386,7 @@ export function LeadsList() {
     const formDataPayload = new FormData();
     formDataPayload.append("file", selectedFile);
     formDataPayload.append("tag", importTag);
+    formDataPayload.append("manualStatus", importManualStatus)
 
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/leads/import`, {
@@ -702,6 +704,29 @@ export function LeadsList() {
                         onChange={(e) => setImportTag(e.target.value)}
                       />
                     </div>
+
+                    <div className="grid gap-2 mb-2">
+                      <Label>Status Inicial dos Leads</Label>
+                      <div className="flex gap-2">
+                        <Button
+                            type="button"
+                            variant={importManualStatus === "novo" ? "default" : "outline"}
+                            onClick={() => setImportManualStatus("novo")}
+                            className={importManualStatus === "novo" ? "bg-slate-500 hover:bg-slate-600 text-white" : ""}
+                        >
+                          Novos / Entrada
+                        </Button>
+                        <Button
+                            type="button"
+                            variant={importManualStatus === "a qualificar" ? "default" : "outline"}
+                            onClick={() => setImportManualStatus("a qualificar")}
+                            className={importManualStatus === "a qualificar" ? "bg-zinc-400 hover:bg-zinc-500 text-white" : ""}
+                        >
+                          A Qualificar (Bounced)
+                        </Button>
+                      </div>
+                    </div>
+
                     <div className="flex flex-col items-center justify-center border-2 border-dashed border-border rounded-xl p-8 bg-muted/30 gap-3">
                       <FileText size={40} className="text-muted-foreground" />
                       <div className="text-center">
