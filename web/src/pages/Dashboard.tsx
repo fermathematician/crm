@@ -62,6 +62,7 @@ type LeadTag =
   | "frio"
   | "morno"
   | "quente"
+  | "visita"
   | "a qualificar"
   | "sem resposta"
   | "respondido"
@@ -133,6 +134,7 @@ const tagColors: Record<LeadTag, string> = {
   frio: "bg-cyan-500 border-cyan-600",
   morno: "bg-orange-400 border-orange-500",
   quente: "bg-red-500 border-red-600",
+  visita: "bg-green-300 border-green-400",
   promessa: "bg-indigo-300 border-indigo-400",
   parcial: "bg-indigo-400 border-indigo-500",
   completa: "bg-indigo-500 border-indigo-600",
@@ -155,7 +157,7 @@ const columnDefaultTags: Record<string, LeadTag> = {
 const columnAllowedTags: Record<string, LeadTag[]> = {
   novos: ["novo", "a qualificar", "bloqueado"],
   contato: ["sem resposta", "aberto", "respondido"],
-  negociacao: ["frio", "morno", "quente"],
+  negociacao: ["frio", "morno", "quente", "visita"],
   cadastro: ["promessa", "parcial", "completa"],
   finalizado: ["aprovado", "recusado"],
   arquivo: ["sem interesse"],
@@ -1134,8 +1136,14 @@ export function Dashboard() {
     const [removed] = sourceItems.splice(source.index, 1);
 
     if (source.droppableId !== destination.droppableId) {
-      const defaultTag = columnDefaultTags[destination.droppableId];
-      removed.tag = defaultTag || removed.tag;
+
+      let newTag = columnDefaultTags[destination.droppableId] || removed.tag;
+
+      if (destination.droppableId === "negociacao" && removed.visitDate) {
+        newTag = "visita";
+      }
+
+      removed.tag = newTag;
 
       removed.unsubscribed = removed.tag === "bloqueado";
       removed.bounced = removed.tag === "a qualificar";
@@ -1188,9 +1196,6 @@ export function Dashboard() {
   function handleSaveLead() {
     if (!selectedLead || !editingTag) return;
 
-    const isUnsubscribing = editingTag === "bloqueado";
-    const isBouncing = editingTag === "a qualificar";
-
     if (editingVisitDate && editingVisitDate.length > 0) {
       if (editingVisitDate.length < 10) {
         setDateError(
@@ -1224,6 +1229,15 @@ export function Dashboard() {
       const time = editingVisitTime.length === 5 ? editingVisitTime : "00:00";
       formattedDateForBackend = `${year}-${month}-${day}T${time}:00`;
     }
+
+    const finalTag = formattedDateForBackend ? "visita" : editingTag;
+    if (finalTag === "visita" && !formattedDateForBackend) {
+      setDateError("Informe a data para agendar a visita");
+      return;
+    }
+
+    const isUnsubscribing = finalTag === "bloqueado";
+    const isBouncing = finalTag === "a qualificar";
 
     const newColumns = { ...columns };
     for (const colId in newColumns) {
@@ -1271,7 +1285,7 @@ export function Dashboard() {
 
         newColumns[colId].leads[leadIndex] = {
           ...oldLead,
-          tag: editingTag,
+          tag: finalTag,
           visitDate: formattedDateForBackend,
           unsubscribed: isUnsubscribing,
           bounced: isBouncing,
@@ -1281,7 +1295,7 @@ export function Dashboard() {
     }
 
     updateLeadOnServer(selectedLead.id, {
-      tags: [editingTag],
+      tags: [finalTag],
       visitDate: formattedDateForBackend,
       unsubscribed: isUnsubscribing,
       bounced: isBouncing,
@@ -1516,8 +1530,7 @@ export function Dashboard() {
     : [];
 
   const showVisitDate =
-    currentLeadColumnId &&
-    ["contato", "negociacao", "cadastro"].includes(currentLeadColumnId);
+    currentLeadColumnId === "negociacao"
 
   // Variável utilitária para o histórico filtrado
   const visibleContacts = leadContacts.filter(
@@ -1596,7 +1609,14 @@ export function Dashboard() {
                 variant="outline"
                 className="text-[8px] px-1 py-0 h-4 font-normal uppercase"
               >
-                {lead.tag}
+                {lead.tag === "visita" && lead.visitDate ? (
+                    <span className="flex items-center gap-1">
+                      <CalendarIcon size={9} strokeWidth={2.5} />
+                      {lead.visitDate.split("T")[0].split("-").slice(1).reverse().join("/")}
+                    </span>
+                ) : (
+                    lead.tag
+                )}
 
               </Badge>
 
@@ -1616,13 +1636,6 @@ export function Dashboard() {
                 👤 {lead.ownerUser || "Livre"}
               </div>
             </div>
-
-            {!isHorizontal && lead.visitDate && (
-              <div className="flex items-center gap-1.5 text-[9px] font-bold text-blue-700 bg-blue-100 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30 px-2 py-0.5 rounded-md shadow-sm">
-                <CalendarIcon size={12} strokeWidth={2.5} />
-                {formatDisplayDate(lead.visitDate)}
-              </div>
-            )}
           </div>
         </div>
       )}
@@ -2146,8 +2159,12 @@ export function Dashboard() {
                       maxLength={10}
                       value={editingVisitDate}
                       onChange={(e) => {
-                        setEditingVisitDate(maskDate(e.target.value));
+                        const masked = maskDate(e.target.value)
+                        setEditingVisitDate(masked);
                         if (dateError) setDateError(null);
+                        if (masked.length === 10) {
+                          setEditingTag("visita");
+                        }
                       }}
                       className={`flex h-10 w-full rounded-md border bg-card px-3 py-2 pl-10 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${dateError ? "border-red-500 focus-visible:ring-red-500" : "border-input"}`}
                     />

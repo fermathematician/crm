@@ -100,6 +100,7 @@ const ALL_TAGS = [
   "frio",
   "morno",
   "quente",
+  "visita",
   "promessa",
   "parcial",
   "completa",
@@ -112,7 +113,7 @@ const ALL_TAGS = [
 const allowedTagsByStage: Record<string, string[]> = {
   NOVO: ["novo", "a qualificar", "bloqueado"],
   CONTATO: ["sem resposta", "aberto", "respondido"],
-  NEGOCIACAO: ["frio", "morno", "quente"],
+  NEGOCIACAO: ["frio", "morno", "quente", "visita"],
   CADASTRO: ["promessa", "parcial", "completa"],
   FINALIZADO: ["aprovado", "recusado"],
   SEM_INTERESSE: ["sem interesse"],
