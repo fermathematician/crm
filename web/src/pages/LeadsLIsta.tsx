@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { Textarea } from "../components/ui/textarea";
 import {
   Moon,
   Sun,
@@ -17,6 +18,10 @@ import {
   FileText,
   ChevronLeft,
   ChevronRight,
+  Bell,
+  Check,
+  Clock,
+  Calendar as CalendarIcon,
 } from "lucide-react";
 import { useTheme } from "../hooks/useTheme";
 
@@ -62,6 +67,7 @@ interface ApiLead {
   tags: string[];
   unsubscribed?: boolean;
   bounced?: boolean;
+  visitDate?: string | null;
 }
 
 // --- FUNÇÕES DE MÁSCARA ---
@@ -89,6 +95,23 @@ const maskCNAE = (value: string) => {
   if (value.length > 4) value = `${value.slice(0, 4)}-${value.slice(4)}`;
   if (value.length > 6) value = `${value.slice(0, 6)}/${value.slice(6)}`;
   return value;
+};
+
+const maskDate = (value: string) => {
+  value = value.replace(/\D/g, "");
+  if (value.length > 8) value = value.slice(0, 8);
+  if (value.length > 2) value = `${value.slice(0, 2)}/${value.slice(2)}`;
+  if (value.length > 5) value = `${value.slice(0, 5)}/${value.slice(5)}`;
+  return value;
+};
+
+const maskTime = (value: string) => {
+  let v = value.replace(/\D/g, "");
+  v = v.slice(0, 4);
+  if (v.length > 2) {
+    v = `${v.slice(0, 2)}:${v.slice(2)}`;
+  }
+  return v;
 };
 
 const ALL_TAGS = [
@@ -130,6 +153,26 @@ const defaultTagsByStage: Record<string, string> = {
   FORA_DE_PERFIL: "fora de perfil",
 };
 
+const tagColors: Record<string, string> = {
+  novo: "bg-slate-500 border-slate-600",
+  bloqueado: "bg-red-200 border-red-300",
+  "a qualificar": "bg-zinc-300 border-zinc-400",
+  "sem resposta": "bg-gray-400 border-gray-500",
+  respondido: "bg-yellow-400 border-yellow-600",
+  aberto: "bg-orange-300 border-orange-500",
+  frio: "bg-cyan-500 border-cyan-600",
+  morno: "bg-orange-400 border-orange-500",
+  quente: "bg-red-500 border-red-600",
+  visita: "bg-green-300 border-green-400",
+  promessa: "bg-indigo-300 border-indigo-400",
+  parcial: "bg-indigo-400 border-indigo-500",
+  completa: "bg-indigo-500 border-indigo-600",
+  aprovado: "bg-green-600 border-green-700",
+  recusado: "bg-rose-600 border-rose-700",
+  "sem interesse": "bg-zinc-500 border-zinc-600",
+  "fora de perfil": "bg-neutral-600 border-neutral-700",
+};
+
 export function LeadsList() {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
@@ -163,6 +206,11 @@ export function LeadsList() {
   const [isImporting, setIsImporting] = useState(false);
   const [importTag, setImportTag] = useState("");
   const [importManualStatus, setImportManualStatus] = useState<"novo" | "a qualificar">("novo");
+
+  const [isQuickModalOpen, setIsQuickModalOpen] = useState(false);
+  const [selectedQuickLead, setSelectedQuickLead] = useState<ApiLead | null>(null);
+  const [quickReminderDate, setQuickReminderDate] = useState("");
+  const [quickReminderText, setQuickReminderText] = useState("");
 
   // Estado do Formulário
   const [formData, setFormData] = useState({
@@ -286,6 +334,7 @@ export function LeadsList() {
     if (e) e.preventDefault();
     setActiveSearch(searchInput);
   }
+
 
   // --- DELETAR LEAD (DELETE) ---
   async function handleDelete(id: string) {
@@ -519,6 +568,57 @@ export function LeadsList() {
       bounced: false,
     });
     setIsModalOpen(true);
+  }
+
+  function openQuickModal(lead: ApiLead) {
+    setSelectedQuickLead(lead);
+
+    // Pega a data de hoje no formato DD/MM/AAAA
+    const today = new Date();
+    const dd = String(today.getDate()).padStart(2, '0');
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const yyyy = today.getFullYear();
+
+    setQuickReminderDate(`${dd}/${mm}/${yyyy}`);
+    setQuickReminderText("");
+    setIsQuickModalOpen(true);
+  }
+
+  async function handleSaveQuickReminder() {
+    if (!selectedQuickLead || !quickReminderText || quickReminderDate.length < 10) {
+      alert("Preencha a data completa e a descrição.");
+      return;
+    }
+
+    const [d, m, y] = quickReminderDate.split("/");
+    const formattedDate = `${y}-${m}-${d}`;
+    const token = localStorage.getItem("token");
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/leads/${selectedQuickLead.id}/contacts`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          type: "REMINDER", // 👈 SALVANDO COMO LEMBRETE!
+          date: formattedDate,
+          description: quickReminderText,
+        }),
+      });
+
+      if (response.ok) {
+        setIsQuickModalOpen(false);
+        fetchLeads(); // Atualiza a tabela
+        alert("Lembrete agendado com sucesso!");
+      } else {
+        alert("Erro ao salvar o lembrete.");
+      }
+    } catch (error) {
+      console.error("Erro:", error);
+      alert("Erro de conexão.");
+    }
   }
 
   function openEditModal(lead: ApiLead) {
@@ -1258,7 +1358,7 @@ export function LeadsList() {
                               handleSaveCell(lead.id, "tags", [val]);
                             }}
                           >
-                            <SelectTrigger className="h-8 border-transparent bg-transparent hover:bg-muted/50 focus:ring-1 shadow-none px-2 w-[140px] text-xs font-semibold uppercase">
+                            <SelectTrigger className="h-8 border-transparent bg-transparent hover:bg-muted/50 focus:ring-1 shadow-none px-2 w-[120px] text-xs font-semibold uppercase">
                               <SelectValue placeholder="SEM ETIQUETA" />
                             </SelectTrigger>
                             <SelectContent>
@@ -1278,6 +1378,15 @@ export function LeadsList() {
                         </td>
 
                         <td className="px-2 py-1 flex justify-end gap-1 items-center h-[40px]">
+                          <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-purple-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => openQuickModal(lead)}
+                              title="Agendar Visita / Etiqueta"
+                          >
+                            <Bell size={14} />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -1337,6 +1446,57 @@ export function LeadsList() {
               </Button>
             </div>
           </div>
+
+          {/* 🚀 MODAL EXPRESSO DE LEMBRETE */}
+          <Dialog open={isQuickModalOpen} onOpenChange={setIsQuickModalOpen}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle className="text-xl flex items-center gap-2">
+                  <Bell className="text-purple-600" />
+                  Agendar Lembrete
+                </DialogTitle>
+                <div className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mt-1">
+                  {selectedQuickLead?.companyName}
+                </div>
+              </DialogHeader>
+
+              <div className="space-y-4 py-2">
+                <div className="space-y-2">
+                  <Label>Data do Lembrete</Label>
+                  <div className="relative w-full">
+                    <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    <Input
+                        type="text"
+                        placeholder="DD/MM/AAAA"
+                        className="pl-9"
+                        value={quickReminderDate}
+                        onChange={(e) => setQuickReminderDate(maskDate(e.target.value))}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>O que você precisa fazer?</Label>
+                  <Textarea
+                      className="min-h-[120px] resize-none"
+                      placeholder="Ex: Ligar para cobrar a assinatura do contrato..."
+                      value={quickReminderText}
+                      onChange={(e) => setQuickReminderText(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button variant="ghost" onClick={() => setIsQuickModalOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleSaveQuickReminder} className="gap-2 bg-purple-600 hover:bg-purple-700 text-white">
+                  <Bell size={16} /> Agendar
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
         </main>
       </div>
     </div>
