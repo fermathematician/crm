@@ -268,6 +268,10 @@ function formatDisplayDate(dateString: string) {
 function formatDisplayDateTime(dateString: string) {
   if (!dateString) return "";
   try {
+    if (dateString.length === 10 || dateString.endsWith("T00:00:00.000Z") || dateString.endsWith("T00:00:00Z")) {
+      const [year, month, day] = dateString.split("T")[0].split("-");
+      return `${day}/${month}/${year}`; // Retorna só a data limpa, sem o "às 21:00"
+    }
     const dateObj = new Date(dateString);
     if (isNaN(dateObj.getTime())) {
       return dateString; // Fallback caso seja um texto plano
@@ -431,6 +435,8 @@ export function Dashboard() {
 
   const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>("all");
+  const [editingContactId, setEditingContactId] = useState<string | null>(null);
+  const [editingContactText, setEditingContactText] = useState("");
 
 
   const [formData, setFormData] = useState({
@@ -501,6 +507,8 @@ export function Dashboard() {
   const [noteDate, setNoteDate] = useState(getTodayDDMMYYYY());
   const [reminderText, setReminderText] = useState("");
   const [reminderDate, setReminderDate] = useState(getTodayDDMMYYYY());
+  const [observationText, setObservationText] = useState("");
+  const [observationDate, setObservationDate] = useState(getTodayDDMMYYYY());
 
   const [leadCalendarMonth, setLeadCalendarMonth] = useState(new Date());
 
@@ -607,14 +615,29 @@ export function Dashboard() {
 
   async function handleSaveInteraction() {
     const isReminder = activeTab === "reminder";
-    const textToSave = isReminder ? reminderText : noteText;
-    const dateToSave = isReminder ? reminderDate : noteDate;
+    const isObservation = activeTab === "observation";
+    let textToSave = "";
+    let dateToSave = "";
+    let interactionType: "REMINDER" | "CALL" | "NOTE" = "CALL";
+
+    if (isReminder) {
+      textToSave = reminderText;
+      dateToSave = reminderDate;
+      interactionType = "REMINDER";
+    } else if (isObservation) {
+      textToSave = observationText;
+      dateToSave = observationDate;
+      interactionType = "NOTE";
+    } else {
+      textToSave = noteText;
+      dateToSave = noteDate;
+      interactionType = "CALL";
+    }
 
     if (!selectedLead || !textToSave || dateToSave.length < 10) return;
 
     const [d, m, y] = dateToSave.split("/");
     const formattedDate = `${y}-${m}-${d}`;
-    const interactionType = isReminder ? "REMINDER" : "CALL";
 
     const newContact: ApiContact = {
       id: Date.now().toString(),
@@ -624,6 +647,7 @@ export function Dashboard() {
     };
 
     setLeadContacts((prev) => [newContact, ...prev]);
+
 
     const newColumns = { ...columns };
     const colId = getLeadColumnId(selectedLead.id);
@@ -640,6 +664,7 @@ export function Dashboard() {
     updateTodayNotifications(newColumns);
 
     if (isReminder) setReminderText("");
+    else if (isObservation) setObservationText("");
     else setNoteText("");
     setActiveTab("history");
 
@@ -662,6 +687,39 @@ export function Dashboard() {
       );
     } catch (e) {
       console.error(e);
+    }
+  }
+
+  async function handleUpdateContact(contactId: string) {
+    const token = localStorage.getItem("token");
+    try {
+      // ⚠️ Atenção: Esta rota precisará ser criada no seu back-end!
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/contacts/update`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contact_id: contactId,
+          description: editingContactText
+        }),
+      });
+
+      if (response.ok) {
+        // Atualiza a lista na tela imediatamente
+        setLeadContacts((prev) =>
+            prev.map((c) =>
+                c.id === contactId ? { ...c, description: editingContactText } : c
+            )
+        );
+        setEditingContactId(null); // Fecha o modo de edição
+      } else {
+        alert("Erro ao atualizar a observação.");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Erro de conexão ao tentar atualizar.");
     }
   }
 
@@ -2405,7 +2463,7 @@ export function Dashboard() {
                 className="flex-1 flex flex-col overflow-hidden"
               >
                 <div className="px-6 pt-4 border-b border-border shrink-0">
-                  <TabsList className="grid w-full grid-cols-5 bg-muted/50 h-12">
+                  <TabsList className="grid w-full grid-cols-6 bg-muted/50 h-12">
                     <TabsTrigger value="history" className="gap-2">
                       <History size={16} /> Histórico
                     </TabsTrigger>
@@ -2415,6 +2473,11 @@ export function Dashboard() {
                     <TabsTrigger value="note" className="gap-2">
                       <Phone size={16} /> Ligação
                     </TabsTrigger>
+
+                    <TabsTrigger value="observation" className="gap-2">
+                      <AlignLeft size={16} /> Observação
+                    </TabsTrigger>
+
                     <TabsTrigger value="reminder" className="gap-2">
                       <Bell size={16} /> Lembrete
                     </TabsTrigger>
@@ -2443,117 +2506,154 @@ export function Dashboard() {
                             </p>
                           </div>
                         ) : (
-                          visibleContacts.map((contact) => {
-                            const isEmail = contact.type === "EMAIL";
-                            const isExpanded = expandedHistory.includes(
-                              contact.id,
-                            );
+                            visibleContacts.map((contact) => {
+                              const isEmail = contact.type === "EMAIL";
+                              const isExpanded = expandedHistory.includes(
+                                  contact.id,
+                              );
 
-                            let subjectTitle = "Sem Assunto";
-                            let emailBody = contact.description || "";
+                              let subjectTitle = "Sem Assunto";
+                              let emailBody = contact.description || "";
 
-                            if (
-                              isEmail &&
-                              contact.description.includes("Assunto:")
-                            ) {
-                              const match = contact.description.match(/Assunto:\s*(.*?)\r?\n\r?\nMensagem:\r?\n([\s\S]*)/i);
+                              if (
+                                  isEmail &&
+                                  contact.description.includes("Assunto:")
+                              ) {
+                                const match = contact.description.match(/Assunto:\s*(.*?)\r?\n\r?\nMensagem:\r?\n([\s\S]*)/i);
 
-                              if (match) {
-                                subjectTitle = match[1].trim();
-                                emailBody = match[2].trim();
-                              }else {
-                                emailBody = contact.description;
+                                if (match) {
+                                  subjectTitle = match[1].trim();
+                                  emailBody = match[2].trim();
+                                }else {
+                                  emailBody = contact.description;
+                                }
                               }
-                            }
 
-                            return (
-                              <div
-                                key={contact.id}
-                                className="flex gap-4 p-4 border border-border rounded-lg bg-card"
-                              >
-                                <div
-                                  className={`mt-1 p-2 rounded-full h-fit shrink-0
+                              return (
+                                  <div
+                                      key={contact.id}
+                                      className="flex gap-4 p-4 border border-border rounded-lg bg-card"
+                                  >
+                                    <div
+                                        className={`mt-1 p-2 rounded-full h-fit shrink-0
                                      ${
-                                       contact.type === "EMAIL"
-                                         ? "bg-blue-100 text-blue-600"
-                                         : contact.type === "CALL" ||
-                                             contact.type === "NOTE"
-                                           ? "bg-green-100 text-green-600"
-                                           : contact.type === "REMINDER"
-                                             ? "bg-purple-100 text-purple-600"
-                                             : "bg-orange-100 text-orange-600"
-                                     }`}
-                                >
-                                  {contact.type === "EMAIL" ? (
-                                    <Mail size={18} />
-                                  ) : contact.type === "CALL" ||
-                                    contact.type === "NOTE" ? (
-                                    <Phone size={18} />
-                                  ) : contact.type === "REMINDER" ? (
-                                    <Bell size={18} />
-                                  ) : (
-                                    <CalendarIcon size={18} />
-                                  )}
-                                </div>
+                                            contact.type === "EMAIL"
+                                                ? "bg-blue-100 text-blue-600"
+                                                : contact.type === "CALL"
+                                                    ? "bg-green-100 text-green-600"
+                                                    : contact.type === "NOTE"
+                                                        ? "bg-amber-100 text-amber-600"
+                                                        : contact.type === "REMINDER"
+                                                            ? "bg-purple-100 text-purple-600"
+                                                            : "bg-orange-100 text-orange-600"
+                                        }`}
+                                    >
+                                      {contact.type === "EMAIL" ? (
+                                          <Mail size={18} />
+                                      ) : contact.type === "CALL" ? (
+                                          <Phone size={18} />
+                                      ) : contact.type === "NOTE" ? (
+                                          <AlignLeft size={18} />
+                                      ) : contact.type === "REMINDER" ? (
+                                          <Bell size={18} />
+                                      ) : (
+                                          <CalendarIcon size={18} />
+                                      )}
+                                    </div>
 
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <span className="font-bold text-sm">
-                                      {contact.type === "EMAIL"
-                                        ? contact.description?.includes("Recebido")
-                                          ? "E-mail Recebido"
-                                          : "E-mail Enviado"
-                                        : contact.type === "CALL" ||
-                                            contact.type === "NOTE"
-                                          ? "Registro de Ligação"
-                                          : contact.type === "REMINDER"
-                                            ? "Lembrete Agendado"
-                                            : "Visita Agendada"}
-                                    </span>
-                                    <span className="text-xs text-muted-foreground">
-                                      • {formatDisplayDateTime(contact.date)}
-                                    </span>
-                                  </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center justify-between mb-1">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="font-bold text-sm">
+                                        {contact.type === "EMAIL"
+                                            ? contact.description?.includes("Recebido")
+                                                ? "E-mail Recebido"
+                                                : "E-mail Enviado"
+                                            : contact.type === "CALL"
+                                                ? "Registro de Ligação"
+                                                : contact.type === "NOTE"
+                                                    ? "Observação Registrada"
+                                                    : contact.type === "REMINDER"
+                                                        ? "Lembrete Agendado"
+                                                        : "Visita Agendada"}
+                                      </span>
+                                          <span className="text-xs text-muted-foreground">
+                                        • {formatDisplayDateTime(contact.date)}
+                                      </span>
+                                        </div>
 
-                                  {isEmail ? (
-                                    <div className="mt-2 border border-border rounded-md overflow-hidden">
-                                      <div
-                                        className="bg-muted/30 p-2 px-3 text-sm font-semibold cursor-pointer flex justify-between items-center hover:bg-muted/50 transition-colors min-w-0"
-                                        onClick={() =>
-                                          toggleHistoryExpand(contact.id)
-                                        }
-                                      >
-                                        <span className="truncate block max-w-xs sm:max-w-md md:max-w-lg">
-                                          Assunto: {subjectTitle}
-                                        </span>
-                                        {isExpanded ? (
-                                          <ChevronDown
-                                            size={16}
-                                            className="text-muted-foreground shrink-0"
-                                          />
-                                        ) : (
-                                          <ChevronRight
-                                            size={16}
-                                            className="text-muted-foreground shrink-0"
-                                          />
+                                        {contact.type === "NOTE" && editingContactId !== contact.id && (
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6 shrink-0 text-muted-foreground hover:text-amber-500"
+                                                onClick={() => {
+                                                  setEditingContactId(contact.id);
+                                                  setEditingContactText(contact.description || "");
+                                                }}
+                                            >
+                                              <Pencil size={14} />
+                                            </Button>
                                         )}
                                       </div>
 
-                                      {isExpanded && (
-                                        <div className="p-3 text-sm text-foreground/80 bg-background border-t border-border whitespace-pre-wrap">
-                                          {emailBody}
-                                        </div>
+                                      {isEmail ? (
+                                          <div className="mt-2 border border-border rounded-md overflow-hidden">
+                                            <div
+                                                className="bg-muted/30 p-2 px-3 text-sm font-semibold cursor-pointer flex justify-between items-center hover:bg-muted/50 transition-colors min-w-0"
+                                                onClick={() =>
+                                                    toggleHistoryExpand(contact.id)
+                                                }
+                                            >
+                                        <span className="truncate block max-w-xs sm:max-w-md md:max-w-lg">
+                                          Assunto: {subjectTitle}
+                                        </span>
+                                              {isExpanded ? (
+                                                  <ChevronDown
+                                                      size={16}
+                                                      className="text-muted-foreground shrink-0"
+                                                  />
+                                              ) : (
+                                                  <ChevronRight
+                                                      size={16}
+                                                      className="text-muted-foreground shrink-0"
+                                                  />
+                                              )}
+                                            </div>
+
+                                            {isExpanded && (
+                                                <div className="p-3 text-sm text-foreground/80 bg-background border-t border-border whitespace-pre-wrap">
+                                                  {emailBody}
+                                                </div>
+                                            )}
+                                          </div>
+                                      ) : (
+                                          editingContactId === contact.id ? (
+                                              <div className="mt-2 space-y-2">
+                                                <Textarea
+                                                    className="min-h-[100px] text-sm bg-background"
+                                                    value={editingContactText}
+                                                    onChange={(e) => setEditingContactText(e.target.value)}
+                                                />
+                                                <div className="flex justify-end gap-2">
+                                                  <Button size="sm" variant="ghost" onClick={() => setEditingContactId(null)}>
+                                                    Cancelar
+                                                  </Button>
+                                                  <Button size="sm" onClick={() => handleUpdateContact(contact.id)} className="bg-amber-600 hover:bg-amber-700">
+                                                    Salvar Edição
+                                                  </Button>
+                                                </div>
+                                              </div>
+                                          ) : (
+                                              <p className="text-sm text-foreground/80 whitespace-pre-wrap break-all mt-1">
+                                                {contact.description}
+                                              </p>
+                                          )
                                       )}
                                     </div>
-                                  ) : (
-                                    <p className="text-sm text-foreground/80 whitespace-pre-wrap break-all mt-1">
-                                      {contact.description}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })
+                                  </div>
+                              );
+                            })
                         )}
                       </TabsContent>
 
@@ -2644,36 +2744,36 @@ export function Dashboard() {
                         </div>
                       </TabsContent>
 
-                      <TabsContent value="note" className="m-0 space-y-4">
+                      <TabsContent value="observation" className="m-0 space-y-4">
                         <div className="space-y-2">
-                          <Label>Data da Ligação / Interação</Label>
+                          <Label>Data da Observação</Label>
                           <div className="relative w-1/3">
                             <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
                             <Input
-                              type="text"
-                              placeholder="DD/MM/AAAA"
-                              className="pl-9"
-                              value={noteDate}
-                              onChange={(e) =>
-                                setNoteDate(maskDate(e.target.value))
-                              }
+                                type="text"
+                                placeholder="DD/MM/AAAA"
+                                className="pl-9"
+                                value={observationDate}
+                                onChange={(e) =>
+                                    setObservationDate(maskDate(e.target.value))
+                                }
                             />
                           </div>
                         </div>
 
                         <div className="space-y-2">
-                          <Label>Detalhes da interação</Label>
+                          <Label>Detalhes da observação</Label>
                           <Textarea
-                            className="min-h-[150px] resize-none"
-                            placeholder="Ex: Liguei para o cliente, conversamos sobre a proposta e ele pediu para retornar amanhã..."
-                            value={noteText}
-                            onChange={(e) => setNoteText(e.target.value)}
+                              className="min-h-[150px] resize-none"
+                              placeholder="Ex: Cliente relatou que a demanda vai aumentar no mês que vem..."
+                              value={observationText}
+                              onChange={(e) => setObservationText(e.target.value)}
                           />
                         </div>
                         <div className="flex justify-end">
                           <Button
-                            onClick={handleSaveInteraction}
-                            className="gap-2 text-white bg-green-600 hover:bg-green-700"
+                              onClick={handleSaveInteraction}
+                              className="gap-2 text-white bg-amber-600 hover:bg-amber-700"
                           >
                             <AlignLeft size={16} /> Salvar Observação
                           </Button>

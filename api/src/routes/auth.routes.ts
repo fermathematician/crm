@@ -22,6 +22,7 @@ import { TrackEmailController } from "../controllers/TrackEmailController.js";
 import { GmailWebhookController } from "../controllers/GmailWebhookController.js";
 import { CheckBouncesController } from "../controllers/CheckBouncesController.js";
 import { UnsubscribeLeadController } from "../controllers/UnsubscribeLeadController.js";
+import { UpdateContactController } from "../controllers/UpdateContactController.js";
 import { prismaClient } from "../../prisma/index.js";
 
 const router = Router();
@@ -46,6 +47,7 @@ const trackEmailController = new TrackEmailController();
 const gmailWebhookController = new GmailWebhookController();
 const checkBouncesController = new CheckBouncesController();
 const unsubscribeLeadController = new UnsubscribeLeadController();
+const updateContactController = new UpdateContactController();
 
 router.get("/me", ensureAuthenticated, detailUserController.handle);
 router.get("/leads", ensureAuthenticated, listLeadsController.handle);
@@ -122,6 +124,11 @@ router.put(
   "/leads/reorder",
   ensureAuthenticated,
   reorderLeadsController.handle,
+);
+router.put(
+  "/update/update",
+  ensureAuthenticated,
+  updateContactController.handle,
 );
 
 router.delete(
