@@ -10,6 +10,7 @@ interface LeadRequest {
   city?: string;
   state?: string;
   address?: string;
+  comercial?: string;
   financeiro?: string;
   funnelStage?:
     | "NOVO"
@@ -36,6 +37,7 @@ class CreateLeadService {
     state,
     address,
     financeiro,
+    comercial,
     funnelStage = "NOVO",
     tags = ["novo"],
     visitDate,
@@ -75,6 +77,7 @@ class CreateLeadService {
         city: city || null,
         state: state || null,
         address: address || null,
+        comercial: comercial || null,
         financeiro: financeiro || null,
         funnelStage,
         tags: finalTags,

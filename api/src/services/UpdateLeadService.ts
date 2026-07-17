@@ -10,6 +10,7 @@ interface UpdateLeadRequest {
   city?: string;
   state?: string;
   address?: string;
+  comercial?: string;
   financeiro?: string;
   funnelStage?:
     | "NOVO"
@@ -35,6 +36,7 @@ class UpdateLeadService {
     city,
     state,
     address,
+    comercial,
     financeiro,
     funnelStage,
     tags,
@@ -56,6 +58,7 @@ class UpdateLeadService {
     if (city !== undefined) dataToUpdate.city = city;
     if (state !== undefined) dataToUpdate.state = state;
     if (address !== undefined) dataToUpdate.address = address;
+    if (comercial !== undefined) dataToUpdate.comercial = comercial;
     if (financeiro !== undefined) dataToUpdate.financeiro = financeiro;
     if (funnelStage !== undefined) dataToUpdate.funnelStage = funnelStage;
     if (tags !== undefined) dataToUpdate.tags = tags;

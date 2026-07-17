@@ -58,6 +58,14 @@ import { Textarea } from "../components/ui/textarea";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
+
 type LeadTag =
   | "frio"
   | "morno"
@@ -103,6 +111,7 @@ interface ApiLead {
   cnpj?: string | null;
   email?: string | null;
   address?: string | null;
+  comercial?: string | null;
   financeiro?: string | null;
   city?: string | null;
   state?: string | null;
@@ -144,6 +153,39 @@ const tagColors: Record<LeadTag, string> = {
   "fora de perfil": "bg-neutral-600 border-neutral-700",
 };
 
+const COMERCIAIS = [
+  "Alexander",
+  "Angela",
+  "Denise",
+  "Flavio",
+  "Manzoni",
+  "Milton",
+  "Rebheka",
+  "Rejane",
+];
+
+const comercialColors: Record<string, string> = {
+  Alexander: "bg-blue-300",
+  Angela: "bg-pink-500",
+  Denise: "bg-orange-500",
+  Flavio: "bg-blue-600",
+  Manzoni: "bg-yellow-500",
+  Milton: "bg-green-500",
+  Rebheka: "bg-indigo-500",
+  Rejane: "bg-rose-500",
+};
+
+const borderComercialColors: Record<string, string> = {
+  Alexander: "border-l-blue-300",
+  Angela: "border-l-pink-500",
+  Denise: "border-l-orange-500",
+  Flavio: "border-l-blue-600",
+  Manzoni: "border-l-yellow-500",
+  Milton: "border-l-green-500",
+  Rebheka: "border-l-indigo-500",
+  Rejane: "border-l-rose-500",
+};
+
 const columnDefaultTags: Record<string, LeadTag> = {
   novos: "novo",
   contato: "sem resposta",
@@ -176,6 +218,7 @@ interface Lead {
   city?: string | null;
   state?: string | null;
   cnae?: string | null;
+  comercial?: string | null;
   financeiro?: string | null;
   contacts?: ApiContact[];
   ImportBatch?: { tag: string } | null;
@@ -399,6 +442,7 @@ export function Dashboard() {
     city: "",
     state: "",
     address: "",
+    comercial: "",
     financeiro: "",
     funnelStage: "NOVO",
   });
@@ -829,6 +873,7 @@ export function Dashboard() {
           cnpj: apiLead.cnpj,
           email: apiLead.email,
           address: apiLead.address,
+          comercial: apiLead.comercial,
           financeiro: apiLead.financeiro,
           city: apiLead.city,
           state: apiLead.state,
@@ -1338,6 +1383,7 @@ export function Dashboard() {
               city: formData.city,
               state: formData.state,
               address: formData.address,
+              comercial: formData.comercial,
               financeiro: formData.financeiro,
             };
             setColumns(updatedColumns);
@@ -1365,6 +1411,7 @@ export function Dashboard() {
       city: selectedLead.city || "",
       state: selectedLead.state || "",
       address: selectedLead.address || "",
+      comercial: selectedLead.comercial || "",
       financeiro: selectedLead.financeiro || "",
       funnelStage:
         (reverseStageMap[getLeadColumnId(selectedLead.id) || ""] as any) ||
@@ -1432,11 +1479,11 @@ export function Dashboard() {
 
           <div className="flex flex-col gap-1 overflow-hidden px-1">
             {visits.slice(0, 3).map((v, i) => (
-              <div
-                key={i}
-                className="w-full h-1.5 bg-blue-500 rounded-full"
-                title={v.name}
-              ></div>
+                <div
+                    key={i}
+                    className={`w-full h-1.5 rounded-full ${v.comercial && comercialColors[v.comercial] ? comercialColors[v.comercial] : "bg-orange-500"}`}
+                    title={`${v.name} (${v.comercial || "Sem comercial"})`}
+                ></div>
             ))}
             {visits.length > 3 && (
               <span className="text-[9px] text-muted-foreground leading-none font-bold">
@@ -1936,15 +1983,15 @@ export function Dashboard() {
                         </div>
                       ) : (
                         getVisitsForDate(selectedDateView).map((lead) => (
-                          <Card
-                            key={lead.id}
-                            className="border-l-4 border-l-blue-500 shadow-sm cursor-pointer hover:bg-accent/30"
-                            onClick={() => {
-                              setIsCalendarOpen(false);
-                              setSelectedLead(lead);
-                              setIsSmallModalOpen(true);
-                            }}
-                          >
+                            <Card
+                                key={lead.id}
+                                className={`border-l-4 shadow-sm cursor-pointer hover:bg-accent/30 ${lead.comercial && borderComercialColors[lead.comercial] ? borderComercialColors[lead.comercial] : "border-l-orange-500"}`}
+                                onClick={() => {
+                                  setIsCalendarOpen(false);
+                                  setSelectedLead(lead);
+                                  setIsSmallModalOpen(true);
+                                }}
+                            >
                             <CardContent className="p-4 flex justify-between items-center">
                               <div>
                                 <h4 className="font-bold text-lg">
@@ -2306,6 +2353,15 @@ export function Dashboard() {
                   <p className="text-sm font-medium flex items-center gap-2">
                     <User size={14} className="text-muted-foreground" />{" "}
                     {selectedLead?.financeiro || "-"}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">
+                    Comercial
+                  </Label>
+                  <p className="text-sm font-medium flex items-center gap-2">
+                    <User size={14} className="text-muted-foreground" />{" "}
+                    {selectedLead?.comercial || "-"}
                   </p>
                 </div>
                 <div>
@@ -2830,7 +2886,24 @@ export function Dashboard() {
                 </div>
               </div>
 
-              <div className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-email">Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                      id="edit-email"
+                      className="pl-8"
+                      placeholder="contato@empresa.com, outro@empresa.com"
+                      value={formData.email}
+                      onChange={(e) =>
+                          setFormData({ ...formData, email: e.target.value })
+                      }
+                  />
+                </div>
+              </div>
+            </div>
+
+              <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="edit-financeiro">Financeiro</Label>
                   <div className="relative">
@@ -2849,24 +2922,26 @@ export function Dashboard() {
                     />
                   </div>
                 </div>
-              </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="edit-email">Email</Label>
-                <div className="relative">
-                  <Mail className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="edit-email"
-                    className="pl-8"
-                    placeholder="contato@empresa.com, outro@empresa.com"
-                    value={formData.email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
-                  />
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-comercial">Comercial</Label>
+                  <div className="relative">
+                    <User className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        id="edit-comercial"
+                        className="pl-8"
+                        placeholder="Nome do comercial"
+                        value={formData.comercial}
+                        onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              comercial: e.target.value,
+                            })
+                        }
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">

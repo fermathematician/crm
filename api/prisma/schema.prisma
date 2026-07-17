@@ -64,6 +64,7 @@ model Lead {
   city        String?
   state       String?
   address     String?
+  comercial   String?
 
   //nome pra contactar
   financeiro String?

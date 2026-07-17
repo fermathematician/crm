@@ -15,6 +15,7 @@ import {
   Building2,
   Mail,
   MapPin,
+  User,
   FileText,
   ChevronLeft,
   ChevronRight,
@@ -57,6 +58,7 @@ interface ApiLead {
   city: string | null;
   state: string | null;
   address: string | null;
+  comercial: string | null;
   funnelStage:
     | "NOVO"
     | "CONTATO"
@@ -223,6 +225,7 @@ export function LeadsList() {
     city: "",
     state: "",
     address: "",
+    comercial: "",
     funnelStage: "NOVO",
     unsubscribed: false,
     bounced: false,
@@ -508,7 +511,7 @@ export function LeadsList() {
         "financeiro",
         "Cidade",
         "UF",
-        "Endereço",
+        "Comercial",
         "Etapa",
         "Etiqueta",
       ];
@@ -523,7 +526,7 @@ export function LeadsList() {
           `"${l.financeiro || ""}"`,
           `"${l.city || ""}"`,
           `"${l.state || ""}"`,
-          `"${l.address || ""}"`,
+          `"${l.comercial || ""}"`,
           `"${l.funnelStage || ""}"`,
           `"${(l.tags && l.tags[0]) || ""}"`,
         ].join(","),
@@ -559,6 +562,7 @@ export function LeadsList() {
       cnae: "",
       phone: "",
       email: "",
+      comercial: "",
       financeiro: "",
       city: "",
       state: "",
@@ -629,6 +633,7 @@ export function LeadsList() {
       cnae: lead.cnae || "",
       phone: lead.phone || "",
       email: lead.email || "",
+      comercial: lead.comercial || "",
       financeiro: lead.financeiro || "",
       city: lead.city || "",
       state: lead.state || "",
@@ -986,7 +991,7 @@ export function LeadsList() {
                       <div className="grid gap-2">
                         <Label htmlFor="email">Financeiro</Label>
                         <div className="relative">
-                          <Mail className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                          <User className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                           <Input
                               id="financeiro"
                               type="financeiro"
@@ -997,6 +1002,26 @@ export function LeadsList() {
                                   setFormData({
                                     ...formData,
                                     financeiro: e.target.value,
+                                  })
+                              }
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label htmlFor="email">Comercial</Label>
+                        <div className="relative">
+                          <User className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                          <Input
+                              id="comercial"
+                              type="comercial"
+                              className="pl-8"
+                              placeholder="Nome comercial"
+                              value={formData.comercial}
+                              onChange={(e) =>
+                                  setFormData({
+                                    ...formData,
+                                    comercial: e.target.value,
                                   })
                               }
                           />
@@ -1035,13 +1060,13 @@ export function LeadsList() {
                     </div>
 
                     <div className="grid gap-2 border-b border-border pb-4">
-                      <Label htmlFor="address">Endereço</Label>
+                      <Label htmlFor="comercial">Endereço</Label>
                       <div className="relative">
                         <MapPin className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input
                           id="address"
                           className="pl-8"
-                          placeholder="Rua, Número, Bairro"
+                          placeholder="address"
                           value={formData.address}
                           onChange={(e) =>
                             setFormData({
@@ -1081,7 +1106,7 @@ export function LeadsList() {
                     <th className="px-4 py-3 font-medium">Financeiro</th>
                     <th className="px-4 py-3 font-medium">Cidade</th>
                     <th className="px-4 py-3 font-medium">UF</th>
-                    <th className="px-4 py-3 font-medium">Endereço</th>
+                    <th className="px-4 py-3 font-medium">Comercial</th>
                     <th className="px-4 py-3 font-medium">Etapa</th>
                     <th className="px-4 py-3 font-medium">Etiqueta</th>
                     <th className="px-4 py-3 text-right font-medium">Ações</th>
@@ -1292,33 +1317,30 @@ export function LeadsList() {
                             className="h-8 min-w-[40px] border-transparent bg-transparent hover:bg-muted/50 focus:bg-background focus:border-primary focus:ring-1 shadow-none px-2 text-muted-foreground transition-all text-center"
                           />
                         </td>
+
                         <td className="px-1 py-1">
-                          <Input
-                            value={lead.address || ""}
-                            onChange={(e) =>
-                              handleLocalChange(
-                                lead.id,
-                                "address",
-                                e.target.value,
-                              )
-                            }
-                            onFocus={(e) => {
-                              e.target.dataset.original = e.target.value;
-                            }}
-                            onBlur={(e) => {
-                              if (
-                                e.target.value !== e.target.dataset.original
-                              ) {
-                                handleSaveCell(
-                                  lead.id,
-                                  "address",
-                                  e.target.value,
-                                );
-                              }
-                            }}
-                            className="h-8 min-w-[160px] border-transparent bg-transparent hover:bg-muted/50 focus:bg-background focus:border-primary focus:ring-1 shadow-none px-2 text-muted-foreground transition-all"
-                          />
+                          <Select
+                              value={lead.comercial || "none"}
+                              onValueChange={(val) => {
+                                const finalVal = val === "none" ? null : val;
+                                handleLocalChange(lead.id, "comercial", finalVal);
+                                handleSaveCell(lead.id, "comercial", finalVal);
+                              }}
+                          >
+                            <SelectTrigger className="h-8 border-transparent bg-transparent hover:bg-muted/50 focus:ring-1 shadow-none px-2 w-[120px] text-[10px] font-bold uppercase text-muted-foreground tracking-wider">
+                              <SelectValue placeholder="Comercial" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">SEM COMERCIAL</SelectItem>
+                              {["Alexander", "Angela", "Denise", "Flavio", "Manzoni", "Milton", "Rebheka", "Rejane"].map((c) => (
+                                  <SelectItem className="uppercase text-xs" key={c} value={c}>
+                                    {c}
+                                  </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </td>
+
                         <td className="px-2 py-1">
                           <Select
                             value={lead.funnelStage}
