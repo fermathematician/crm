@@ -33,6 +33,7 @@ import {
   ChevronDown,
   Search,
   BarChart,
+  X,
 } from "lucide-react";
 import { useTheme } from "../hooks/useTheme";
 
@@ -107,7 +108,9 @@ interface ApiLead {
     | "FORA_DE_PERFIL";
   tags: string[];
   phone: string | null;
+  visitId: string | null;
   visitDate: string | null;
+  isCompleted?: boolean;
   cnpj?: string | null;
   email?: string | null;
   address?: string | null;
@@ -210,7 +213,9 @@ interface Lead {
   id: string;
   name: string;
   tag: LeadTag;
+  visitId?: string | null;
   visitDate?: string | null;
+  isCompleted?: boolean;
   phone?: string | null;
   cnpj?: string | null;
   email?: string | null;
@@ -519,10 +524,14 @@ export function Dashboard() {
   const [selectedDateView, setSelectedDateView] = useState<string | null>(null);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
+  const [hiddenNotifications, setHiddenNotifications] = useState<string[]>([]);
+
   const [userProfile, setUserProfile] = useState<{
+    id: string;
     name: string;
     role: string;
   }>({
+    id: "",
     name: "Carregando...",
     role: "USER",
   });
@@ -670,21 +679,41 @@ export function Dashboard() {
 
     const token = localStorage.getItem("token");
     try {
-      await fetch(
-        `${import.meta.env.VITE_API_URL}/auth/leads/${selectedLead.id}/contacts`,
-        {
+      // 🚀 Se for um lembrete, dispara para a nossa nova rota de notificações
+      if (interactionType === "REMINDER") {
+        await fetch(`${import.meta.env.VITE_API_URL}/auth/notifications`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            type: interactionType,
-            date: formattedDate,
-            description: textToSave,
+            notifyDate: formattedDate,
+            message: textToSave,
+            leadId: selectedLead.id,
+            userId: userProfile.id, // ID do vendedor logado
           }),
-        },
-      );
+        });
+      }
+
+      // Mantém a rota antiga para CALL e NOTE alimentarem o histórico de contatos
+      if (interactionType === "CALL" || interactionType === "NOTE") {
+        await fetch(
+            `${import.meta.env.VITE_API_URL}/auth/leads/${selectedLead.id}/contacts`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                type: interactionType,
+                date: formattedDate,
+                description: textToSave,
+              }),
+            },
+        );
+      }
     } catch (e) {
       console.error(e);
     }
@@ -857,6 +886,36 @@ export function Dashboard() {
     }
   }
 
+  async function handleHideNotification(e: React.MouseEvent, notifId: string) {
+    // 🚀 Evita que o clique no "X" abra o modal do Lead por engano!
+    e.stopPropagation();
+
+    // Oculta imediatamente da tela do usuário
+    setHiddenNotifications((prev) => [...prev, notifId]);
+
+    // Se for um lembrete, extraímos o ID real do banco (removendo o prefixo 'rem-')
+    if (notifId.startsWith("rem-")) {
+      const realId = notifId.replace("rem-", "");
+      const token = localStorage.getItem("token");
+
+      try {
+        await fetch(`${import.meta.env.VITE_API_URL}/auth/notifications/update`, {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            id: realId,
+            isOcult: true, // 🚀 Mandando a propriedade que você estruturou!
+          }),
+        });
+      } catch (err) {
+        console.error("Erro ao ocultar notificação no servidor:", err);
+      }
+    }
+  }
+
   async function updateLeadOnServer(
     leadId: string,
     data: { funnelStage?: string; tags?: string[]; visitDate?: string | null; unsubscribed?: boolean; bounced?: boolean},
@@ -926,7 +985,9 @@ export function Dashboard() {
           id: apiLead.id,
           name: apiLead.companyName,
           tag: tag,
+          visitId: apiLead.visitId,
           visitDate: apiLead.visitDate,
+          isCompleted: apiLead.isCompleted,
           phone: apiLead.phone,
           cnpj: apiLead.cnpj,
           email: apiLead.email,
@@ -1091,7 +1152,7 @@ export function Dashboard() {
         }
 
         const userData = await response.json();
-        setUserProfile({ name: userData.name, role: userData.role });
+        setUserProfile({ id: userData.id, name: userData.name, role: userData.role });
       } catch (error) {
         console.error("Erro ao carregar perfil: ", error);
       }
@@ -1397,6 +1458,57 @@ export function Dashboard() {
       }
     }
 
+    const token = localStorage.getItem("token");
+
+    // 1️⃣ CENÁRIO: Criar nova visita (Não tinha data antes, mas agora tem)
+    if (formattedDateForBackend && !selectedLead.visitDate) {
+      fetch(`${import.meta.env.VITE_API_URL}/auth/visits`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          visitDate: formattedDateForBackend,
+          leadId: selectedLead.id,
+          userId: userProfile.id,
+        }),
+      })
+          .then(res => res.json())
+          .then(newVisit => {
+            // 💡 Salva o ID que o banco acabou de criar para futuras edições sem precisar dar F5
+            if (newVisit?.id) selectedLead.visitId = newVisit.id;
+          })
+          .catch((err) => console.error("Erro ao criar visita:", err));
+    }
+
+    // 2️⃣ CENÁRIO: Atualizar visita existente (Usa o visitId correto!)
+    else if (formattedDateForBackend && selectedLead.visitDate && selectedLead.visitDate !== formattedDateForBackend) {
+      fetch(`${import.meta.env.VITE_API_URL}/auth/visits/update`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: selectedLead.visitId, // 🚀 Arquitetura Limpa: Altera usando o ID da própria Visita
+          visitDate: formattedDateForBackend,
+          userId: userProfile.id,
+        }),
+      }).catch((err) => console.error("Erro ao atualizar visita:", err));
+    }
+
+    // 3️⃣ CENÁRIO: Cancelar/Remover visita (Passa o visitId correto por query na URL)
+    else if (!formattedDateForBackend && selectedLead.visitDate && selectedLead.visitId) {
+      fetch(`${import.meta.env.VITE_API_URL}/auth/visits?id=${selectedLead.visitId}`, { // 🚀 Rota correta por ID
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }).catch((err) => console.error("Erro ao deletar visita:", err));
+    }
+
+
     updateLeadOnServer(selectedLead.id, {
       tags: [finalTag],
       visitDate: formattedDateForBackend,
@@ -1456,6 +1568,23 @@ export function Dashboard() {
     } catch (error) {
       console.error("Erro ao salvar:", error);
     }
+  }
+
+  async function handleCompleteNotification(notificationId: string) {
+    const token = localStorage.getItem("token");
+    await fetch(`${import.meta.env.VITE_API_URL}/auth/notifications/update`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        id: notificationId,
+        isCompleted: true
+      }),
+    });
+    // Remove da tela localmente após concluir
+    setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
   }
 
   function openEditForm() {
@@ -1911,34 +2040,109 @@ export function Dashboard() {
                   Nenhuma visita ou lembrete para hoje.
                 </div>
               ) : (
-                notifications.map((notif) => (
-                  <div
-                    key={notif.id}
-                    onClick={() => handleNotificationClick(notif.leadId)}
-                    className="flex items-start gap-3 p-3 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors cursor-pointer shadow-sm"
-                  >
-                    {notif.type === "warning" && (
-                      <AlertCircle size={18} className="text-orange-500 mt-1" />
-                    )}
-                    {notif.type === "success" && (
-                      <CheckCircle2 size={18} className="text-green-500 mt-1" />
-                    )}
-                    {notif.type === "info" && (
-                      <Clock size={18} className="text-blue-500 mt-1" />
-                    )}
-                    {notif.type === "reminder" && (
-                      <Bell size={18} className="text-purple-500 mt-1" />
-                    )}
-                    <div className="flex-1">
-                      <p className="text-sm font-bold leading-none text-foreground">
-                        {notif.title}
-                      </p>
-                      <p className="text-[11px] font-medium text-muted-foreground mt-1.5 uppercase tracking-wider">
-                        {notif.time}
-                      </p>
-                    </div>
-                  </div>
-                ))
+                  notifications
+                      .filter((notif) => !hiddenNotifications.includes(notif.id))
+                      .map((notif) => (
+                          <div
+                              key={notif.id}
+                              onClick={() => handleNotificationClick(notif.leadId)}
+                              className="flex items-start gap-3 p-3 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors cursor-pointer shadow-sm relative group"
+                          >
+                            {notif.type === "warning" && (
+                                <AlertCircle size={18} className="text-orange-500 mt-1" />
+                            )}
+                            {notif.type === "success" && (
+                                <CheckCircle2 size={18} className="text-green-500 mt-1" />
+                            )}
+                            {notif.type === "info" && (
+                                <Clock size={18} className="text-blue-500 mt-1" />
+                            )}
+                            {notif.type === "reminder" && (
+                                <Bell size={18} className="text-purple-500 mt-1" />
+                            )}
+
+                            {/* 🚀 BOTÃO DO XIZINHO (Aparece elegantemente ao passar o mouse por cima) */}
+                            <div className="flex-1 pr-4"> {/* Adicionado um padding para não bater no X */}
+                              <p className="text-sm font-bold leading-none text-foreground">
+                                {notif.title}
+                              </p>
+                              <p className="text-[11px] font-medium text-muted-foreground mt-1.5 uppercase tracking-wider">
+                                {notif.time}
+                              </p>
+                            </div>
+
+                            {/* 🚀 CONTAINER DE AÇÕES (Check + Ocultar) */}
+                            <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+
+                              {/* Botão Concluir Definitivamente */}
+                              <button
+                                  onClick={async (e) => {
+                                    e.stopPropagation(); // Evita abrir o modal do Lead
+                                    const token = localStorage.getItem("token");
+
+                                    // 🚀 SE FOR UMA VISITA: Avisa a rota de Visitas
+                                    if (notif.id.startsWith("visit-")) {
+                                      // Encontra o lead correspondente para pegar o visitId dele
+                                      let targetVisitId = null;
+                                      for (const colId in columns) {
+                                        const lead = columns[colId].leads.find(l => l.id === notif.leadId);
+                                        if (lead?.visitId) {
+                                          targetVisitId = lead.visitId;
+                                          break;
+                                        }
+                                      }
+
+                                      if (targetVisitId) {
+                                        await fetch(`${import.meta.env.VITE_API_URL}/auth/visits/update`, {
+                                          method: "PUT",
+                                          headers: {
+                                            Authorization: `Bearer ${token}`,
+                                            "Content-Type": "application/json",
+                                          },
+                                          body: JSON.stringify({
+                                            id: targetVisitId,
+                                            isCompleted: true, // 🚀 Marca como concluída
+                                          }),
+                                        }).catch((err) => console.error("Erro ao concluir visita:", err));
+                                      }
+                                    }
+
+                                    // 🚀 SE FOR UM LEMBRETE: Avisa a rota de Notificações
+                                    else if (notif.id.startsWith("rem-")) {
+                                      const realNotifId = notif.id.replace("rem-", "");
+                                      await fetch(`${import.meta.env.VITE_API_URL}/auth/notifications/update`, {
+                                        method: "PUT",
+                                        headers: {
+                                          Authorization: `Bearer ${token}`,
+                                          "Content-Type": "application/json",
+                                        },
+                                        body: JSON.stringify({
+                                          id: realNotifId,
+                                          isCompleted: true, // 🚀 Marca como concluída
+                                        }),
+                                      }).catch((err) => console.error("Erro ao concluir lembrete:", err));
+                                    }
+
+                                    // Remove da listagem visual na hora
+                                    setNotifications((prev) => prev.filter((n) => n.id !== notif.id));
+                                  }}
+                                  className="text-muted-foreground/40 hover:text-green-500 p-0.5 rounded hover:bg-accent transition-colors"
+                                  title="Marcar como Concluído"
+                              >
+                                <Check size={14} strokeWidth={3} />
+                              </button>
+
+                              {/* Botão Ocultar por Hoje */}
+                              <button
+                                  onClick={(e) => handleHideNotification(e, notif.id)}
+                                  className="text-muted-foreground/40 hover:text-destructive p-0.5 rounded hover:bg-accent transition-colors"
+                                  title="Ocultar por hoje"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          </div>
+                      ))
               )}
             </div>
           </ScrollArea>
