@@ -97,9 +97,9 @@ class SendEmailService {
         .replace(/Olá,?\s*{{leadName}}!?/gi, cumprimento)
         .replace(/{{leadName}}/g, lead.companyName);
     }
-
+    const firstname = user.name.split(" ")[0];
     processedBody = processedBody
-      .replace(/{{userName}}/g, user.name)
+      .replace(/{{userName}}/g, firstname || "")
       .replace(/{{userPhone}}/g, "(41) 99213-4459");
 
     const formattedBody =
