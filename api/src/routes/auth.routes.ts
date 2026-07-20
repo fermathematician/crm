@@ -25,6 +25,7 @@ import { UnsubscribeLeadController } from "../controllers/UnsubscribeLeadControl
 import { UpdateContactController } from "../controllers/UpdateContactController.js";
 import { CreateNotificationController } from "../controllers/CreateNotificationController.js";
 import { CreateVisitController } from "../controllers/CreateVisitController.js";
+import { UpdateNotificationController } from "../controllers/UpdateNotificationController.js";
 import { prismaClient } from "../../prisma/index.js";
 
 const router = Router();
@@ -52,6 +53,7 @@ const unsubscribeLeadController = new UnsubscribeLeadController();
 const updateContactController = new UpdateContactController();
 const createVisitController = new CreateVisitController();
 const createNotificationController = new CreateNotificationController();
+const updateNotificationController = new UpdateNotificationController();
 
 router.get("/me", ensureAuthenticated, detailUserController.handle);
 router.get("/leads", ensureAuthenticated, listLeadsController.handle);
@@ -122,8 +124,12 @@ router.post(
   checkBouncesController.handle,
 );
 
-router.post("/visits", createVisitController.handle);
-router.post("/notifications", createNotificationController.handle);
+router.post("/visits", ensureAuthenticated, createVisitController.handle);
+router.post(
+  "/notifications",
+  ensureAuthenticated,
+  createNotificationController.handle,
+);
 //////////////////////////////////////////////////////////
 
 router.put("/leads/update", ensureAuthenticated, updateLeadController.handle);
@@ -136,6 +142,12 @@ router.put(
   "/update/update",
   ensureAuthenticated,
   updateContactController.handle,
+);
+
+router.put(
+  "/update/notifications",
+  ensureAuthenticated,
+  updateNotificationController.handle,
 );
 
 router.delete(
