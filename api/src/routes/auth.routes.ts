@@ -23,6 +23,8 @@ import { GmailWebhookController } from "../controllers/GmailWebhookController.js
 import { CheckBouncesController } from "../controllers/CheckBouncesController.js";
 import { UnsubscribeLeadController } from "../controllers/UnsubscribeLeadController.js";
 import { UpdateContactController } from "../controllers/UpdateContactController.js";
+import { CreateNotificationController } from "../controllers/CreateNotificationController.js";
+import { CreateVisitController } from "../controllers/CreateVisitController.js";
 import { prismaClient } from "../../prisma/index.js";
 
 const router = Router();
@@ -48,6 +50,8 @@ const gmailWebhookController = new GmailWebhookController();
 const checkBouncesController = new CheckBouncesController();
 const unsubscribeLeadController = new UnsubscribeLeadController();
 const updateContactController = new UpdateContactController();
+const createVisitController = new CreateVisitController();
+const createNotificationController = new CreateNotificationController();
 
 router.get("/me", ensureAuthenticated, detailUserController.handle);
 router.get("/leads", ensureAuthenticated, listLeadsController.handle);
@@ -117,6 +121,9 @@ router.post(
   ensureAuthenticated,
   checkBouncesController.handle,
 );
+
+router.post("/visits", createVisitController.handle);
+router.post("/notifications", createNotificationController.handle);
 //////////////////////////////////////////////////////////
 
 router.put("/leads/update", ensureAuthenticated, updateLeadController.handle);
