@@ -25,6 +25,7 @@ import { UnsubscribeLeadController } from "../controllers/UnsubscribeLeadControl
 import { UpdateContactController } from "../controllers/UpdateContactController.js";
 import { CreateNotificationController } from "../controllers/CreateNotificationController.js";
 import { CreateVisitController } from "../controllers/CreateVisitController.js";
+import { UpdateVisitController } from "../controllers/UpdateVisitController.js";
 import { UpdateNotificationController } from "../controllers/UpdateNotificationController.js";
 import { prismaClient } from "../../prisma/index.js";
 
@@ -53,6 +54,7 @@ const unsubscribeLeadController = new UnsubscribeLeadController();
 const updateContactController = new UpdateContactController();
 const createVisitController = new CreateVisitController();
 const createNotificationController = new CreateNotificationController();
+const updateVisitController = new UpdateVisitController();
 const updateNotificationController = new UpdateNotificationController();
 
 router.get("/me", ensureAuthenticated, detailUserController.handle);
@@ -139,16 +141,20 @@ router.put(
   reorderLeadsController.handle,
 );
 router.put(
-  "/update/update",
+  "/leads/:id/contacts/update",
   ensureAuthenticated,
   updateContactController.handle,
 );
 
 router.put(
-  "/update/notifications",
+  "/notifications/update",
   ensureAuthenticated,
   updateNotificationController.handle,
 );
+
+router.put("/visits/update", ensureAuthenticated, updateVisitController.handle);
+
+/////////////////////////////////
 
 router.delete(
   "/leads/:lead_id",
