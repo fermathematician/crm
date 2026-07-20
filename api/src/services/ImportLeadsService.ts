@@ -106,6 +106,7 @@ class ImportLeadsService {
             state: normalizeValue(row["UF"]),
             address: normalizeValue(row["RUANUMCEP"]),
             comercial: normalizeValue(row["COMERCIAL"]),
+            financeiro: normalizeValue(row["FINANCEIRO"]),
             ownerId: null,
             ImportBatchId: batch.id,
             funnelStage: FunnelStage.NOVO,
