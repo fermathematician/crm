@@ -20,7 +20,6 @@ interface UpdateLeadRequest {
     | "FINALIZADO"
     | "SEM_INTERESSE";
   tags?: string[];
-  visitDate?: string | null;
   unsubscribed?: boolean;
   bounced?: boolean;
 }
@@ -40,7 +39,6 @@ class UpdateLeadService {
     financeiro,
     funnelStage,
     tags,
-    visitDate,
     unsubscribed,
     bounced,
   }: UpdateLeadRequest) {
@@ -64,9 +62,6 @@ class UpdateLeadService {
     if (tags !== undefined) dataToUpdate.tags = tags;
     if (unsubscribed !== undefined) dataToUpdate.unsubscribed = unsubscribed;
     if (bounced !== undefined) dataToUpdate.bounced = bounced;
-    if (visitDate !== undefined) {
-      dataToUpdate.visitDate = visitDate ? new Date(visitDate) : null;
-    }
 
     const lead = await prismaClient.lead.update({
       where: {

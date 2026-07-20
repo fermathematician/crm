@@ -16,7 +16,6 @@ class CreateLeadController {
       financeiro,
       funnelStage,
       tags,
-      visitDate,
     } = req.body;
 
     const ownerId = req.user_id;
@@ -36,7 +35,6 @@ class CreateLeadController {
       financeiro,
       funnelStage,
       tags,
-      visitDate,
       ownerId,
     });
 

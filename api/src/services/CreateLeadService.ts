@@ -20,7 +20,6 @@ interface LeadRequest {
     | "FINALIZADO"
     | "SEM_INTERESSE";
   tags?: string[];
-  visitDate?: string;
   ownerId: string;
   unsubscribed?: boolean;
   bounced?: boolean;
@@ -40,7 +39,6 @@ class CreateLeadService {
     comercial,
     funnelStage = "NOVO",
     tags = ["novo"],
-    visitDate,
     ownerId,
     unsubscribed = false,
     bounced = false,
@@ -81,7 +79,6 @@ class CreateLeadService {
         financeiro: financeiro || null,
         funnelStage,
         tags: finalTags,
-        visitDate: visitDate ? new Date(visitDate) : null, // <-- 3. CONVERSÃO ADICIONADA AQUI
         ownerId,
         unsubscribed: unsubscribed || false,
         bounced: bounced || false,

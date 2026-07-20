@@ -25,9 +25,11 @@ model User {
   created      DateTime @default(now())
 
   // Relacionamentos
-  leads   Lead[]        @relation("LeadOwner") // Leads do usuário
-  actions Contact[] // Historico de contatos que fez
-  imports ImportBatch[] // Planilhas que importou
+  leads         Lead[]         @relation("LeadOwner") // Leads do usuário
+  actions       Contact[] // Historico de contatos que fez
+  imports       ImportBatch[] // Planilhas que importou
+  visits        Visit[]
+  notifications Notification[]
 }
 
 //------------------------------------------
@@ -46,6 +48,37 @@ model ImportBatch {
 
   // Lead gerado
   leads Lead[]
+}
+
+model Visit {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+
+  visitDate   DateTime
+  isCompleted Boolean  @default(false)
+
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId String
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+
+  notifyDate DateTime
+  message    String
+
+  isCompleted Boolean @default(false) //marca com o check
+  isOcult     Boolean @default(false) //usuario pode ocultar clicando no x
+
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadId String
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
 }
 
 //------------------------------------------
@@ -69,9 +102,10 @@ model Lead {
   //nome pra contactar
   financeiro String?
 
-  funnelStage FunnelStage @default(NOVO)
-  tags        String[]
-  visitDate   DateTime?
+  funnelStage   FunnelStage    @default(NOVO)
+  tags          String[]
+  visits        Visit[]
+  notifications Notification[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

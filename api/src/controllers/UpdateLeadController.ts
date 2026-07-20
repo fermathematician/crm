@@ -17,7 +17,6 @@ class UpdateLeadController {
       financeiro,
       funnelStage,
       tags,
-      visitDate,
       unsubscribed,
       bounced,
     } = req.body;
@@ -38,7 +37,6 @@ class UpdateLeadController {
       financeiro,
       funnelStage,
       tags,
-      visitDate,
       unsubscribed,
       bounced,
     });
