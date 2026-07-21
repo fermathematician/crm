@@ -786,7 +786,7 @@ export function LeadsList() {
                     <SelectItem value="CADASTRO">Cadastro</SelectItem>
                     <SelectItem value="FINALIZADO">Finalizados</SelectItem>
                     <SelectItem value="SEM_INTERESSE">Sem Interesse</SelectItem>
-                    <SelectItem value="FORA_DE_PERFIL">
+                    <SelectItem value="DESCARTADO">
                       Descartado
                     </SelectItem>
                   </SelectContent>
@@ -1452,7 +1452,7 @@ export function LeadsList() {
                               <SelectItem value="SEM_INTERESSE">
                                 SEM INTERESSE
                               </SelectItem>
-                              <SelectItem value="FORA_DE_PERFIL">
+                              <SelectItem value="DESCARTADO">
                                 DESCARTADO
                               </SelectItem>
                             </SelectContent>
