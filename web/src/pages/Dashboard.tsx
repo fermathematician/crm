@@ -940,12 +940,18 @@ export function Dashboard() {
     stageName: string,
     page: number,
     batchId: string = "all",
+    search: string = ""
   ) {
     const token = localStorage.getItem("token");
     if (!token) return [];
 
     try {
       let url = `${import.meta.env.VITE_API_URL}/auth/leads?stage=${stageName}&limit=50&page=${page}`;
+
+      if (search.trim()) {
+        url += `&search=${encodeURIComponent(search.trim())}`;
+      }
+
       if (selectedUserId !== "all") {
         url += `&ownerId=${selectedUserId}`;
       }
@@ -1107,7 +1113,7 @@ export function Dashboard() {
       colId,
       stageName,
       nextPage,
-      selectedBatchId,
+      selectedBatchId, columnSearch[colId]
     );
 
     if (newLeads.length > 0) {
@@ -1587,6 +1593,36 @@ export function Dashboard() {
     setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
   }
 
+  // 🚀 Função para buscar diretamente no servidor para uma coluna específica
+  async function handleColumnSearchSubmit(colId: string, searchTerm: string) {
+    const stageName = reverseStageMap[colId];
+    if (!stageName) return;
+
+    setIsLoadingColumn((prev) => ({ ...prev, [colId]: true }));
+
+    // Reseta a paginação da coluna para a página 1
+    setColumnPages((prev) => ({ ...prev, [colId]: 1 }));
+
+    // Busca do banco passando o termo pesquisado
+    const searchResults = await fetchColumnLeads(
+        colId,
+        stageName,
+        1,
+        selectedBatchId,
+        searchTerm
+    );
+
+    setColumns((prev) => ({
+      ...prev,
+      [colId]: {
+        ...prev[colId],
+        leads: searchResults,
+      },
+    }));
+
+    setIsLoadingColumn((prev) => ({ ...prev, [colId]: false }));
+  }
+
   function openEditForm() {
     if (!selectedLead) return;
     setFormData({
@@ -1951,16 +1987,39 @@ export function Dashboard() {
             <div className="relative w-full">
               <AlignLeft className="absolute left-2 top-2 h-3.5 w-3.5 text-muted-foreground/50" />
               <Input
-                placeholder="Buscar"
-                value={columnSearch[colId]}
-                onChange={(e) =>
-                  setColumnSearch((prev) => ({
-                    ...prev,
-                    [colId]: e.target.value,
-                  }))
-                }
-                className="h-7 pl-7 text-[11px] bg-background/30 border-border/50 focus-visible:ring-primary/30"
+                  placeholder="Buscar (Enter)..."
+                  value={columnSearch[colId]}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setColumnSearch((prev) => ({ ...prev, [colId]: val }));
+
+                    // 🚀 Se o usuário apagar todo o texto, limpa a busca e volta os 50 leads originais
+                    if (val === "") {
+                      handleColumnSearchSubmit(colId, "");
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleColumnSearchSubmit(colId, columnSearch[colId]);
+                    }
+                  }}
+                  className="h-7 pl-7 pr-7 text-[11px] bg-background/30 border-border/50 focus-visible:ring-primary/30"
               />
+
+              {/* 🚀 Botão "X" para desfazer a busca com 1 clique */}
+              {columnSearch[colId] && (
+                  <button
+                      type="button"
+                      onClick={() => {
+                        setColumnSearch((prev) => ({ ...prev, [colId]: "" }));
+                        handleColumnSearchSubmit(colId, "");
+                      }}
+                      className="absolute right-2 top-2 text-muted-foreground/50 hover:text-foreground transition-colors"
+                      title="Limpar busca"
+                  >
+                    <X size={12} />
+                  </button>
+              )}
             </div>
           </div>
         )}
