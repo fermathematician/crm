@@ -66,7 +66,8 @@ interface ApiLead {
     | "NEGOCIACAO"
     | "CADASTRO"
     | "FINALIZADO"
-    | "SEM_INTERESSE";
+    | "SEM_INTERESSE"
+    | "DESCARTADO";
   tags: string[];
   unsubscribed?: boolean;
   bounced?: boolean;
@@ -134,6 +135,8 @@ const ALL_TAGS = [
   "recusado",
   "sem interesse",
   "fora de perfil",
+  "inapto",
+  "baixado",
 ];
 
 const allowedTagsByStage: Record<string, string[]> = {
@@ -143,7 +146,7 @@ const allowedTagsByStage: Record<string, string[]> = {
   CADASTRO: ["promessa", "parcial", "completa"],
   FINALIZADO: ["aprovado", "recusado"],
   SEM_INTERESSE: ["sem interesse"],
-  FORA_DE_PERFIL: ["fora de perfil"],
+  DESCARTADO: ["fora de perfil", "inapto", "baixado"],
 };
 
 const defaultTagsByStage: Record<string, string> = {
@@ -153,7 +156,7 @@ const defaultTagsByStage: Record<string, string> = {
   CADASTRO: "promessa",
   FINALIZADO: "aprovado",
   SEM_INTERESSE: "sem interesse",
-  FORA_DE_PERFIL: "fora de perfil",
+  DESCARTADO: "fora de perfil",
 };
 
 const tagColors: Record<string, string> = {
@@ -174,6 +177,9 @@ const tagColors: Record<string, string> = {
   recusado: "bg-rose-600 border-rose-700",
   "sem interesse": "bg-zinc-500 border-zinc-600",
   "fora de perfil": "bg-neutral-600 border-neutral-700",
+  inapto: "bg-neutral-600 border-neutral-700",
+  baixado: "bg-neutral-600 border-neutral-700",
+
 };
 
 export function LeadsList() {
@@ -781,7 +787,7 @@ export function LeadsList() {
                     <SelectItem value="FINALIZADO">Finalizados</SelectItem>
                     <SelectItem value="SEM_INTERESSE">Sem Interesse</SelectItem>
                     <SelectItem value="FORA_DE_PERFIL">
-                      Fora de Perfil
+                      Descartado
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -1447,7 +1453,7 @@ export function LeadsList() {
                                 SEM INTERESSE
                               </SelectItem>
                               <SelectItem value="FORA_DE_PERFIL">
-                                FORA DE PERFIL
+                                DESCARTADO
                               </SelectItem>
                             </SelectContent>
                           </Select>

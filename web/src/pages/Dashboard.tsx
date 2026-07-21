@@ -82,6 +82,8 @@ type LeadTag =
   | "recusado"
   | "sem interesse"
   | "fora de perfil"
+  | "inapto"
+  | "baixado"
   | "aberto"
   | "novo"
   | "bloqueado";
@@ -105,7 +107,7 @@ interface ApiLead {
     | "CADASTRO"
     | "FINALIZADO"
     | "SEM_INTERESSE"
-    | "FORA_DE_PERFIL";
+    | "DESCARTADO";
   tags: string[];
   phone: string | null;
   visitId: string | null;
@@ -133,7 +135,7 @@ const reverseStageMap: Record<string, string> = {
   cadastro: "CADASTRO",
   finalizado: "FINALIZADO",
   arquivo: "SEM_INTERESSE",
-  fora_de_perfil: "FORA_DE_PERFIL",
+  descartado: "DESCARTADO",
 };
 
 const tagColors: Record<LeadTag, string> = {
@@ -154,6 +156,8 @@ const tagColors: Record<LeadTag, string> = {
   recusado: "bg-rose-600 border-rose-700",
   "sem interesse": "bg-zinc-500 border-zinc-600",
   "fora de perfil": "bg-neutral-600 border-neutral-700",
+  inapto: "bg-neutral-600 border-neutral-700",
+  baixado: "bg-neutral-600 border-neutral-700",
 };
 
 const COMERCIAIS = [
@@ -196,7 +200,7 @@ const columnDefaultTags: Record<string, LeadTag> = {
   cadastro: "promessa",
   finalizado: "aprovado",
   arquivo: "sem interesse",
-  fora_de_perfil: "fora de perfil",
+  descartado: "fora de perfil",
 };
 
 const columnAllowedTags: Record<string, LeadTag[]> = {
@@ -206,7 +210,7 @@ const columnAllowedTags: Record<string, LeadTag[]> = {
   cadastro: ["promessa", "parcial", "completa"],
   finalizado: ["aprovado", "recusado"],
   arquivo: ["sem interesse"],
-  fora_de_perfil: ["fora de perfil"],
+  descartado: ["fora de perfil", "inapto", "baixado"],
 };
 
 interface Lead {
@@ -245,7 +249,7 @@ const emptyBoard: Record<string, Column> = {
   cadastro: { id: "cadastro", title: "Cadastro", leads: [] },
   finalizado: { id: "finalizado", title: "Finalizado", leads: [] },
   arquivo: { id: "arquivo", title: "Sem Interesse", leads: [] },
-  fora_de_perfil: { id: "fora_de_perfil", title: "Fora de Perfil", leads: [] },
+  descartado: { id: "descartado", title: "Descartado", leads: [] },
 };
 
 interface Notification {
@@ -442,7 +446,7 @@ export function Dashboard() {
     cadastro: "todas",
     finalizado: "todas",
     arquivo: "todas",
-    fora_de_perfil: "todas",
+    descartado: "todas",
   });
 
   const [columnSearch, setColumnSearch] = useState<Record<string, string>>({
@@ -452,7 +456,7 @@ export function Dashboard() {
     cadastro: "",
     finalizado: "",
     arquivo: "",
-    fora_de_perfil: "",
+    descartado: "",
   });
 
   const [columns, setColumns] = useState(emptyBoard);
@@ -1072,7 +1076,7 @@ export function Dashboard() {
         cadastro: 1,
         finalizado: 1,
         arquivo: 1,
-        fora_de_perfil: 1,
+        descartado: 1,
       });
 
       await Promise.all(
@@ -1858,7 +1862,7 @@ export function Dashboard() {
     "cadastro",
     "finalizado",
   ];
-  const horizontalCols = ["arquivo", "fora_de_perfil"];
+  const horizontalCols = ["arquivo", "descartado"];
 
   //Inserindo funcao pra padronizar colunas
   const renderLeadCard = (lead: Lead, index: number, isHorizontal: boolean) => (
