@@ -1248,8 +1248,14 @@ export function Dashboard() {
     if (template && selectedLead) {
       //converte html em texto
       let cleanBody = template.body.replace(/<br\s*\/?>/gi, "\n");
-      const clientName = selectedLead.financeiro || selectedLead.name || "Cliente";
-      const userName = userProfile.name || "Consultor";
+
+      const clientName = selectedLead.financeiro || "Financeiro";
+      const rawUserName = userProfile.name || "Consultor";
+      const userName = rawUserName
+          .split("@")[0]
+          .replace(/\.com.*/i, "")
+          .trim()
+          .split(" ")[0];
       const userPhone = "(41) 99213-4459";
 
       const processedSubject = template.subject.replace(/{{leadName}}/g, clientName);
