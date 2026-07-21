@@ -101,9 +101,11 @@ class ListLeadsService {
         where: whereClause,
         skip: skip,
         take: limit,
-        orderBy: {
-          position: "asc",
-        },
+        orderBy: [
+          { bounced: "asc" },
+          { unsubscribed: "asc" },
+          { position: "asc" },
+        ],
         include: {
           contacts: {
             orderBy: {
