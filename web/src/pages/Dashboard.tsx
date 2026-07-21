@@ -33,6 +33,7 @@ import {
   ChevronDown,
   Search,
   BarChart,
+  Snowflake,
   X,
 } from "lucide-react";
 import { useTheme } from "../hooks/useTheme";
@@ -75,6 +76,7 @@ type LeadTag =
   | "a qualificar"
   | "sem resposta"
   | "respondido"
+  | "geladeira"
   | "promessa"
   | "parcial"
   | "completa"
@@ -144,6 +146,7 @@ const tagColors: Record<LeadTag, string> = {
   "a qualificar": "bg-zinc-300 border-zinc-400",
   "sem resposta": "bg-gray-400 border-gray-500",
   respondido: "bg-yellow-400 border-yellow-600",
+  geladeira: "bg-cyan-300 border-cyan-400",
   aberto: "bg-orange-300 border-orange-500",
   frio: "bg-cyan-500 border-cyan-600",
   morno: "bg-orange-400 border-orange-500",
@@ -205,7 +208,7 @@ const columnDefaultTags: Record<string, LeadTag> = {
 
 const columnAllowedTags: Record<string, LeadTag[]> = {
   novos: ["novo", "a qualificar", "bloqueado"],
-  contato: ["sem resposta", "aberto", "respondido"],
+  contato: ["sem resposta", "aberto", "respondido", "geladeira"],
   negociacao: ["frio", "morno", "quente", "visita"],
   cadastro: ["promessa", "parcial", "completa"],
   finalizado: ["aprovado", "recusado"],
@@ -1924,18 +1927,24 @@ export function Dashboard() {
           >
             <div className="flex items-center gap-1.5 flex-wrap">
               <Badge
-                variant="outline"
-                className="text-[8px] px-1 py-0 h-4 font-normal uppercase"
+                  variant="outline"
+                  className="text-[8px] px-1 py-0 h-4 font-normal uppercase"
               >
                 {lead.tag === "visita" && lead.visitDate ? (
                     <span className="flex items-center gap-1">
                       <CalendarIcon size={9} strokeWidth={2.5} />
                       {lead.visitDate.split("T")[0].split("-").slice(1).reverse().join("/")}
                     </span>
+                ) : lead.tag === "geladeira" ? (
+                    // 🚀 Exibição ultra compacta de gelo!
+                    <span title="Geladeira" className="flex items-center justify-center">
+                      <Snowflake size={11} className="text-cyan-400" />
+                    </span>
+                ) : lead.tag === "sem resposta" ? (
+                    "SEM RESPOSTA" // 🚀 Texto encurtado
                 ) : (
                     lead.tag
                 )}
-
               </Badge>
 
               {(() => {
@@ -2012,19 +2021,26 @@ export function Dashboard() {
                 TODAS
               </button>
               {columnAllowedTags[colId]?.map((tag) => (
-                <button
-                  key={tag}
-                  onClick={() =>
-                    setSelectedTags((prev) => ({ ...prev, [colId]: tag }))
-                  }
-                  className={`text-[7px] px-1 py-0.5 rounded border font-bold transition-all uppercase ${
-                    selectedTags[colId] === tag
-                      ? `${tagColors[tag]} text-white border-transparent shadow-sm`
-                      : "bg-background/50 text-muted-foreground border-border hover:bg-background"
-                  }`}
-                >
-                  {tag}
-                </button>
+                  <button
+                      key={tag}
+                      onClick={() =>
+                          setSelectedTags((prev) => ({ ...prev, [colId]: tag }))
+                      }
+                      className={`text-[7px] px-1 py-0.5 rounded border font-bold transition-all uppercase flex items-center justify-center ${
+                          selectedTags[colId] === tag
+                              ? `${tagColors[tag]} text-white border-transparent shadow-sm`
+                              : "bg-background/50 text-muted-foreground border-border hover:bg-background"
+                      }`}
+                      title={tag} // Exibe o nome completo ao passar o mouse por cima
+                  >
+                    {tag === "sem resposta" ? (
+                        "SEM RESP"
+                    ) : tag === "geladeira" ? (
+                        <Snowflake size={10} />
+                    ) : (
+                        tag
+                    )}
+                  </button>
               ))}
             </div>
           )}

@@ -124,6 +124,7 @@ const ALL_TAGS = [
   "bloqueado",
   "sem resposta",
   "respondido",
+  "geladeira",
   "frio",
   "morno",
   "quente",
@@ -141,7 +142,7 @@ const ALL_TAGS = [
 
 const allowedTagsByStage: Record<string, string[]> = {
   NOVO: ["novo", "a qualificar", "bloqueado"],
-  CONTATO: ["sem resposta", "aberto", "respondido"],
+  CONTATO: ["sem resposta", "aberto", "respondido", "geladeira"],
   NEGOCIACAO: ["frio", "morno", "quente", "visita"],
   CADASTRO: ["promessa", "parcial", "completa"],
   FINALIZADO: ["aprovado", "recusado"],
@@ -165,6 +166,7 @@ const tagColors: Record<string, string> = {
   "a qualificar": "bg-zinc-300 border-zinc-400",
   "sem resposta": "bg-gray-400 border-gray-500",
   respondido: "bg-yellow-400 border-yellow-600",
+  geladeira: "bg-cyan-300 border-cyan-400",
   aberto: "bg-orange-300 border-orange-500",
   frio: "bg-cyan-500 border-cyan-600",
   morno: "bg-orange-400 border-orange-500",
