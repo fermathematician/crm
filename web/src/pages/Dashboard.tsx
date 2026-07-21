@@ -354,6 +354,36 @@ const maskTime = (value: string) => {
   return v;
 };
 
+function getNextBusinessDayText(daysToAdd: number): string {
+  const date = new Date();
+  let added = 0;
+
+  const weekdays = [
+    "Domingo",
+    "Segunda",
+    "Terça",
+    "Quarta",
+    "Quinta",
+    "Sexta",
+    "Sábado",
+  ];
+
+  while (added < daysToAdd) {
+    date.setDate(date.getDate() + 1);
+    const dayOfWeek = date.getDay(); // 0 = Domingo, 6 = Sábado
+    // Pula sábado (6) e domingo (0)
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      added++;
+    }
+  }
+
+  const weekdayName = weekdays[date.getDay()];
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+
+  return `${weekdayName}, dia ${day}/${month}`;
+}
+
 function getActivityStatus(contacts?: ApiContact[]) {
   //conta atividade somente interações
   const validContatcs =
@@ -1257,12 +1287,20 @@ export function Dashboard() {
           .trim()
           .split(" ")[0];
       const userPhone = "(41) 99213-4459";
+      const oneDayText = getNextBusinessDayText(1);  // Ex: "Quarta, dia 22/07"
+      const twoDaysText = getNextBusinessDayText(2);
 
-      const processedSubject = template.subject.replace(/{{leadName}}/g, clientName);
+      const processedSubject = template.subject
+          .replace(/{{leadName}}/g, clientName)
+          .replace(/{{oneDay}}/gi, oneDayText)
+          .replace(/{{twoDays}}/gi, twoDaysText);
+
       const processedBody = cleanBody
           .replace(/{{leadName}}/g, clientName)
           .replace(/{{userName}}/g, userName)
-          .replace(/{{userPhone}}/g, userPhone);
+          .replace(/{{userPhone}}/g, userPhone)
+          .replace(/{{oneDay}}/gi, oneDayText)
+          .replace(/{{twoDays}}/gi, twoDaysText);
 
       setEmailSubject(processedSubject);
       setEmailBody(processedBody);

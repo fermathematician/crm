@@ -14,6 +14,36 @@ interface SendEmailRequest {
   targetEmails: string[];
 }
 
+function getNextBusinessDayText(daysToAdd: number): string {
+  const date = new Date();
+  let added = 0;
+
+  const weekdays = [
+    "Domingo",
+    "Segunda",
+    "Terça",
+    "Quarta",
+    "Quinta",
+    "Sexta",
+    "Sábado",
+  ];
+
+  while (added < daysToAdd) {
+    date.setDate(date.getDate() + 1);
+    const dayOfWeek = date.getDay(); // 0 = Domingo, 6 = Sábado
+    // Pula sábado (6) e domingo (0)
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      added++;
+    }
+  }
+
+  const weekdayName = weekdays[date.getDay()];
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+
+  return `${weekdayName}, dia ${day}/${month}`;
+}
+
 class SendEmailService {
   async execute({
     leadId,
@@ -98,9 +128,13 @@ class SendEmailService {
         .replace(/{{leadName}}/g, lead.companyName);
     }
     const firstname = user.name.split(" ")[0];
+    const oneDayText = getNextBusinessDayText(1); // Ex: "Quarta, dia 22/07"
+    const twoDaysText = getNextBusinessDayText(2);
     processedBody = processedBody
       .replace(/{{userName}}/g, firstname || "")
-      .replace(/{{userPhone}}/g, "(41) 99213-4459");
+      .replace(/{{userPhone}}/g, "(41) 99213-4459")
+      .replace(/{{oneDay}}/gi, oneDayText)
+      .replace(/{{twoDays}}/gi, twoDaysText);
 
     const formattedBody =
       processedBody.includes("<br/>") || processedBody.includes("<p>")
