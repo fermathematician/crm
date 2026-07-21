@@ -1343,11 +1343,35 @@ export function LeadsList() {
 
                         <td className="px-2 py-1">
                           <Select
-                            value={lead.funnelStage}
-                            onValueChange={(val) => {
-                              handleLocalChange(lead.id, "funnelStage", val);
-                              handleSaveCell(lead.id, "funnelStage", val);
-                            }}
+                              value={lead.funnelStage}
+                              onValueChange={(val) => {
+                                const defaultTag = defaultTagsByStage[val] || "novo";
+                                const isBounced = defaultTag === "a qualificar";
+                                const isUnsubscribed = defaultTag === "bloqueado";
+
+                                // 1. Atualiza a tela local na hora
+                                handleLocalChange(lead.id, "funnelStage", val);
+                                handleLocalChange(lead.id, "tags", [defaultTag]);
+                                handleLocalChange(lead.id, "bounced", isBounced);
+                                handleLocalChange(lead.id, "unsubscribed", isUnsubscribed);
+
+                                // 2. Salva no banco zerando as variáveis de a qualificar/bloqueado
+                                const token = localStorage.getItem("token");
+                                fetch(`${import.meta.env.VITE_API_URL}/auth/leads/update`, {
+                                  method: "PUT",
+                                  headers: {
+                                    Authorization: `Bearer ${token}`,
+                                    "Content-Type": "application/json",
+                                  },
+                                  body: JSON.stringify({
+                                    lead_id: lead.id,
+                                    funnelStage: val,
+                                    tags: [defaultTag],
+                                    bounced: isBounced,
+                                    unsubscribed: isUnsubscribed,
+                                  }),
+                                });
+                              }}
                           >
                             <SelectTrigger className="h-8 border-transparent bg-transparent hover:bg-muted/50 focus:ring-1 shadow-none px-2 w-[140px] text-xs font-semibold">
                               <SelectValue />
@@ -1374,11 +1398,32 @@ export function LeadsList() {
 
                         <td className="px-2 py-1">
                           <Select
-                            value={lead.tags?.[0] || ""}
-                            onValueChange={(val) => {
-                              handleLocalChange(lead.id, "tags", [val]);
-                              handleSaveCell(lead.id, "tags", [val]);
-                            }}
+                              value={lead.tags?.[0] || ""}
+                              onValueChange={(val) => {
+                                const isBounced = val === "a qualificar";
+                                const isUnsubscribed = val === "bloqueado";
+
+                                // 1. Atualiza a tela local
+                                handleLocalChange(lead.id, "tags", [val]);
+                                handleLocalChange(lead.id, "bounced", isBounced);
+                                handleLocalChange(lead.id, "unsubscribed", isUnsubscribed);
+
+                                // 2. Salva no banco atualizando a etiqueta E desligando o bounced/unsubscribed
+                                const token = localStorage.getItem("token");
+                                fetch(`${import.meta.env.VITE_API_URL}/auth/leads/update`, {
+                                  method: "PUT",
+                                  headers: {
+                                    Authorization: `Bearer ${token}`,
+                                    "Content-Type": "application/json",
+                                  },
+                                  body: JSON.stringify({
+                                    lead_id: lead.id,
+                                    tags: [val],
+                                    bounced: isBounced,
+                                    unsubscribed: isUnsubscribed,
+                                  }),
+                                });
+                              }}
                           >
                             <SelectTrigger className="h-8 border-transparent bg-transparent hover:bg-muted/50 focus:ring-1 shadow-none px-2 w-[120px] text-xs font-semibold uppercase">
                               <SelectValue placeholder="SEM ETIQUETA" />
