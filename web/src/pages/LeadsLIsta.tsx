@@ -22,6 +22,7 @@ import {
   Bell,
   Check,
   Clock,
+  AlignLeft,
   Calendar as CalendarIcon,
 } from "lucide-react";
 import { useTheme } from "../hooks/useTheme";
@@ -214,6 +215,12 @@ export function LeadsList() {
   const [quickReminderDate, setQuickReminderDate] = useState("");
   const [quickReminderText, setQuickReminderText] = useState("");
 
+  const [isQuickNoteModalOpen, setIsQuickNoteModalOpen] = useState(false);
+  const [selectedQuickNoteLead, setSelectedQuickNoteLead] = useState<ApiLead | null>(null);
+  const [quickNoteDate, setQuickNoteDate] = useState("");
+  const [quickNoteText, setQuickNoteText] = useState("");
+
+
   // Estado do Formulário
   const [formData, setFormData] = useState({
     companyName: "",
@@ -332,6 +339,56 @@ export function LeadsList() {
 
     fetchBatches();
   }, []);
+
+  function openQuickNoteModal(lead: ApiLead) {
+    setSelectedQuickNoteLead(lead);
+
+    const today = new Date();
+    const dd = String(today.getDate()).padStart(2, '0');
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const yyyy = today.getFullYear();
+
+    setQuickNoteDate(`${dd}/${mm}/${yyyy}`);
+    setQuickNoteText("");
+    setIsQuickNoteModalOpen(true);
+  }
+
+  async function handleSaveQuickNote() {
+    if (!selectedQuickNoteLead || !quickNoteText || quickNoteDate.length < 10) {
+      alert("Preencha a data completa e a observação.");
+      return;
+    }
+
+    const [d, m, y] = quickNoteDate.split("/");
+    const formattedDate = `${y}-${m}-${d}`;
+    const token = localStorage.getItem("token");
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/leads/${selectedQuickNoteLead.id}/contacts`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          type: "NOTE", // 🚀 Registra no histórico como NOTA / OBSERVAÇÃO
+          date: formattedDate,
+          description: quickNoteText,
+        }),
+      });
+
+      if (response.ok) {
+        setIsQuickNoteModalOpen(false);
+        fetchLeads();
+        alert("Observação salva com sucesso!");
+      } else {
+        alert("Erro ao salvar a observação.");
+      }
+    } catch (error) {
+      console.error("Erro:", error);
+      alert("Erro de conexão.");
+    }
+  }
 
   function handleSearchSubmit(e?: React.FormEvent) {
     if (e) e.preventDefault();
@@ -1448,6 +1505,15 @@ export function LeadsList() {
                           <Button
                               variant="ghost"
                               size="icon"
+                              className="h-7 w-7 text-amber-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => openQuickNoteModal(lead)}
+                              title="Registrar Observação"
+                          >
+                            <AlignLeft size={14} />
+                          </Button>
+                          <Button
+                              variant="ghost"
+                              size="icon"
                               className="h-7 w-7 text-purple-500 opacity-0 group-hover:opacity-100 transition-opacity"
                               onClick={() => openQuickModal(lead)}
                               title="Agendar Visita / Etiqueta"
@@ -1514,51 +1580,51 @@ export function LeadsList() {
             </div>
           </div>
 
-          {/* 🚀 MODAL EXPRESSO DE LEMBRETE */}
-          <Dialog open={isQuickModalOpen} onOpenChange={setIsQuickModalOpen}>
+          {/* 🚀 MODAL EXPRESSO DE OBSERVAÇÃO */}
+          <Dialog open={isQuickNoteModalOpen} onOpenChange={setIsQuickNoteModalOpen}>
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle className="text-xl flex items-center gap-2">
-                  <Bell className="text-purple-600" />
-                  Agendar Lembrete
+                  <AlignLeft className="text-amber-600" />
+                  Nova Observação
                 </DialogTitle>
                 <div className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mt-1">
-                  {selectedQuickLead?.companyName}
+                  {selectedQuickNoteLead?.companyName}
                 </div>
               </DialogHeader>
 
               <div className="space-y-4 py-2">
                 <div className="space-y-2">
-                  <Label>Data do Lembrete</Label>
+                  <Label>Data da Observação</Label>
                   <div className="relative w-full">
                     <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
                     <Input
                         type="text"
                         placeholder="DD/MM/AAAA"
                         className="pl-9"
-                        value={quickReminderDate}
-                        onChange={(e) => setQuickReminderDate(maskDate(e.target.value))}
+                        value={quickNoteDate}
+                        onChange={(e) => setQuickNoteDate(maskDate(e.target.value))}
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>O que você precisa fazer?</Label>
+                  <Label>Detalhes da observação</Label>
                   <Textarea
                       className="min-h-[120px] resize-none"
-                      placeholder="Ex: Ligar para cobrar a assinatura do contrato..."
-                      value={quickReminderText}
-                      onChange={(e) => setQuickReminderText(e.target.value)}
+                      placeholder="Ex: Cliente relatou que vai analisar a proposta na semana que vem..."
+                      value={quickNoteText}
+                      onChange={(e) => setQuickNoteText(e.target.value)}
                   />
                 </div>
               </div>
 
               <DialogFooter>
-                <Button variant="ghost" onClick={() => setIsQuickModalOpen(false)}>
+                <Button variant="ghost" onClick={() => setIsQuickNoteModalOpen(false)}>
                   Cancelar
                 </Button>
-                <Button onClick={handleSaveQuickReminder} className="gap-2 bg-purple-600 hover:bg-purple-700 text-white">
-                  <Bell size={16} /> Agendar
+                <Button onClick={handleSaveQuickNote} className="gap-2 bg-amber-600 hover:bg-amber-700 text-white">
+                  <AlignLeft size={16} /> Salvar Observação
                 </Button>
               </DialogFooter>
             </DialogContent>
