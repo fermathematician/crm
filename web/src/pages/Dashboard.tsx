@@ -757,20 +757,25 @@ export function Dashboard() {
   }
 
   async function handleUpdateContact(contactId: string) {
+    if (!selectedLead) return;
+
     const token = localStorage.getItem("token");
     try {
-      // ⚠️ Atenção: Esta rota precisará ser criada no seu back-end!
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/contacts/update`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contact_id: contactId,
-          description: editingContactText
-        }),
-      });
+      // 🚀 Passa o selectedLead.id na URL para bater perfeitamente com a rota do seu backend!
+      const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/auth/leads/${selectedLead.id}/contacts/update`,
+          {
+            method: "PUT",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              contact_id: contactId,
+              description: editingContactText,
+            }),
+          }
+      );
 
       if (response.ok) {
         // Atualiza a lista na tela imediatamente
