@@ -67,7 +67,7 @@ interface ApiLead {
     | "CADASTRO"
     | "FINALIZADO"
     | "SEM_INTERESSE"
-    | "DESCARTADO";
+    | "FORA_DE_PERFIL";
   tags: string[];
   unsubscribed?: boolean;
   bounced?: boolean;
@@ -788,7 +788,7 @@ export function LeadsList() {
                     <SelectItem value="CADASTRO">Cadastro</SelectItem>
                     <SelectItem value="FINALIZADO">Finalizados</SelectItem>
                     <SelectItem value="SEM_INTERESSE">Sem Interesse</SelectItem>
-                    <SelectItem value="DESCARTADO">
+                    <SelectItem value="FORA_DE_PERFIL">
                       Descartado
                     </SelectItem>
                   </SelectContent>
@@ -1454,7 +1454,7 @@ export function LeadsList() {
                               <SelectItem value="SEM_INTERESSE">
                                 SEM INTERESSE
                               </SelectItem>
-                              <SelectItem value="DESCARTADO">
+                              <SelectItem value="FORA_DE_PERFIL">
                                 DESCARTADO
                               </SelectItem>
                             </SelectContent>
@@ -1509,40 +1509,47 @@ export function LeadsList() {
                           </Select>
                         </td>
 
-                        <td className="px-2 py-1 flex justify-end gap-1 items-center h-[40px]">
+                        <td className="px-1 py-1 flex justify-end gap-0.5 items-center h-[40px]">
+                          {/* 🚀 Atalho Expresso de Observação */}
                           <Button
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7 text-amber-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="h-6 w-6 p-0 text-amber-500 opacity-0 group-hover:opacity-100 transition-opacity"
                               onClick={() => openQuickNoteModal(lead)}
                               title="Registrar Observação"
                           >
                             <AlignLeft size={14} />
                           </Button>
+
+                          {/* 🚀 Atalho Expresso de Lembrete */}
                           <Button
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7 text-purple-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="h-6 w-6 p-0 text-purple-500 opacity-0 group-hover:opacity-100 transition-opacity"
                               onClick={() => openQuickModal(lead)}
-                              title="Agendar Visita / Etiqueta"
+                              title="Agendar Lembrete"
                           >
                             <Bell size={14} />
                           </Button>
+
+                          {/* Editar Lead */}
                           <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={() => openEditModal(lead)}
-                            title="Abrir Modal Completo"
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 p-0 text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => openEditModal(lead)}
+                              title="Abrir Modal Completo"
                           >
                             <Pencil size={14} />
                           </Button>
+
+                          {/* Excluir Lead */}
                           <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-red-500 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40"
-                            onClick={() => handleDelete(lead.id)}
-                            title="Excluir lead"
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 p-0 text-red-500 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40"
+                              onClick={() => handleDelete(lead.id)}
+                              title="Excluir lead"
                           >
                             <Trash2 size={14} />
                           </Button>
@@ -1587,6 +1594,54 @@ export function LeadsList() {
               </Button>
             </div>
           </div>
+          <Dialog open={isQuickModalOpen} onOpenChange={setIsQuickModalOpen}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle className="text-xl flex items-center gap-2">
+                  <Bell className="text-purple-600" />
+                  Agendar Lembrete
+                </DialogTitle>
+                <div className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mt-1">
+                  {selectedQuickLead?.companyName}
+                </div>
+              </DialogHeader>
+
+              <div className="space-y-4 py-2">
+                <div className="space-y-2">
+                  <Label>Data do Lembrete</Label>
+                  <div className="relative w-full">
+                    <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    <Input
+                        type="text"
+                        placeholder="DD/MM/AAAA"
+                        className="pl-9"
+                        value={quickReminderDate}
+                        onChange={(e) => setQuickReminderDate(maskDate(e.target.value))}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>O que você precisa fazer?</Label>
+                  <Textarea
+                      className="min-h-[120px] resize-none"
+                      placeholder="Ex: Ligar para cobrar a assinatura do contrato..."
+                      value={quickReminderText}
+                      onChange={(e) => setQuickReminderText(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button variant="ghost" onClick={() => setIsQuickModalOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleSaveQuickReminder} className="gap-2 bg-purple-600 hover:bg-purple-700 text-white">
+                  <Bell size={16} /> Agendar
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           {/* 🚀 MODAL EXPRESSO DE OBSERVAÇÃO */}
           <Dialog open={isQuickNoteModalOpen} onOpenChange={setIsQuickNoteModalOpen}>

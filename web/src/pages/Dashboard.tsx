@@ -109,7 +109,7 @@ interface ApiLead {
     | "CADASTRO"
     | "FINALIZADO"
     | "SEM_INTERESSE"
-    | "DESCARTADO";
+    | "FORA_DE_PERFIL";
   tags: string[];
   phone: string | null;
   visitId: string | null;
@@ -137,7 +137,7 @@ const reverseStageMap: Record<string, string> = {
   cadastro: "CADASTRO",
   finalizado: "FINALIZADO",
   arquivo: "SEM_INTERESSE",
-  descartado: "DESCARTADO",
+  descartado: "FORA_DE_PERFIL",
 };
 
 const tagColors: Record<LeadTag, string> = {
