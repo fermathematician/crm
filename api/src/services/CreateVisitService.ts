@@ -14,7 +14,7 @@ class CreateVisitService {
 
     const visit = await prismaClient.visit.create({
       data: {
-        visitDate,
+        visitDate: new Date(visitDate),
         leadId,
         userId,
       },

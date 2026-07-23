@@ -117,6 +117,10 @@ class ListLeadsService {
               name: true,
             },
           },
+          visits: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+          },
         },
       }),
       prismaClient.lead.count({

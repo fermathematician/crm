@@ -724,7 +724,7 @@ export function Dashboard() {
     try {
       // 🚀 Se for um lembrete, dispara para a nossa nova rota de notificações
       if (interactionType === "REMINDER") {
-        await fetch(`${import.meta.env.VITE_API_URL}/auth/notifications`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/notifications`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -737,11 +737,18 @@ export function Dashboard() {
             userId: userProfile.id, // ID do vendedor logado
           }),
         });
+
+        const savedReminder = await response.json();
+        if (savedReminder && savedReminder.id) {
+          setLeadContacts((prev) =>
+            prev.map(c => c.id === newContact.id ? {...c, id: savedReminder.id} : c)
+          );
+        }
       }
 
       // Mantém a rota antiga para CALL e NOTE alimentarem o histórico de contatos
       if (interactionType === "CALL" || interactionType === "NOTE") {
-        await fetch(
+        const response = await fetch(
             `${import.meta.env.VITE_API_URL}/auth/leads/${selectedLead.id}/contacts`,
             {
               method: "POST",
@@ -756,6 +763,14 @@ export function Dashboard() {
               }),
             },
         );
+
+        const savedContact = await response.json();
+        if (savedContact && savedContact.id) {
+          setLeadContacts((prev) =>
+              prev.map(c => c.id === newContact.id ? { ...c, id: savedContact.id } : c)
+          );
+        }
+
       }
     } catch (e) {
       console.error(e);
@@ -1042,13 +1057,14 @@ export function Dashboard() {
             : apiLead.bounced
               ? "a qualificar"
               : (apiLead.tags[0] as LeadTag) || columnDefaultTags[columnId];
+        const visitObj = apiLead.visits && apiLead.visits.length > 0 ? apiLead.visits[0] : null;
         return {
           id: apiLead.id,
           name: apiLead.companyName,
           tag: tag,
-          visitId: apiLead.visitId,
-          visitDate: apiLead.visitDate,
-          isCompleted: apiLead.isCompleted,
+          visitId: visitObj ? visitObj.id : null,
+          visitDate: visitObj ? visitObj.visitDate : null,
+          isCompleted: visitObj ? visitObj.isCompleted : false,
           phone: apiLead.phone,
           cnpj: apiLead.cnpj,
           email: apiLead.email,
@@ -1434,7 +1450,7 @@ export function Dashboard() {
     }).catch((err) => console.error("Erro ao salvar ordem", err));
   }
 
-  function handleSaveLead() {
+  async function handleSaveLead() {
     if (!selectedLead || !editingTag) return;
 
     if (editingVisitDate && editingVisitDate.length > 0) {
@@ -1479,6 +1495,55 @@ export function Dashboard() {
 
     const isUnsubscribing = finalTag === "bloqueado";
     const isBouncing = finalTag === "a qualificar";
+
+    const token = localStorage.getItem("token");
+    let currentVisitId = selectedLead.visitId;
+
+    try {
+      // 1️⃣ CENÁRIO: Criar nova visita
+      if (formattedDateForBackend && !selectedLead.visitDate) {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/visits`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            visitDate: formattedDateForBackend,
+            leadId: selectedLead.id,
+            userId: userProfile.id,
+          }),
+        });
+        const newVisit = await res.json();
+        if (newVisit?.id) currentVisitId = newVisit.id; // 🚀 Atualiza com o ID real gerado pelo banco!
+      }
+
+      // 2️⃣ CENÁRIO: Atualizar visita existente
+      else if (formattedDateForBackend && selectedLead.visitDate && selectedLead.visitDate !== formattedDateForBackend) {
+        await fetch(`${import.meta.env.VITE_API_URL}/auth/visits/update`, {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            id: currentVisitId, // 🚀 Usa a variável garantida para nunca mandar undefined
+            visitDate: formattedDateForBackend,
+            userId: userProfile.id,
+          }),
+        });
+      }
+
+      // 3️⃣ CENÁRIO: Cancelar/Remover visita
+      else if (!formattedDateForBackend && selectedLead.visitDate && currentVisitId) {
+        await fetch(`${import.meta.env.VITE_API_URL}/auth/visits?id=${currentVisitId}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        currentVisitId = null; // 🚀 Limpa o ID da tela
+      }
 
     const newColumns = { ...columns };
     for (const colId in newColumns) {
@@ -1528,74 +1593,26 @@ export function Dashboard() {
           ...oldLead,
           tag: finalTag,
           visitDate: formattedDateForBackend,
+          visitId: currentVisitId,
           unsubscribed: isUnsubscribing,
           bounced: isBouncing,
         };
         break;
+        }
       }
+      updateLeadOnServer(selectedLead.id, {
+        tags: [finalTag],
+        unsubscribed: isUnsubscribing,
+        bounced: isBouncing,
+      });
+
+      setColumns(newColumns);
+      updateTodayNotifications(newColumns);
+      setIsSmallModalOpen(false);
+
+    } catch (err) {
+      console.error("Erro ao salvar visita:", err);
     }
-
-    const token = localStorage.getItem("token");
-
-    // 1️⃣ CENÁRIO: Criar nova visita (Não tinha data antes, mas agora tem)
-    if (formattedDateForBackend && !selectedLead.visitDate) {
-      fetch(`${import.meta.env.VITE_API_URL}/auth/visits`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          visitDate: formattedDateForBackend,
-          leadId: selectedLead.id,
-          userId: userProfile.id,
-        }),
-      })
-          .then(res => res.json())
-          .then(newVisit => {
-            // 💡 Salva o ID que o banco acabou de criar para futuras edições sem precisar dar F5
-            if (newVisit?.id) selectedLead.visitId = newVisit.id;
-          })
-          .catch((err) => console.error("Erro ao criar visita:", err));
-    }
-
-    // 2️⃣ CENÁRIO: Atualizar visita existente (Usa o visitId correto!)
-    else if (formattedDateForBackend && selectedLead.visitDate && selectedLead.visitDate !== formattedDateForBackend) {
-      fetch(`${import.meta.env.VITE_API_URL}/auth/visits/update`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          id: selectedLead.visitId, // 🚀 Arquitetura Limpa: Altera usando o ID da própria Visita
-          visitDate: formattedDateForBackend,
-          userId: userProfile.id,
-        }),
-      }).catch((err) => console.error("Erro ao atualizar visita:", err));
-    }
-
-    // 3️⃣ CENÁRIO: Cancelar/Remover visita (Passa o visitId correto por query na URL)
-    else if (!formattedDateForBackend && selectedLead.visitDate && selectedLead.visitId) {
-      fetch(`${import.meta.env.VITE_API_URL}/auth/visits?id=${selectedLead.visitId}`, { // 🚀 Rota correta por ID
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }).catch((err) => console.error("Erro ao deletar visita:", err));
-    }
-
-
-    updateLeadOnServer(selectedLead.id, {
-      tags: [finalTag],
-      visitDate: formattedDateForBackend,
-      unsubscribed: isUnsubscribing,
-      bounced: isBouncing,
-    });
-
-    setColumns(newColumns);
-    updateTodayNotifications(newColumns);
-    setIsSmallModalOpen(false);
   }
 
   async function handleSaveEditForm() {

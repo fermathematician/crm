@@ -21,6 +21,7 @@ class UpdateLeadController {
       bounced,
       importBatchId,
       ImportBatchId,
+      visitDate,
     } = req.body;
 
     const updateLeadService = new UpdateLeadService();
@@ -43,6 +44,7 @@ class UpdateLeadController {
       bounced,
       importBatchId,
       ImportBatchId,
+      visitDate,
     });
 
     return res.json(lead);
