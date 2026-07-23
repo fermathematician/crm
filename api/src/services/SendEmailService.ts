@@ -12,6 +12,8 @@ interface SendEmailRequest {
   subject: string;
   body: string;
   targetEmails: string[];
+  threadId?: string;
+  inReplyTo?: string;
 }
 
 function getNextBusinessDayText(daysToAdd: number): string {
@@ -51,6 +53,8 @@ class SendEmailService {
     subject,
     body,
     targetEmails,
+    threadId,
+    inReplyTo,
   }: SendEmailRequest) {
     const user = await prismaClient.user.findUnique({
       where: { id: userId },
@@ -157,6 +161,8 @@ class SendEmailService {
       `🚀 Contato criado com sucesso! ID para o Pixel: ${contact.id}`,
     );
 
+    let updatedContact = contact;
+
     try {
       const keyFilePath = path.join(
         __dirname,
@@ -248,16 +254,30 @@ class SendEmailService {
         </div>
       `;
 
+      const customMessageId = `<crm-${contact.id}@osinteligenciafinanceira.com>`;
+
       const trackingPixel = `<img src="${apiUrl}/auth/emails/track/${contact.id}" alt="" width="1" height="1" style="display:none;" />`;
       const messageParts = [
         `From: <${user.email}>`,
         `To: ${destinatario}`,
         `Subject: ${encodedSubject}`,
+        `Message-ID: ${customMessageId}`,
         `Content-Type: text/html; charset=UTF-8`,
         `Mime-Version: 1.0`,
-        "",
-        `<div>${htmlTemplate}</div>${trackingPixel}`,
       ];
+
+      if (inReplyTo) {
+        const formattedInReplyTo =
+          inReplyTo.startsWith("<") && inReplyTo.endsWith(">")
+            ? inReplyTo
+            : `<${inReplyTo}>`;
+
+        messageParts.push(`In-Reply-To: ${formattedInReplyTo}`);
+        messageParts.push(`References: ${formattedInReplyTo}`);
+      }
+      // Linha em branco obrigatória separando cabeçalhos do corpo HTML
+      messageParts.push("");
+      messageParts.push(`<div>${htmlTemplate}</div>${trackingPixel}`);
 
       const message = messageParts.join("\r\n");
       const encodedMessage = Buffer.from(message)
@@ -266,12 +286,49 @@ class SendEmailService {
         .replace(/\//g, "_")
         .replace(/=+$/, "");
 
-      const response = await gmail.users.messages.send({
+      // 🚀 3. Passa o threadId no envio para o Gmail agrupar na mesma mensagem
+      const response: any = await gmail.users.messages.send({
         userId: "me",
-        requestBody: { raw: encodedMessage },
+        requestBody: {
+          raw: encodedMessage,
+          threadId: threadId || null,
+        },
       });
 
-      messageId = response.data.id as string;
+      messageId = response.data?.id || "";
+      const generatedThreadId = response.data?.threadId || "";
+      let realRfcMessageId = messageId;
+      try {
+        if (messageId) {
+          const sentMsg = await gmail.users.messages.get({
+            userId: "me",
+            id: messageId,
+            format: "metadata",
+            metadataHeaders: ["Message-ID", "Message-Id"],
+          });
+          const msgIdHeader = sentMsg.data.payload?.headers?.find(
+            (h) => h.name?.toLowerCase() === "message-id",
+          )?.value;
+
+          if (msgIdHeader) {
+            realRfcMessageId = msgIdHeader;
+          }
+        }
+      } catch (e) {
+        console.error("Erro ao obter RFC Message-ID do Gmail:", e);
+      }
+
+      if (contact.id && (realRfcMessageId || generatedThreadId)) {
+        updatedContact = await prismaClient.contact
+          .update({
+            where: { id: contact.id },
+            data: {
+              messageId: realRfcMessageId,
+              threadId: generatedThreadId,
+            },
+          })
+          .catch(() => contact);
+      }
     } catch (err: any) {
       console.error("Falha no envio do email", err.message);
       throw new Error(
@@ -283,7 +340,7 @@ class SendEmailService {
       success: true,
       messageId: messageId,
       provider: "GMAIL",
-      contact,
+      contact: updatedContact,
     };
   }
 }

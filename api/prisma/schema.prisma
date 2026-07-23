@@ -157,6 +157,9 @@ model Contact {
   observation String?
 
   opened Boolean @default(false)
+
+  messageId String?
+  threadId  String?
 }
 
 model EmailTemplate {

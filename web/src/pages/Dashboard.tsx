@@ -22,6 +22,7 @@ import {
   ExternalLink,
   Phone,
   Mail,
+  Reply,
   AlignLeft,
   CalendarDays,
   History,
@@ -97,6 +98,8 @@ interface ApiContact {
   description: string; //estava description e quebrava quando recebia um descriptionri´ption
   leadId?: string;
   userId?: string;
+  messageId?: string;
+  threadId?: string;
 }
 
 interface ApiLead {
@@ -586,6 +589,9 @@ export function Dashboard() {
     return selectedDate > today;
   };
 
+  const [replyThreadId, setReplyThreadId] = useState<string | null>(null);
+  const [replyMessageId, setReplyMessageId] = useState<string | null>(null);
+
   function updateTodayNotifications(boardData: Record<string, Column>) {
     const todayStr = getTodayString();
     const todayNotifications: Notification[] = [];
@@ -821,6 +827,8 @@ export function Dashboard() {
             subject: emailSubject,
             body: emailBody,
             targetEmails: selectedTargetEmails,
+            threadId: replyThreadId,
+            inReplyTo: replyMessageId,
           }),
         },
       );
@@ -872,6 +880,11 @@ export function Dashboard() {
               };
 
               setSelectedLead(movedLead);
+              setReplyThreadId(null);
+              setReplyMessageId(null);
+              setEmailSubject("");
+              setEmailBody("");
+              setActiveTab("history");
             } else {
               const newBoard = {...prev};
               if (currentColId && newBoard[currentColId]) {
@@ -1052,6 +1065,8 @@ export function Dashboard() {
                 type: c.type,
                 date: c.date ? c.date.toString() : "",
                 description: c.description || c.observation || "",
+                messageId: c.messageId || null,
+                threadId: c.threadId || null,
               }))
             : [],
           unsubscribed: apiLead.unsubscribed,
@@ -2911,8 +2926,31 @@ export function Dashboard() {
                                       </span>
                                           <span className="text-xs text-muted-foreground">
                                         • {formatDisplayDateTime(contact.date)}
-                                      </span>
-                                        </div>
+                                          </span>
+                                      </div>
+
+                                        {isEmail && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-7 text-xs gap-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/40 ml-2"
+                                                onClick={() => {
+                                                  const cleanSubject = subjectTitle.replace(/^Re:\s*/i, "");
+                                                  setEmailSubject(`Re: ${cleanSubject}`);
+
+                                                  console.log("🔍 DADOS DA RESPOSTA:", {
+                                                    threadId: (contact as any).threadId,
+                                                    messageId: (contact as any).messageId,
+                                                  });
+
+                                                  setReplyThreadId((contact as any).threadId || null);
+                                                  setReplyMessageId((contact as any).messageId || null);
+                                                  setActiveTab("email");
+                                                }}
+                                            >
+                                              <Reply size={14} /> Responder
+                                            </Button>
+                                        )}
 
                                         {contact.type === "NOTE" && editingContactId !== contact.id && (
                                             <Button
@@ -2993,6 +3031,23 @@ export function Dashboard() {
                         value="email"
                         className="m-0 flex flex-col h-full space-y-4"
                       >
+                        {replyThreadId && (
+                            <div className="flex justify-between items-center bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 px-3 py-2 rounded-md border border-blue-200 dark:border-blue-800 text-xs font-medium">
+                              <span>💬 Respondendo à conversa anterior do lead...</span>
+                              <button
+                                  type="button"
+                                  onClick={() => {
+                                    setReplyThreadId(null);
+                                    setReplyMessageId(null);
+                                    setEmailSubject("");
+                                  }}
+                                  className="hover:underline font-bold text-red-500"
+                              >
+                                Cancelar Resposta
+                              </button>
+                            </div>
+                        )}
+
                         <div className="space-y-2">
                           <Label htmlFor="template-select">Modelo de E-mail</Label>
                           <select

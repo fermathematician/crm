@@ -136,6 +136,13 @@ class CheckRepliesService {
           })
           .join("\n");
 
+        const messageIdHeader = payload?.headers?.find(
+          (h) => h.name?.toLowerCase() === "message-id",
+        )?.value;
+
+        const realThreadId = msgData.data.threadId || msg.threadId || null;
+        const realMessageId = messageIdHeader || msgData.data.id || msg.id;
+
         await prismaClient.contact.create({
           data: {
             leadId: lead.id,
@@ -145,6 +152,8 @@ class CheckRepliesService {
             description: `Assunto: ${subjectHeader}\n\nMensagem:\n${corpoEmail}\n\nRecebido via GMAIL`,
             observation: corpoEmail,
             didChageFunnel: false,
+            messageId: realMessageId,
+            threadId: realThreadId,
           },
         });
 
