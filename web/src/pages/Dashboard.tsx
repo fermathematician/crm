@@ -783,7 +783,6 @@ export function Dashboard() {
 
     const token = localStorage.getItem("token");
     try {
-      // 🚀 Passa o selectedLead.id na URL para bater perfeitamente com a rota do seu backend!
       const response = await fetch(
           `${import.meta.env.VITE_API_URL}/auth/leads/${selectedLead.id}/contacts/update`,
           {
@@ -793,6 +792,7 @@ export function Dashboard() {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
+              id: contactId,
               contact_id: contactId,
               description: editingContactText,
             }),
@@ -800,12 +800,28 @@ export function Dashboard() {
       );
 
       if (response.ok) {
-        // Atualiza a lista na tela imediatamente
+        // 1. Atualiza a lista visual do modal
         setLeadContacts((prev) =>
             prev.map((c) =>
                 c.id === contactId ? { ...c, description: editingContactText } : c
             )
         );
+
+        // 🚀 2. Atualiza no estado global da Coluna para não perder ao fechar o modal
+        const newColumns = { ...columns };
+        const colId = getLeadColumnId(selectedLead.id);
+        if (colId) {
+          const leadIndex = newColumns[colId].leads.findIndex(l => l.id === selectedLead.id);
+          if (leadIndex !== -1) {
+            const updatedContacts = (newColumns[colId].leads[leadIndex].contacts || []).map(c =>
+                c.id === contactId ? { ...c, description: editingContactText } : c
+            );
+            newColumns[colId].leads[leadIndex].contacts = updatedContacts;
+            setSelectedLead({ ...selectedLead, contacts: updatedContacts });
+          }
+        }
+        setColumns(newColumns);
+
         setEditingContactId(null); // Fecha o modo de edição
       } else {
         alert("Erro ao atualizar a observação.");
@@ -845,21 +861,73 @@ export function Dashboard() {
         setColumns(newColumns);
         updateTodayNotifications(newColumns);
       }
-      // 2. Apagar Observação / Ligação (Vai usar a rota nova de Contacts)
+      // 2. Apagar Observação / Ligação / Contato
       else {
         await fetch(`${import.meta.env.VITE_API_URL}/auth/contacts?id=${contactId}`, {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
         });
+
+        // 🚀 AQUI ESTAVA O SEGREDO: Remove o contato da lista principal da COLUNA!
+        const newColumns = { ...columns };
+        const colId = getLeadColumnId(selectedLead.id);
+
+        if (colId) {
+          const leadIndex = newColumns[colId].leads.findIndex(l => l.id === selectedLead.id);
+          if (leadIndex !== -1) {
+            // Filtra o contato removido do lead dentro da coluna
+            const updatedContacts = (newColumns[colId].leads[leadIndex].contacts || []).filter(
+                c => c.id !== contactId
+            );
+
+            newColumns[colId].leads[leadIndex].contacts = updatedContacts;
+
+            // Atualiza também o selectedLead para refletir a mudança
+            setSelectedLead({
+              ...selectedLead,
+              contacts: updatedContacts
+            });
+          }
+        }
+        setColumns(newColumns);
       }
 
-      // Remove o item do histórico visualmente na hora
+      // Remove o item do modal atual na mesma hora
       setLeadContacts(prev => prev.filter(c => c.id !== contactId));
 
     } catch (err) {
       console.error("Erro ao apagar log:", err);
       alert("Erro ao tentar deletar o registro.");
     }
+  }
+
+  function handleOpenVisitEdit(contactDate: string, contactDescription: string) {
+    if (!selectedLead) return;
+
+    // Reseta erros e define a etiqueta como 'visita'
+    setDateError(null);
+    setEditingTag("visita");
+
+    // Tenta extrair a data e a hora
+    if (selectedLead.visitDate) {
+      const [datePart, timePart] = selectedLead.visitDate.split("T");
+      const [year, month, day] = datePart.split("-");
+      setEditingVisitDate(`${day}/${month}/${year}`);
+
+      if (timePart) {
+        setEditingVisitTime(timePart.slice(0, 5));
+      } else {
+        setEditingVisitTime("");
+      }
+    } else {
+      // Fallback para caso seja um registro antigo de visita no histórico
+      setEditingVisitDate(formatDisplayDate(contactDate));
+      setEditingVisitTime("");
+    }
+
+    // Fecha o modal grande de detalhes e abre o modal pequeno de agendamento de visita
+    setIsDetailsModalOpen(false);
+    setIsSmallModalOpen(true);
   }
 
   async function handleSendEmail() {
@@ -3042,8 +3110,8 @@ export function Dashboard() {
                                             </Button>
                                         )}
 
-                                        {/* 🚀 BOTÕES PARA OBSERVAÇÕES E VISITAS ANTIGAS (Que estão na tabela de contatos) */}
-                                        {(contact.type === "NOTE" || (contact.type === "MEETING" && contact.id !== selectedLead?.visitId)) && editingContactId !== contact.id && (
+                                        {/* 🚀 BOTÕES PARA OBSERVAÇÕES (Novas e Antigas) */}
+                                        {contact.type === "NOTE" && editingContactId !== contact.id && (
                                             <div className="flex items-center gap-1 ml-2">
                                               <Button
                                                   variant="ghost"
@@ -3053,7 +3121,7 @@ export function Dashboard() {
                                                     setEditingContactId(contact.id);
                                                     setEditingContactText(contact.description || "");
                                                   }}
-                                                  title="Editar Registro"
+                                                  title="Editar Observação"
                                               >
                                                 <Pencil size={14} />
                                               </Button>
@@ -3063,26 +3131,51 @@ export function Dashboard() {
                                                   size="icon"
                                                   className="h-6 w-6 shrink-0 text-muted-foreground hover:text-red-500"
                                                   onClick={() => handleDeleteInteraction(contact.id, contact.type)}
-                                                  title="Apagar Registro"
+                                                  title="Apagar Observação"
                                               >
                                                 <Trash2 size={14} />
                                               </Button>
                                             </div>
                                         )}
 
-                                        {/* 🚀 LIXEIRA EXCLUSIVA PARA A VISITA ATUAL (Não tem lápis, pois ela é editada no modal principal) */}
+                                        {/* 🚀 BOTÕES PARA A VISITA ATUAL */}
                                         {contact.type === "MEETING" && contact.id === selectedLead?.visitId && (
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-6 w-6 shrink-0 text-muted-foreground hover:text-red-500 ml-2"
-                                                onClick={() => handleDeleteInteraction(contact.id, contact.type)}
-                                                title="Cancelar/Apagar Visita Atual"
-                                            >
-                                              <Trash2 size={14} />
-                                            </Button>
+                                            <div className="flex items-center gap-1 ml-2">
+                                              <Button
+                                                  variant="ghost"
+                                                  size="icon"
+                                                  className="h-6 w-6 shrink-0 text-muted-foreground hover:text-orange-500"
+                                                  onClick={() => handleOpenVisitEdit(contact.date, contact.description)}
+                                                  title="Editar Data/Hora da Visita"
+                                              >
+                                                <Pencil size={14} />
+                                              </Button>
+                                              <Button
+                                                  variant="ghost"
+                                                  size="icon"
+                                                  className="h-6 w-6 shrink-0 text-muted-foreground hover:text-red-500"
+                                                  onClick={() => handleDeleteInteraction(contact.id, contact.type)}
+                                                  title="Cancelar/Apagar Visita"
+                                              >
+                                                <Trash2 size={14} />
+                                              </Button>
+                                            </div>
                                         )}
 
+                                        {/* 🚀 BOTÕES PARA VISITAS ANTIGAS (Registros passados) */}
+                                        {contact.type === "MEETING" && contact.id !== selectedLead?.visitId && editingContactId !== contact.id && (
+                                            <div className="flex items-center gap-1 ml-2">
+                                              <Button
+                                                  variant="ghost"
+                                                  size="icon"
+                                                  className="h-6 w-6 shrink-0 text-muted-foreground hover:text-red-500"
+                                                  onClick={() => handleDeleteInteraction(contact.id, contact.type)}
+                                                  title="Apagar Registro Antigo"
+                                              >
+                                                <Trash2 size={14} />
+                                              </Button>
+                                            </div>
+                                        )}
 
                                       </div>
 
