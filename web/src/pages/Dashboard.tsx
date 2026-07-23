@@ -3042,8 +3042,8 @@ export function Dashboard() {
                                             </Button>
                                         )}
 
-                                        {/* Botões de Ação no Histórico */}
-                                        {contact.type === "NOTE" && editingContactId !== contact.id && (
+                                        {/* 🚀 BOTÕES PARA OBSERVAÇÕES E VISITAS ANTIGAS (Que estão na tabela de contatos) */}
+                                        {(contact.type === "NOTE" || (contact.type === "MEETING" && contact.id !== selectedLead?.visitId)) && editingContactId !== contact.id && (
                                             <div className="flex items-center gap-1 ml-2">
                                               <Button
                                                   variant="ghost"
@@ -3053,29 +3053,31 @@ export function Dashboard() {
                                                     setEditingContactId(contact.id);
                                                     setEditingContactText(contact.description || "");
                                                   }}
-                                                  title="Editar Observação"
+                                                  title="Editar Registro"
                                               >
                                                 <Pencil size={14} />
                                               </Button>
+
                                               <Button
                                                   variant="ghost"
                                                   size="icon"
                                                   className="h-6 w-6 shrink-0 text-muted-foreground hover:text-red-500"
                                                   onClick={() => handleDeleteInteraction(contact.id, contact.type)}
-                                                  title="Apagar Observação"
+                                                  title="Apagar Registro"
                                               >
                                                 <Trash2 size={14} />
                                               </Button>
                                             </div>
                                         )}
 
-                                        {contact.type === "MEETING" && contact.id === selectedLead.visitId && (
+                                        {/* 🚀 LIXEIRA EXCLUSIVA PARA A VISITA ATUAL (Não tem lápis, pois ela é editada no modal principal) */}
+                                        {contact.type === "MEETING" && contact.id === selectedLead?.visitId && (
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
                                                 className="h-6 w-6 shrink-0 text-muted-foreground hover:text-red-500 ml-2"
                                                 onClick={() => handleDeleteInteraction(contact.id, contact.type)}
-                                                title="Cancelar/Apagar Visita"
+                                                title="Cancelar/Apagar Visita Atual"
                                             >
                                               <Trash2 size={14} />
                                             </Button>
