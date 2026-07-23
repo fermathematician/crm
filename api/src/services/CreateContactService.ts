@@ -6,28 +6,35 @@ interface CreateContactRequest {
   userId: string;
   type: ContactType;
   date: string;
-  desc: string;
-  didChangeFunnel?: boolean; 
+  desc?: string;
+  didChangeFunnel?: boolean;
 }
 
 class CreateContactService {
-  async execute({ leadId, userId, type, date, desc, didChangeFunnel }: CreateContactRequest) {
+  async execute({
+    leadId,
+    userId,
+    type,
+    date,
+    desc,
+    didChangeFunnel,
+  }: CreateContactRequest) {
     if (!leadId || !userId) {
       throw new Error("ID do Lead e do Usuário são obrigatórios.");
     }
 
-    const isoDate = new Date(`${date}T12:00:00Z`);
+    const isoDate = new Date(date);
 
     const contact = await prismaClient.contact.create({
       data: {
         leadId: leadId,
         userId: userId,
         type: type,
-        date: isoDate, 
-        description: desc,
-        observation: desc,
-        didChageFunnel: didChangeFunnel || false 
-      }
+        date: isoDate,
+        description: desc ?? null,
+        observation: desc ?? null,
+        didChageFunnel: didChangeFunnel || false,
+      },
     });
 
     return contact;

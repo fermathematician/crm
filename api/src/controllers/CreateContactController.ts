@@ -3,7 +3,7 @@ import { CreateContactService } from "../services/CreateContactService.js";
 
 class CreateContactController {
   async handle(req: Request, res: Response) {
-    const { type, date, desc, didChangeFunnel } = req.body;
+    const { type, date, description, didChangeFunnel } = req.body;
     const leadId = req.params.id as string;
     const userId = req.user_id as string;
 
@@ -14,8 +14,8 @@ class CreateContactController {
       userId,
       type,
       date,
-      desc,
-      didChangeFunnel
+      desc: description,
+      didChangeFunnel,
     });
 
     return res.json(contact);
