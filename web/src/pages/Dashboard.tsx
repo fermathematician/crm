@@ -1150,10 +1150,12 @@ export function Dashboard() {
     if (selectedLead) {
       setEditingTag(selectedLead.tag);
       setDateError(null);
-      //reseta o select
       setSelectedTemplateId("");
 
+      let hasVisit = false;
+
       if (selectedLead.visitDate) {
+        hasVisit = true;
         const [datePart, timePart] = selectedLead.visitDate.split("T");
         const [year, month, day] = datePart.split("-");
         setEditingVisitDate(`${day}/${month}/${year}`);
@@ -1168,7 +1170,31 @@ export function Dashboard() {
         setEditingVisitTime("");
       }
 
-      setLeadContacts(selectedLead.contacts || []);
+      // 🚀 Juntando a Visita e os Contatos em uma única lista para o Histórico ler!
+      const allContacts = [...(selectedLead.contacts || [])];
+
+      if (hasVisit && selectedLead.visitDate) {
+        // Formata para o formato YYYY-MM-DD que o calendário lê
+        const visitDateOnly = selectedLead.visitDate.split("T")[0];
+
+        // Formata a hora para o texto do histórico
+        const timeToDisplay = selectedLead.visitDate.includes("T")
+            ? selectedLead.visitDate.split("T")[1].slice(0, 5)
+            : "00:00";
+
+        // Cria um log virtual para a tela ler (Sem salvar de novo no banco)
+        allContacts.push({
+          id: selectedLead.visitId || "visit-virtual",
+          type: "MEETING",
+          date: visitDateOnly,
+          description: `Visita agendada para as ${timeToDisplay !== "00:00" ? timeToDisplay : "h a combinar"}`,
+        });
+      }
+
+      // Ordena tudo por data decrescente (do mais novo para o mais velho)
+      allContacts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+      setLeadContacts(allContacts);
     }
   }, [selectedLead]);
 
