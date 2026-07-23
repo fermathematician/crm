@@ -34,7 +34,7 @@ class CheckBouncesService {
 
     const response = await gmail.users.messages.list({
       userId: "me",
-      q: "from:mailer-daemon is:unread",
+      q: '(from:mailer-daemon OR from:postmaster OR subject:"Delivery Status Notification" OR subject:"Undelivered Mail Returned to Sender" OR subject:"Mail delivery failed") is:unread',
     });
 
     const messages = response.data.messages || [];
