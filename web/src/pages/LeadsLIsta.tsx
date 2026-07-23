@@ -69,6 +69,8 @@ interface ApiLead {
     | "SEM_INTERESSE"
     | "FORA_DE_PERFIL";
   tags: string[];
+  importBatchId?: string | null;
+  ImportBatchId?: string | null;
   unsubscribed?: boolean;
   bounced?: boolean;
   visitDate?: string | null;
@@ -244,6 +246,7 @@ export function LeadsList() {
     funnelStage: "NOVO",
     unsubscribed: false,
     bounced: false,
+    importBatchId: null as string | null,
   });
 
   const fetchLeads = useCallback(async () => {
@@ -632,6 +635,7 @@ export function LeadsList() {
       city: "",
       state: "",
       address: "",
+      importBatchId: null,
       funnelStage: "NOVO",
       unsubscribed: false,
       bounced: false,
@@ -703,6 +707,7 @@ export function LeadsList() {
       city: lead.city || "",
       state: lead.state || "",
       address: lead.address || "",
+      importBatchId: lead.importBatchId || lead.ImportBatchId || null,
       funnelStage: lead.funnelStage,
       unsubscribed: lead.unsubscribed || false,
       bounced: lead.bounced || false,
@@ -951,8 +956,7 @@ export function LeadsList() {
                   </Button>
                 </DialogTrigger>
 
-                <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-                  <DialogHeader>
+                <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto" aria-describedby={undefined}>                  <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                       {editingLead ? <Pencil size={18} /> : <Plus size={18} />}
                       {editingLead ? "Editar Lead" : "Criar Novo Lead"}
@@ -1141,6 +1145,28 @@ export function LeadsList() {
                           }
                         />
                       </div>
+                    </div>
+
+                    <div className="grid gap-2 border-b border-border pb-4">
+                      <Label htmlFor="importBatch">Lista / Origem</Label>
+                      <select
+                          id="importBatch"
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
+                          value={formData.importBatchId || "none"}
+                          onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                importBatchId: e.target.value === "none" ? null : e.target.value,
+                              })
+                          }
+                      >
+                        <option value="none">Sem Lista (Manual)</option>
+                        {importedBatches.map((batch) => (
+                            <option key={batch.id} value={batch.id}>
+                              📋 {batch.tag}
+                            </option>
+                        ))}
+                      </select>
                     </div>
                   </div>
 

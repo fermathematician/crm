@@ -19,6 +19,8 @@ class UpdateLeadController {
       tags,
       unsubscribed,
       bounced,
+      importBatchId,
+      ImportBatchId,
     } = req.body;
 
     const updateLeadService = new UpdateLeadService();
@@ -39,6 +41,8 @@ class UpdateLeadController {
       tags,
       unsubscribed,
       bounced,
+      importBatchId,
+      ImportBatchId,
     });
 
     return res.json(lead);
