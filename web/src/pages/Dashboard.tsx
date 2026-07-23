@@ -36,6 +36,7 @@ import {
   BarChart,
   Snowflake,
   X,
+  Trash2,
 } from "lucide-react";
 import { useTheme } from "../hooks/useTheme";
 
@@ -812,6 +813,52 @@ export function Dashboard() {
     } catch (error) {
       console.error(error);
       alert("Erro de conexão ao tentar atualizar.");
+    }
+  }
+
+  async function handleDeleteInteraction(contactId: string, type: string) {
+    if (!selectedLead) return;
+
+    const confirmDelete = window.confirm("Tem certeza que deseja apagar este registro?");
+    if (!confirmDelete) return;
+
+    const token = localStorage.getItem("token");
+
+    try {
+      // 1. Apagar Visita (Usa o seu DeleteVisitService que já está pronto)
+      if (type === "MEETING" && contactId === selectedLead.visitId) {
+        await fetch(`${import.meta.env.VITE_API_URL}/auth/visits?id=${contactId}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        // Limpa a visita da tela na mesma hora
+        const newColumns = { ...columns };
+        for (const colId in newColumns) {
+          const leadIndex = newColumns[colId].leads.findIndex(l => l.id === selectedLead.id);
+          if (leadIndex !== -1) {
+            newColumns[colId].leads[leadIndex].visitId = null;
+            newColumns[colId].leads[leadIndex].visitDate = null;
+            break;
+          }
+        }
+        setColumns(newColumns);
+        updateTodayNotifications(newColumns);
+      }
+      // 2. Apagar Observação / Ligação (Vai usar a rota nova de Contacts)
+      else {
+        await fetch(`${import.meta.env.VITE_API_URL}/auth/contacts?id=${contactId}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      }
+
+      // Remove o item do histórico visualmente na hora
+      setLeadContacts(prev => prev.filter(c => c.id !== contactId));
+
+    } catch (err) {
+      console.error("Erro ao apagar log:", err);
+      alert("Erro ao tentar deletar o registro.");
     }
   }
 
@@ -2995,19 +3042,46 @@ export function Dashboard() {
                                             </Button>
                                         )}
 
+                                        {/* Botões de Ação no Histórico */}
                                         {contact.type === "NOTE" && editingContactId !== contact.id && (
+                                            <div className="flex items-center gap-1 ml-2">
+                                              <Button
+                                                  variant="ghost"
+                                                  size="icon"
+                                                  className="h-6 w-6 shrink-0 text-muted-foreground hover:text-amber-500"
+                                                  onClick={() => {
+                                                    setEditingContactId(contact.id);
+                                                    setEditingContactText(contact.description || "");
+                                                  }}
+                                                  title="Editar Observação"
+                                              >
+                                                <Pencil size={14} />
+                                              </Button>
+                                              <Button
+                                                  variant="ghost"
+                                                  size="icon"
+                                                  className="h-6 w-6 shrink-0 text-muted-foreground hover:text-red-500"
+                                                  onClick={() => handleDeleteInteraction(contact.id, contact.type)}
+                                                  title="Apagar Observação"
+                                              >
+                                                <Trash2 size={14} />
+                                              </Button>
+                                            </div>
+                                        )}
+
+                                        {contact.type === "MEETING" && contact.id === selectedLead.visitId && (
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
-                                                className="h-6 w-6 shrink-0 text-muted-foreground hover:text-amber-500"
-                                                onClick={() => {
-                                                  setEditingContactId(contact.id);
-                                                  setEditingContactText(contact.description || "");
-                                                }}
+                                                className="h-6 w-6 shrink-0 text-muted-foreground hover:text-red-500 ml-2"
+                                                onClick={() => handleDeleteInteraction(contact.id, contact.type)}
+                                                title="Cancelar/Apagar Visita"
                                             >
-                                              <Pencil size={14} />
+                                              <Trash2 size={14} />
                                             </Button>
                                         )}
+
+
                                       </div>
 
                                       {isEmail ? (

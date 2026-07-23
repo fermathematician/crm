@@ -29,6 +29,7 @@ import { UpdateVisitController } from "../controllers/UpdateVisitController.js";
 import { UpdateNotificationController } from "../controllers/UpdateNotificationController.js";
 import { DeleteVisitController } from "../controllers/DeleteVisitController.js";
 import { DeleteNotificationController } from "../controllers/DeleteNotificationController.js";
+import { DeleteContactController } from "../controllers/DeleteContactController.js";
 import { prismaClient } from "../../prisma/index.js";
 
 const router = Router();
@@ -60,6 +61,7 @@ const updateVisitController = new UpdateVisitController();
 const updateNotificationController = new UpdateNotificationController();
 const deleteVisitController = new DeleteVisitController();
 const deleteNotificationController = new DeleteNotificationController();
+const deleteContactController = new DeleteContactController();
 
 router.get("/me", ensureAuthenticated, detailUserController.handle);
 router.get("/leads", ensureAuthenticated, listLeadsController.handle);
@@ -173,6 +175,8 @@ router.delete(
   ensureAuthenticated,
   deleteNotificationController.handle,
 );
+
+router.delete("/contacts", ensureAuthenticated, deleteContactController.handle);
 
 router.patch(
   "/users/:id/role",
