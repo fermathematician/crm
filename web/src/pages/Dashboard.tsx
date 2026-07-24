@@ -1125,13 +1125,18 @@ export function Dashboard() {
     stageName: string,
     page: number,
     batchId: string = "all",
-    search: string = ""
+    search: string = "",
+    tag: string = "todas"
   ) {
     const token = localStorage.getItem("token");
     if (!token) return [];
 
     try {
       let url = `${import.meta.env.VITE_API_URL}/auth/leads?stage=${stageName}&limit=50&page=${page}`;
+
+      if (tag != "todas") {
+        url +=  `&tag=${encodeURIComponent(tag)}`;
+      }
 
       if (search.trim()) {
         url += `&search=${encodeURIComponent(search.trim())}`;
@@ -1209,6 +1214,37 @@ export function Dashboard() {
       console.error(`Erro ao buscar leads da coluna ${columnId}:`, error);
       return [];
     }
+  }
+
+  // 🚀 Dispara a busca no servidor filtrando pela etiqueta selecionada
+  async function handleTagFilterChange(colId: string, newTag: LeadTag | "todas") {
+    setSelectedTags((prev) => ({ ...prev, [colId]: newTag }));
+
+    const stageName = reverseStageMap[colId];
+    if (!stageName) return;
+
+    setIsLoadingColumn((prev) => ({ ...prev, [colId]: true }));
+    setColumnPages((prev) => ({ ...prev, [colId]: 1 }));
+
+    // Busca da API já filtrado por etiqueta
+    const searchResults = await fetchColumnLeads(
+        colId,
+        stageName,
+        1,
+        selectedBatchId,
+        columnSearch[colId],
+        newTag
+    );
+
+    setColumns((prev) => ({
+      ...prev,
+      [colId]: {
+        ...prev[colId],
+        leads: searchResults,
+      },
+    }));
+
+    setIsLoadingColumn((prev) => ({ ...prev, [colId]: false }));
   }
 
   //load initial bord
@@ -1323,11 +1359,15 @@ export function Dashboard() {
 
     if (!stageName) return;
 
+    const currentTag = selectedTags[colId];
+
     const newLeads = await fetchColumnLeads(
       colId,
       stageName,
       nextPage,
-      selectedBatchId, columnSearch[colId]
+      selectedBatchId,
+      columnSearch[colId],
+      currentTag
     );
 
     if (newLeads.length > 0) {
@@ -2184,44 +2224,43 @@ export function Dashboard() {
           </div>
 
           {/*Filtro de colunas*/}
+
+          {/* Filtro de colunas */}
           {!isHorizontal && (
-            <div className="px-2 pb-2 flex flex-wrap gap-1 h-[30px]">
-              <button
-                onClick={() =>
-                  setSelectedTags((prev) => ({ ...prev, [colId]: "todas" }))
-                }
-                className={`text-[7px] px-1 py-0.5 rounded border font-bold transition-all ${
-                  selectedTags[colId] === "todas"
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-background/50 text-muted-foreground border-border hover:bg-background"
-                }`}
-              >
-                TODAS
-              </button>
-              {columnAllowedTags[colId]?.map((tag) => (
-                  <button
-                      key={tag}
-                      onClick={() =>
-                          setSelectedTags((prev) => ({ ...prev, [colId]: tag }))
-                      }
-                      className={`text-[7px] px-1 py-0.5 rounded border font-bold transition-all uppercase flex items-center justify-center ${
-                          selectedTags[colId] === tag
-                              ? `${tagColors[tag]} text-white border-transparent shadow-sm`
-                              : "bg-background/50 text-muted-foreground border-border hover:bg-background"
-                      }`}
-                      title={tag} // Exibe o nome completo ao passar o mouse por cima
-                  >
-                    {tag === "sem resposta" ? (
-                        "SEM RESP"
-                    ) : tag === "geladeira" ? (
-                        <Snowflake size={10} />
-                    ) : (
-                        tag
-                    )}
-                  </button>
-              ))}
-            </div>
+              <div className="px-2 pb-2 flex flex-wrap gap-1 h-[30px]">
+                <button
+                    onClick={() => handleTagFilterChange(colId, "todas")}
+                    className={`text-[7px] px-1 py-0.5 rounded border font-bold transition-all ${
+                        selectedTags[colId] === "todas"
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-background/50 text-muted-foreground border-border hover:bg-background"
+                    }`}
+                >
+                  TODAS
+                </button>
+                {columnAllowedTags[colId]?.map((tag) => (
+                    <button
+                        key={tag}
+                        onClick={() => handleTagFilterChange(colId, tag)}
+                        className={`text-[7px] px-1 py-0.5 rounded border font-bold transition-all uppercase flex items-center justify-center ${
+                            selectedTags[colId] === tag
+                                ? `${tagColors[tag]} text-white border-transparent shadow-sm`
+                                : "bg-background/50 text-muted-foreground border-border hover:bg-background"
+                        }`}
+                        title={tag}
+                    >
+                      {tag === "sem resposta" ? (
+                          "SEM RESP"
+                      ) : tag === "geladeira" ? (
+                          <Snowflake size={10} />
+                      ) : (
+                          tag
+                      )}
+                    </button>
+                ))}
+              </div>
           )}
+
         </div>
 
         {!isHorizontal && (
