@@ -42,7 +42,7 @@ class CheckRepliesService {
       select: { createdAt: true },
     });
 
-    let gmailQuery = "to:me  -from:me is: unread";
+    let gmailQuery = "-from:me is: unread";
 
     if (oldestLead) {
       const dateLimit = new Date(oldestLead.createdAt);
@@ -98,8 +98,10 @@ class CheckRepliesService {
 
       if (!emailDoCliente) continue;
 
+      const realThreadId = msgData.data.threadId || msg.threadId || null;
+
       //veja que ele pega o primeiro pelo email
-      const lead = await prismaClient.lead.findFirst({
+      let lead = await prismaClient.lead.findFirst({
         where: {
           email: {
             contains: emailDoCliente,
@@ -107,6 +109,23 @@ class CheckRepliesService {
           },
         },
       });
+
+      //verifica se respondeu opr outro email
+      if (!lead && realThreadId) {
+        const previousContact = await prismaClient.contact.findFirst({
+          where: { threadId: realThreadId },
+          select: { leadId: true },
+        });
+
+        if (previousContact?.leadId) {
+          lead = await prismaClient.lead.findUnique({
+            where: { id: previousContact.leadId },
+          });
+          console.log(
+            `[🎯 THREAD MATCH] Lead ${lead?.companyName} localizado via Thread ID em vez de E-mail!`,
+          );
+        }
+      }
 
       console.log(
         `[🔎 ESPIÃO 2] Lead Encontrado no Banco? ${!!lead} | Estágio atual do funil: ${lead?.funnelStage || "N/A"}`,
@@ -154,6 +173,16 @@ class CheckRepliesService {
             didChageFunnel: false,
             messageId: realMessageId,
             threadId: realThreadId,
+          },
+        });
+
+        await prismaClient.lead.update({
+          where: { id: lead.id },
+          data: {
+            funnelStage: ["NOVO", "CONTATO"].includes(lead.funnelStage)
+              ? "CONTATO"
+              : lead.funnelStage,
+            tags: ["respondido"],
           },
         });
 
