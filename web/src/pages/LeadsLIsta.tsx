@@ -149,7 +149,7 @@ const allowedTagsByStage: Record<string, string[]> = {
   CADASTRO: ["promessa", "parcial", "completa"],
   FINALIZADO: ["aprovado", "recusado"],
   SEM_INTERESSE: ["sem interesse"],
-  DESCARTADO: ["fora de perfil", "inapto", "baixado"],
+  FORA_DE_PERFIL: ["fora de perfil", "inapto", "baixado"],
 };
 
 const defaultTagsByStage: Record<string, string> = {
@@ -159,7 +159,7 @@ const defaultTagsByStage: Record<string, string> = {
   CADASTRO: "promessa",
   FINALIZADO: "aprovado",
   SEM_INTERESSE: "sem interesse",
-  DESCARTADO: "fora de perfil",
+  FORA_DE_PERFIL: "fora de perfil",
 };
 
 const tagColors: Record<string, string> = {
