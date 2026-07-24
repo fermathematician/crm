@@ -37,6 +37,7 @@ class ListLeadsService {
           { companyName: { contains: search, mode: "insensitive" } },
           { cnpj: { contains: search } },
           { phone: { contains: search } },
+          { email: { contains: search } },
         ],
       });
     }
