@@ -56,6 +56,13 @@ class SendEmailService {
     threadId,
     inReplyTo,
   }: SendEmailRequest) {
+    console.log("🔍 [DEBUG EMAIL - INPUTS REQUISITADOS]:", {
+      leadId,
+      userId,
+      targetEmails,
+      threadId,
+      inReplyTo,
+    });
     const user = await prismaClient.user.findUnique({
       where: { id: userId },
     });
@@ -173,7 +180,10 @@ class SendEmailService {
 
       const auth = new google.auth.JWT({
         keyFile: keyFilePath,
-        scopes: ["https://www.googleapis.com/auth/gmail.send"],
+        scopes: [
+          "https://www.googleapis.com/auth/gmail.send",
+          "https://www.googleapis.com/auth/gmail.readonly",
+        ],
         subject: user.email,
       });
 
@@ -266,15 +276,18 @@ class SendEmailService {
         `Mime-Version: 1.0`,
       ];
 
-      if (inReplyTo) {
-        const formattedInReplyTo =
-          inReplyTo.startsWith("<") && inReplyTo.endsWith(">")
-            ? inReplyTo
-            : `<${inReplyTo}>`;
+      if (inReplyTo && inReplyTo.trim().length > 0) {
+        let formattedInReplyTo = inReplyTo.trim();
+        if (!formattedInReplyTo.startsWith("<")) {
+          formattedInReplyTo = `<${formattedInReplyTo}>`;
+        }
 
-        messageParts.push(`In-Reply-To: ${formattedInReplyTo}`);
-        messageParts.push(`References: ${formattedInReplyTo}`);
+        if (formattedInReplyTo.includes("@")) {
+          messageParts.push(`In-Reply-To: ${formattedInReplyTo}`);
+          messageParts.push(`References: ${formattedInReplyTo}`);
+        }
       }
+      console.log("🔍 [DEBUG EMAIL - CABEÇALHOS MONTADOS]:", messageParts);
       // Linha em branco obrigatória separando cabeçalhos do corpo HTML
       messageParts.push("");
       messageParts.push(`<div>${htmlTemplate}</div>${trackingPixel}`);
@@ -285,6 +298,11 @@ class SendEmailService {
         .replace(/\+/g, "-")
         .replace(/\//g, "_")
         .replace(/=+$/, "");
+
+      console.log(
+        "🔍 [DEBUG EMAIL - THREAD ID ENVIADO PRO GMAIL]:",
+        threadId || null,
+      );
 
       // 🚀 3. Passa o threadId no envio para o Gmail agrupar na mesma mensagem
       const response: any = await gmail.users.messages.send({
@@ -297,7 +315,7 @@ class SendEmailService {
 
       messageId = response.data?.id || "";
       const generatedThreadId = response.data?.threadId || "";
-      let realRfcMessageId = messageId;
+      let realRfcMessageId = customMessageId;
       try {
         if (messageId) {
           const sentMsg = await gmail.users.messages.get({
@@ -330,9 +348,9 @@ class SendEmailService {
           .catch(() => contact);
       }
     } catch (err: any) {
-      console.error("Falha no envio do email", err.message);
+      console.error("💥 [ERRO DETALHADO DO GMAIL]:", err.response?.data || err);
       throw new Error(
-        "Não foi possível enviar o email pelo servidor da Google",
+        `Falha ao enviar e-mail: ${err.response?.data?.error_description || err.response?.data?.error?.message || err.message}`,
       );
     }
 
