@@ -16,6 +16,7 @@ class CreateLeadController {
       financeiro,
       funnelStage,
       tags,
+      importBatchId,
     } = req.body;
 
     const ownerId = req.user_id;
@@ -36,6 +37,7 @@ class CreateLeadController {
       funnelStage,
       tags,
       ownerId,
+      importBatchId,
     });
 
     return res.json(lead);

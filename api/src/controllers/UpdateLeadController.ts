@@ -20,7 +20,6 @@ class UpdateLeadController {
       unsubscribed,
       bounced,
       importBatchId,
-      ImportBatchId,
       visitDate,
     } = req.body;
 
@@ -43,7 +42,6 @@ class UpdateLeadController {
       unsubscribed,
       bounced,
       importBatchId,
-      ImportBatchId,
       visitDate,
     });
 

@@ -23,6 +23,7 @@ interface LeadRequest {
   ownerId: string;
   unsubscribed?: boolean;
   bounced?: boolean;
+  importBatchId?: string | null; // 🚀 Adicionado
 }
 
 class CreateLeadService {
@@ -42,6 +43,7 @@ class CreateLeadService {
     ownerId,
     unsubscribed = false,
     bounced = false,
+    importBatchId,
   }: LeadRequest) {
     if (!companyName) {
       throw new Error("O nome da empresa (Razão Social) é obrigatório.");
@@ -82,6 +84,7 @@ class CreateLeadService {
         ownerId,
         unsubscribed: unsubscribed || false,
         bounced: bounced || false,
+        importBatchId: importBatchId || null,
       },
     });
 

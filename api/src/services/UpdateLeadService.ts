@@ -22,8 +22,8 @@ interface UpdateLeadRequest {
   tags?: string[];
   unsubscribed?: boolean;
   bounced?: boolean;
+  visitDate?: Date | null;
   importBatchId?: string | null; // 🚀 Adicionado
-  ImportBatchId?: string | null;
 }
 
 class UpdateLeadService {
@@ -44,7 +44,6 @@ class UpdateLeadService {
     unsubscribed,
     bounced,
     importBatchId,
-    ImportBatchId,
   }: UpdateLeadRequest) {
     if (!lead_id) {
       throw new Error("ID do Lead não fornecido.");
@@ -67,11 +66,7 @@ class UpdateLeadService {
     if (unsubscribed !== undefined) dataToUpdate.unsubscribed = unsubscribed;
     if (bounced !== undefined) dataToUpdate.bounced = bounced;
 
-    const batchIdToSave =
-      importBatchId !== undefined ? importBatchId : ImportBatchId;
-    if (batchIdToSave !== undefined) {
-      dataToUpdate.ImportBatchId = batchIdToSave;
-    }
+    if (importBatchId !== undefined) dataToUpdate.importBatchId = importBatchId;
 
     const lead = await prismaClient.lead.update({
       where: {

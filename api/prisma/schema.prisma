@@ -114,8 +114,8 @@ model Lead {
   ownerUser User?   @relation("LeadOwner", fields: [ownerId], references: [id])
 
   // Origem (Pode ser nulo se foi cadastrado manualmente)
-  ImportBatchId String?
-  ImportBatch   ImportBatch? @relation(fields: [ImportBatchId], references: [id])
+  importBatchId String?      @map("ImportBatchId") //o burro botou com "I" antes e agor anão pode quebrar
+  ImportBatch   ImportBatch? @relation(fields: [importBatchId], references: [id])
 
   // Histórico
   contacts Contact[]
