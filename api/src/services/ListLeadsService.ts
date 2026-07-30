@@ -48,9 +48,9 @@ class ListLeadsService {
 
     //filtro listas
     if (isManual === "true") {
-      andCondition.push({ ImportBatchId: null });
+      andCondition.push({ importBatchId: null });
     } else if (importBatchId && importBatchId != "all") {
-      andCondition.push({ ImportBatchId: importBatchId });
+      andCondition.push({ importBatchId: importBatchId });
     }
 
     if (globalFilter === "overdue") {
@@ -64,7 +64,7 @@ class ListLeadsService {
       });
 
       andCondition.push({
-        contacs: {
+        contacts: {
           none: {
             type: { not: "SYSTEM_CHANGE" },
             date: { gte: thirtyDaysAgo },
