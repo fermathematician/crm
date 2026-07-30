@@ -114,6 +114,13 @@ class SendEmailService {
       throw new Error("Este usuário não tem nome!");
     }
 
+    const cleanUserName = user.name
+      .replace(/@.*$/g, "")
+      .replace(/\s*\.com(\.br)?/gi, "")
+      .trim();
+
+    const firstname = cleanUserName.split(" ")[0] || cleanUserName;
+
     const financeiro = lead.financeiro;
 
     const processedSubject = subject.replace(
@@ -138,7 +145,6 @@ class SendEmailService {
         .replace(/Olá,?\s*{{leadName}}!?/gi, cumprimento)
         .replace(/{{leadName}}/g, lead.companyName);
     }
-    const firstname = user.name.split(" ")[0];
     const oneDayText = getNextBusinessDayText(1); // Ex: "Quarta, dia 22/07"
     const twoDaysText = getNextBusinessDayText(2);
     processedBody = processedBody
@@ -212,7 +218,7 @@ class SendEmailService {
               
               <!-- COLUNA DIREITA: Nome e Contatos -->
               <td valign="top">
-                <div style="font-size: 18px; font-weight: bold; color: #1a1a1a; margin-bottom: 2px;">${user.name}</div>
+                <div style="font-size: 18px; font-weight: bold; color: #1a1a1a; margin-bottom: 2px;">${firstname}</div>
                 <div style="font-size: 14px; font-style: italic; color: #666; margin-bottom: 8px;">SDR</div>
                 
                 <!-- Linha Dourada Divisória -->
