@@ -292,14 +292,22 @@ export function LeadsList() {
 
       const data = await response.json();
 
-      // Atualizando os estados com o novo formato de resposta do backend
       if (data.leads) {
         setLeads(data.leads);
-        setTotalPages(data.totalPages || 1);
-        setTotalLeads(data.totalCount || 0);
+
+        // 🚀 CORREÇÃO: Pega o total de leads e calcula as páginas dinamicamente
+        const total = data.totalCount ?? data.total ?? data.count ?? (data.leads.length || 0);
+        const limitPerPage = 50;
+        const calculatedTotalPages = Math.max(1, Math.ceil(total / limitPerPage));
+
+        // Se o backend enviar totalPages válido, usa ele. Se não, usa o nosso cálculo!
+        setTotalPages(data.totalPages && data.totalPages > 0 ? data.totalPages : calculatedTotalPages);
+        setTotalLeads(total);
       } else {
-        // Fallback caso o backend ainda retorne um Array direto (durante a transição)
-        setLeads(data.length ? data : []);
+        // Fallback caso o backend retorne um Array direto
+        setLeads(Array.isArray(data) ? data : []);
+        setTotalPages(1);
+        setTotalLeads(Array.isArray(data) ? data.length : 0);
       }
     } catch (error) {
       console.error("Erro ao buscar leads:", error);

@@ -132,7 +132,7 @@ class ListLeadsService {
     return {
       leads,
       totalCount,
-      totalPages: Math.ceil(totalCount / limit),
+      totalPages: Math.ceil(totalCount / limit) || 1,
       currentPage: page,
     };
   }
