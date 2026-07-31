@@ -404,7 +404,7 @@ function getActivityStatus(contacts?: ApiContact[]) {
 
   if (validContatcs.length === 0) {
     return {
-      text: "SEM AT.",
+      text: "-",
       color: "bg-slate-100 text-slate-500 border-slate-200",
     };
   }
@@ -845,14 +845,27 @@ export function Dashboard() {
     const token = localStorage.getItem("token");
 
     try {
-      // 1. Apagar Visita (Usa o seu DeleteVisitService que já está pronto)
-      if (type === "MEETING" && contactId === selectedLead.visitId) {
-        await fetch(`${import.meta.env.VITE_API_URL}/auth/visits?id=${contactId}`, {
+      // 1️⃣ Define a rota primária com base no tipo
+      let primaryEndpoint = "/auth/contacts";
+      if (type === "MEETING") primaryEndpoint = "/auth/visits";
+      if (type === "REMINDER") primaryEndpoint = "/auth/notifications";
+
+      // 2️⃣ Tenta deletar no endpoint principal
+      let res = await fetch(`${import.meta.env.VITE_API_URL}${primaryEndpoint}?id=${contactId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      // 3️⃣ Se falhar e não era o endpoint de contatos, faz o Fallback universal no /auth/contacts
+      if (!res.ok && primaryEndpoint !== "/auth/contacts") {
+        await fetch(`${import.meta.env.VITE_API_URL}/auth/contacts?id=${contactId}`, {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
         });
+      }
 
-        // Limpa a visita da tela na mesma hora
+      // 4️⃣ Se for a visita ativa do card, limpa o badge do card
+      if (type === "MEETING" && contactId === selectedLead.visitId) {
         const newColumns = { ...columns };
         for (const colId in newColumns) {
           const leadIndex = newColumns[colId].leads.findIndex(l => l.id === selectedLead.id);
@@ -866,48 +879,25 @@ export function Dashboard() {
         updateTodayNotifications(newColumns);
       }
 
-      else if (type === "REMINDER") {
-        await fetch(`${import.meta.env.VITE_API_URL}/auth/notifications?id=${contactId}`, {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      }
-      // 2. Apagar Observação / Ligação / Contato
-      else {
-        await fetch(`${import.meta.env.VITE_API_URL}/auth/contacts?id=${contactId}`, {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        // 🚀 AQUI ESTAVA O SEGREDO: Remove o contato da lista principal da COLUNA!
-        const newColumns = { ...columns };
-        const colId = getLeadColumnId(selectedLead.id);
-
-        if (colId) {
-          const leadIndex = newColumns[colId].leads.findIndex(l => l.id === selectedLead.id);
-          if (leadIndex !== -1) {
-            // Filtra o contato removido do lead dentro da coluna
-            const updatedContacts = (newColumns[colId].leads[leadIndex].contacts || []).filter(
-                c => c.id !== contactId
-            );
-
-            newColumns[colId].leads[leadIndex].contacts = updatedContacts;
-
-            // Atualiza também o selectedLead para refletir a mudança
-            setSelectedLead({
-              ...selectedLead,
-              contacts: updatedContacts
-            });
-          }
-        }
-        setColumns(newColumns);
-      }
-
-      // Remove o item do modal atual na mesma hora
+      // 🔄 Atualização imediata das listas no Front-end
       setLeadContacts(prev => prev.filter(c => c.id !== contactId));
 
+      const newColumns = { ...columns };
+      const colId = getLeadColumnId(selectedLead.id);
+      if (colId) {
+        const leadIndex = newColumns[colId].leads.findIndex(l => l.id === selectedLead.id);
+        if (leadIndex !== -1) {
+          const updatedContacts = (newColumns[colId].leads[leadIndex].contacts || []).filter(
+              c => c.id !== contactId
+          );
+          newColumns[colId].leads[leadIndex].contacts = updatedContacts;
+          setSelectedLead({ ...selectedLead, contacts: updatedContacts });
+        }
+      }
+      setColumns(newColumns);
+
     } catch (err) {
-      console.error("Erro ao apagar log:", err);
+      console.error("Erro ao apagar registro:", err);
       alert("Erro ao tentar deletar o registro.");
     }
   }
@@ -3202,6 +3192,21 @@ export function Dashboard() {
                                                   className="h-6 w-6 shrink-0 text-muted-foreground hover:text-red-500"
                                                   onClick={() => handleDeleteInteraction(contact.id, contact.type)}
                                                   title="Apagar Observação"
+                                              >
+                                                <Trash2 size={14} />
+                                              </Button>
+                                            </div>
+                                        )}
+
+                                        {/* 🚀 BOTÃO PARA APAGAR LEMBRETE (REMINDER) */}
+                                        {contact.type === "REMINDER" && (
+                                            <div className="flex items-center gap-1 ml-2">
+                                              <Button
+                                                  variant="ghost"
+                                                  size="icon"
+                                                  className="h-6 w-6 shrink-0 text-muted-foreground hover:text-red-500"
+                                                  onClick={() => handleDeleteInteraction(contact.id, contact.type)}
+                                                  title="Apagar Lembrete"
                                               >
                                                 <Trash2 size={14} />
                                               </Button>
