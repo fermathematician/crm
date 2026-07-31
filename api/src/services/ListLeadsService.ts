@@ -113,6 +113,7 @@ class ListLeadsService {
               date: "desc",
             },
           },
+          notifications: true,
           ownerUser: {
             select: {
               name: true,

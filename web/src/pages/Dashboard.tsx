@@ -101,6 +101,8 @@ interface ApiContact {
   userId?: string;
   messageId?: string;
   threadId?: string;
+  isCompleted? : boolean;
+  isOcult? : boolean;
 }
 
 interface ApiLead {
@@ -621,6 +623,8 @@ export function Dashboard() {
           lead.contacts.forEach((contact) => {
             if (
               contact.type === "REMINDER" &&
+              !contact.isCompleted &&
+              !contact.isOcult &&
               contact.date.startsWith(todayStr)
             ) {
               todayNotifications.push({
@@ -860,6 +864,13 @@ export function Dashboard() {
         }
         setColumns(newColumns);
         updateTodayNotifications(newColumns);
+      }
+
+      else if (type === "REMINDER") {
+        await fetch(`${import.meta.env.VITE_API_URL}/auth/notifications?id=${contactId}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
       }
       // 2. Apagar Observação / Ligação / Contato
       else {
@@ -1178,6 +1189,35 @@ export function Dashboard() {
               ? "a qualificar"
               : (apiLead.tags[0] as LeadTag) || columnDefaultTags[columnId];
         const visitObj = apiLead.visits && apiLead.visits.length > 0 ? apiLead.visits[0] : null;
+
+        const mappedContacts = apiLead.contacts
+            ? apiLead.contacts.map((c: any) => ({
+              id: c.id,
+              type: c.type,
+              date: c.date ? c.date.toString() : "",
+              description: c.description || c.observation || "",
+              messageId: c.messageId || null,
+              threadId: c.threadId || null,
+            }))
+            : [];
+
+        // 2️⃣ MISTURA as notificações vindas do banco na mesma lista!
+        if (apiLead.notifications) {
+          apiLead.notifications.forEach((n: any) => {
+            mappedContacts.push({
+              id: n.id,
+              type: "REMINDER",
+              date: n.notifyDate ? n.notifyDate.toString() : "",
+              description: n.message || "",
+              isCompleted: n.isCompleted,
+              isOcult: n.isOcult,
+            });
+          });
+        }
+
+        // 3️⃣ Ordena tudo por data (do mais recente para o mais antigo)
+        mappedContacts.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
         return {
           id: apiLead.id,
           name: apiLead.companyName,
@@ -1195,16 +1235,7 @@ export function Dashboard() {
           state: apiLead.state,
           cnae: apiLead.cnae,
           ImportBatch: apiLead.ImportBatch,
-          contacts: apiLead.contacts
-            ? apiLead.contacts.map((c: any) => ({
-                id: c.id,
-                type: c.type,
-                date: c.date ? c.date.toString() : "",
-                description: c.description || c.observation || "",
-                messageId: c.messageId || null,
-                threadId: c.threadId || null,
-              }))
-            : [],
+          contacts: mappedContacts,
           unsubscribed: apiLead.unsubscribed,
           bounced: apiLead.bounced,
           ownerUser: apiLead.ownerUser?.name || "livre",
