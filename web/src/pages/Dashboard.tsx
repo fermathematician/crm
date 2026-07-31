@@ -1772,25 +1772,6 @@ export function Dashboard() {
           oldLead.contacts = [newLocalContact, ...(oldLead.contacts || [])];
         }
 
-        if (
-          formattedDateForBackend &&
-          oldLead.visitDate != formattedDateForBackend
-        ) {
-          const timeToDisplay =
-            editingVisitTime && editingVisitTime.length === 5
-              ? editingVisitTime
-              : "00:00";
-          const description = `Visita agendada para: ${editingVisitDate} às ${timeToDisplay || "00:00"}`;
-          createHistoryLog(selectedLead.id, "MEETING", description, false);
-          const newLocalContact: ApiContact = {
-            id: (Date.now() + 1).toString(),
-            type: "MEETING",
-            date: getTodayString(),
-            description,
-          };
-          oldLead.contacts = [newLocalContact, ...(oldLead.contacts || [])];
-        }
-
         newColumns[colId].leads[leadIndex] = {
           ...oldLead,
           tag: finalTag,
