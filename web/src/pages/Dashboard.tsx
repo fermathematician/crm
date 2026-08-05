@@ -37,6 +37,7 @@ import {
   Snowflake,
   X,
   Trash2,
+  Lock,
 } from "lucide-react";
 import { useTheme } from "../hooks/useTheme";
 
@@ -76,6 +77,7 @@ type LeadTag =
   | "quente"
   | "visita"
   | "a qualificar"
+  | "pesquisado"
   | "sem resposta"
   | "respondido"
   | "geladeira"
@@ -150,6 +152,7 @@ const tagColors: Record<LeadTag, string> = {
   novo: "bg-slate-500 border-slate-600",
   bloqueado: "bg-red-200 border-red-300",
   "a qualificar": "bg-zinc-300 border-zinc-400",
+  pesquisado: "bg-zinc-600 border-zinc-700",
   "sem resposta": "bg-gray-400 border-gray-500",
   respondido: "bg-yellow-400 border-yellow-600",
   geladeira: "bg-cyan-300 border-cyan-400",
@@ -213,7 +216,7 @@ const columnDefaultTags: Record<string, LeadTag> = {
 };
 
 const columnAllowedTags: Record<string, LeadTag[]> = {
-  novos: ["novo", "a qualificar", "bloqueado"],
+  novos: ["novo", "a qualificar","bloqueado", "pesquisado"],
   contato: ["sem resposta", "aberto", "respondido", "geladeira"],
   negociacao: ["frio", "morno", "quente", "visita"],
   cadastro: ["promessa", "parcial", "completa"],
@@ -1522,7 +1525,7 @@ export function Dashboard() {
     const template = templates.find((t) => t.id === templateId);
     if (template && selectedLead) {
       //converte html em texto
-      let cleanBody = template.body.replace(/<br\s*\/?>/gi, "\n");
+      const cleanBody = template.body.replace(/<br\s*\/?>/gi, "\n");
 
       const clientName = selectedLead.financeiro || "Financeiro";
       const rawUserName = userProfile.name || "Consultor";
@@ -2160,8 +2163,12 @@ export function Dashboard() {
                     <span title="Geladeira" className="flex items-center justify-center">
                       <Snowflake size={11} className="text-cyan-400" />
                     </span>
+                ) : lead.tag === "pesquisado" ? ( // 🚀 Ícone de lupa ultra compacto
+                  <span title="Pesquisado" className="flex items-center justify-center">
+                  <Search size={11} className="text-sky-300" />
+                  </span>
                 ) : lead.tag === "sem resposta" ? (
-                    "SEM RESPOSTA" // 🚀 Texto encurtado
+                    "SEM RESP" // 🚀 Texto encurtado
                 ) : (
                     lead.tag
                 )}
@@ -2255,6 +2262,8 @@ export function Dashboard() {
                           "SEM RESP"
                       ) : tag === "geladeira" ? (
                           <Snowflake size={10} />
+                      ) : tag === "pesquisado" ? (
+                          <Search size={10} />
                       ) : (
                           tag
                       )}
