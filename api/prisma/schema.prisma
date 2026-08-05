@@ -177,6 +177,7 @@ model EmailTemplate {
 enum Role {
   ADMIN
   SALES
+  QUALIFICADOR
 }
 
 enum FunnelStage {

@@ -1024,7 +1024,8 @@ export function Dashboard() {
               if (currentColId && newBoard[currentColId]) {
                 const leadIndex = newBoard[currentColId].leads.findIndex((l) => l.id === selectedLead.id);
                 if (leadIndex !== -1) {
-                  newBoard[currentColId].leads[leadIndex].ownerUser = userProfile.name;
+                  if (userProfile.role !== "QUALIFICADOR") newBoard[currentColId].leads[leadIndex].ownerUser = userProfile.name;
+                  else newBoard[currentColId].leads[leadIndex].ownerUser = "livre";
                 }
               }
             }
@@ -1110,6 +1111,7 @@ export function Dashboard() {
     data: { funnelStage?: string; tags?: string[]; visitDate?: string | null; unsubscribed?: boolean; bounced?: boolean},
   ) {
     const token = localStorage.getItem("token");
+    const isQualificador = userProfile.role === "QUALIFICADOR";
     try {
       await fetch(`${import.meta.env.VITE_API_URL}/auth/leads/update`, {
         method: "PUT",
@@ -1117,7 +1119,7 @@ export function Dashboard() {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ lead_id: leadId, ...data }),
+        body: JSON.stringify({ lead_id: leadId, ...data, ...(isQualificador && {ownerId: null}) }),
       });
     } catch (err) {
       console.error(err);
@@ -1176,6 +1178,7 @@ export function Dashboard() {
       }));
 
       return leadsArray.map((apiLead: any) => {
+        const isQualificador = apiLead.ownerUser?.role === "QUALIFICADOR";
         const tag = apiLead.unsubscribed
             ?"bloqueado"
             : apiLead.bounced
@@ -1231,7 +1234,7 @@ export function Dashboard() {
           contacts: mappedContacts,
           unsubscribed: apiLead.unsubscribed,
           bounced: apiLead.bounced,
-          ownerUser: apiLead.ownerUser?.name || "livre",
+          ownerUser: (apiLead.ownerUser?.name && !isQualificador) ? apiLead.ownerUser?.name : "livre",
         };
       });
     } catch (error) {
@@ -2169,6 +2172,8 @@ export function Dashboard() {
                   </span>
                 ) : lead.tag === "sem resposta" ? (
                     "SEM RESP" // 🚀 Texto encurtado
+                ) : lead.tag === "sem interesse" ? (
+                    "SEM INT"
                 ) : (
                     lead.tag
                 )}
