@@ -1689,7 +1689,7 @@ export function Dashboard() {
       formattedDateForBackend = `${year}-${month}-${day}T${time}:00`;
     }
 
-    const finalTag = formattedDateForBackend ? "visita" : editingTag;
+    const finalTag = (formattedDateForBackend && showVisitDate) ? "visita" : editingTag;
     if (finalTag === "visita" && !formattedDateForBackend) {
       setDateError("Informe a data para agendar a visita");
       return;
