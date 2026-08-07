@@ -220,7 +220,7 @@ export function LeadsList() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [importTag, setImportTag] = useState("");
-  const [importManualStatus, setImportManualStatus] = useState<"novo" | "a qualificar">("novo");
+  const [importManualStatus, setImportManualStatus] = useState<"novo" | "a qualificar" | "pesquisado">("novo");
 
   const [isQuickModalOpen, setIsQuickModalOpen] = useState(false);
   const [selectedQuickLead, setSelectedQuickLead] = useState<ApiLead | null>(null);
@@ -907,7 +907,15 @@ export function LeadsList() {
                             onClick={() => setImportManualStatus("a qualificar")}
                             className={importManualStatus === "a qualificar" ? "bg-zinc-400 hover:bg-zinc-500 text-white" : ""}
                         >
-                          A Qualificar (Bounced)
+                          A Qualificar
+                        </Button>
+                        <Button
+                            type="button"
+                            variant={importManualStatus === "pesquisado" ? "default" : "outline"}
+                            onClick={() => setImportManualStatus("pesquisado")}
+                            className={importManualStatus === "pesquisado" ? "bg-zinc-600 hover:bg-zinc-700 text-white" : ""}
+                        >
+                          Pesquisado
                         </Button>
                       </div>
                     </div>

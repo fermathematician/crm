@@ -108,7 +108,7 @@ class ImportLeadsService {
             comercial: normalizeValue(row["COMERCIAL"]),
             financeiro: normalizeValue(row["FINANCEIRO"]),
             ownerId: null,
-            ImportBatchId: batch.id,
+            importBatchId: batch.id,
             funnelStage: FunnelStage.NOVO,
             tags: [manualStatus],
             unsubscribed: manualStatus === "bloqueado",
