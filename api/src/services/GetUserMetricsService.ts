@@ -83,24 +83,13 @@ class GetUserMetricsService {
     });
     const uniqueLeadsContacted = uniqueLeadsGroup.length;
 
-    let totalVisits = 0;
-
-    if (visitMode === "marcada") {
-      totalVisits = await prismaClient.contact.count({
-        where: {
-          userId: targetUserId,
-          type: "MEETING",
-          date: { gte: start, lte: end },
-        },
-      });
-    } else {
-      totalVisits = await prismaClient.lead.count({
-        where: {
-          ownerId: targetUserId,
-          visitDate: { gte: start, lte: end },
-        },
-      });
-    }
+    const totalVisits = await prismaClient.visit.count({
+      where: {
+        userId: targetUserId,
+        visitDate: { gte: start, lte: end },
+        ...(visitMode === "ocorrida" ? { isCompleted: true } : {}),
+      },
+    });
 
     const allUserLeads = await prismaClient.lead.findMany({
       where: { ownerId: targetUserId },
