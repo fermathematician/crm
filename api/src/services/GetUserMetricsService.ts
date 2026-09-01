@@ -11,22 +11,22 @@ interface GetUserMetricsRequest {
 
 class GetUserMetricsService {
   async execute({
-    adminId,
-    targetUserId,
-    startDate,
-    endDate,
-    visitMode,
-  }: GetUserMetricsRequest) {
+                  adminId,
+                  targetUserId,
+                  startDate,
+                  endDate,
+                  visitMode,
+                }: GetUserMetricsRequest) {
     const admin = await prismaClient.user.findUnique({
-      where: { id: adminId },
+      where: {id: adminId},
     });
     if (admin?.role !== "ADMIN" && adminId != targetUserId) {
       throw new Error("Acesso negado.");
     }
 
     const user = await prismaClient.user.findUnique({
-      where: { id: targetUserId },
-      select: { name: true, email: true, role: true },
+      where: {id: targetUserId},
+      select: {name: true, email: true, role: true},
     });
 
     if (!user) {
@@ -49,7 +49,7 @@ class GetUserMetricsService {
         type: {
           in: validContactTypes,
         },
-        date: { gte: start, lte: end },
+        date: {gte: start, lte: end},
       },
     });
 
@@ -57,7 +57,7 @@ class GetUserMetricsService {
       where: {
         userId: targetUserId,
         type: "EMAIL",
-        date: { gte: start, lte: end },
+        date: {gte: start, lte: end},
       },
     });
 
@@ -68,7 +68,7 @@ class GetUserMetricsService {
         type: {
           in: ["CALL", "WHATSAPP"] as ContactType[],
         },
-        date: { gte: start, lte: end },
+        date: {gte: start, lte: end},
       },
     });
 
@@ -77,7 +77,7 @@ class GetUserMetricsService {
       where: {
         userId: targetUserId,
         type: "NOTE",
-        date: { gte: start, lte: end },
+        date: {gte: start, lte: end},
       },
     });
 
@@ -88,7 +88,7 @@ class GetUserMetricsService {
         type: {
           in: validContactTypes,
         },
-        date: { gte: start, lte: end },
+        date: {gte: start, lte: end},
       },
     });
     const uniqueLeadsContacted = uniqueLeadsGroup.length;
@@ -96,14 +96,14 @@ class GetUserMetricsService {
     const totalVisits = await prismaClient.visit.count({
       where: {
         userId: targetUserId,
-        visitDate: { gte: start, lte: end },
-        ...(visitMode === "ocorrida" ? { isCompleted: true } : {}),
+        visitDate: {gte: start, lte: end},
+        ...(visitMode === "ocorrida" ? {isCompleted: true} : {}),
       },
     });
 
     const allUserLeads = await prismaClient.lead.findMany({
-      where: { ownerId: targetUserId },
-      select: { id: true, companyName: true, funnelStage: true, tags: true },
+      where: {ownerId: targetUserId},
+      select: {id: true, companyName: true, funnelStage: true, tags: true},
     });
 
     const leadStatsMap = new Map<string, any>();
@@ -117,13 +117,15 @@ class GetUserMetricsService {
         timesContacted: 0,
         funnelChanges: 0,
         statusChanges: 0,
+        qualifications: 0,
       });
     });
 
+    // Busca os contatos do período no banco de dados
     const contactsInPeriod = await prismaClient.contact.findMany({
       where: {
         userId: targetUserId,
-        date: { gte: start, lte: end },
+        date: {gte: start, lte: end},
       },
       include: {
         lead: {
@@ -140,6 +142,10 @@ class GetUserMetricsService {
       },
     });
 
+// 1. Declara a variável ANTES do loop (no escopo da função principal)
+    let totalQualifications = 0;
+
+    // 2. Percorre os contatos do período uma única vez
     contactsInPeriod.forEach((contact) => {
       const leadId = contact.leadId;
 
@@ -152,6 +158,7 @@ class GetUserMetricsService {
           timesContacted: 0,
           funnelChanges: 0,
           statusChanges: 0,
+          qualifications: 0,
         });
       }
 
@@ -167,14 +174,22 @@ class GetUserMetricsService {
 
       if (contact.type === "SYSTEM_CHANGE") {
         stats.statusChanges += 1;
+
+        // 🚀 Contabiliza a qualificação se alterou de 'a qualificar' para 'novo'
+        const desc = (contact.description || "").toLowerCase();
+        if (desc.includes("a qualificar") && desc.includes("novo")) {
+          stats.qualifications = (stats.qualifications || 0) + 1;
+          totalQualifications += 1;
+        }
       }
     });
 
     const analyticalTable = Array.from(leadStatsMap.values()).filter(
-      (lead) =>
-        lead.timesContacted > 0 ||
-        lead.funnelChanges > 0 ||
-        lead.statusChanges > 0,
+        (lead) =>
+            lead.timesContacted > 0 ||
+            lead.funnelChanges > 0 ||
+            lead.statusChanges > 0 ||
+            lead.qualifications > 0,
     );
 
     // Agrupamento por Etapa de Funil e Status (apenas dos leads ativos no período)
@@ -199,6 +214,7 @@ class GetUserMetricsService {
         totalNotes,
         uniqueLeadsContacted,
         totalVisits,
+        totalQualifications,
       },
       funnelSummary,
       statusSummary,
