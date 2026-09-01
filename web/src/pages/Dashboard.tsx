@@ -2032,8 +2032,8 @@ export function Dashboard() {
               setReminderDate(displayDateStr);
               setActiveTab("reminder");
             } else {
-              setNoteDate(displayDateStr);
-              setActiveTab("note");
+              setObservationDate(displayDateStr);
+              setActiveTab("observation");
             }
           }}
           className="h-16 border border-border/50 p-1 flex flex-col gap-1 bg-card hover:bg-accent/20 cursor-pointer transition-colors relative group"
@@ -3409,6 +3409,40 @@ export function Dashboard() {
                           >
                             <Mail size={16} />
                             {isSendingEmail ? "Enviando..." : "Enviar E-mail"}
+                          </Button>
+                        </div>
+                      </TabsContent>
+
+                      <TabsContent value="note" className="m-0 space-y-4">
+                        <div className="space-y-2">
+                          <Label>Data da Ligação</Label>
+                          <div className="relative w-1/3">
+                            <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+                            <Input
+                                type="text"
+                                placeholder="DD/MM/AAAA"
+                                className="pl-9"
+                                value={noteDate}
+                                onChange={(e) => setNoteDate(maskDate(e.target.value))}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Detalhes / Resumo da Ligação</Label>
+                          <Textarea
+                              className="min-h-[150px] resize-none"
+                              placeholder="Ex: Falei com o financeiro, solicitou o envio da proposta por e-mail..."
+                              value={noteText}
+                              onChange={(e) => setNoteText(e.target.value)}
+                          />
+                        </div>
+                        <div className="flex justify-end">
+                          <Button
+                              onClick={handleSaveInteraction}
+                              className="gap-2 text-white bg-green-600 hover:bg-green-700"
+                          >
+                            <Phone size={16} /> Salvar Ligação
                           </Button>
                         </div>
                       </TabsContent>

@@ -13,11 +13,12 @@ import {
   Calendar,
   BarChart3,
   List,
+  AlignLeft,
+  CheckCircle2,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { Input } from "../components/ui/input";
-import { ScrollArea } from "../components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -26,15 +27,22 @@ import {
   SelectValue,
 } from "../components/ui/select";
 
+
+import { ScrollArea, ScrollBar } from "../components/ui/scroll-area";
+
 interface UserMetrics {
   user: { name: string; email: string; role: string };
   metrics: {
     totalContacts: number;
     totalEmails: number;
     totalCalls: number;
+    totalNotes: number;
     uniqueLeadsContacted: number;
     totalVisits: number;
+    totalQualifications: number;
   };
+  funnelSummary?: Record<string, number>;
+  statusSummary?: Record<string, number>;
   analyticalTable: {
     leadId: string;
     leadName: string;
@@ -43,6 +51,7 @@ interface UserMetrics {
     timesContacted: number;
     funnelChanges: number;
     statusChanges: number;
+    qualifications: number;
   }[];
 }
 
@@ -54,6 +63,7 @@ const reverseStageMap: Record<string, string> = {
   FINALIZADO: "Finalizados",
   SEM_INTERESSE: "Perdidos",
 };
+
 
 function getTodayFormatted() {
   const d = new Date();
@@ -93,6 +103,15 @@ export function UserReport() {
   const [visitMode, setVisitMode] = useState<"ocorrida" | "marcada">(
     "ocorrida",
   );
+
+  const [filterStage, setFilterStage] = useState<string>("ALL");
+  const [filterStatus, setFilterStatus] = useState<string>("ALL");
+
+  const filteredAnalyticalTable = (data?.analyticalTable || []).filter((row) => {
+    const matchesStage = filterStage === "ALL" || row.funnel === filterStage;
+    const matchesStatus = filterStatus === "ALL" || row.status === filterStatus;
+    return matchesStage && matchesStatus;
+  });
 
   // ESTADO QUE SEGURA O NOME NO CARD ATE CLICAR
   const [appliedVisitMode, setAppliedVisitMode] = useState<
@@ -284,7 +303,7 @@ export function UserReport() {
                 </Badge>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
                 <div className="p-4 rounded-xl border border-border bg-card flex flex-col justify-center shadow-sm items-center text-center">
                   <Users className="text-blue-500 mb-2" size={24} />
                   <span className="text-3xl font-bold text-foreground">
@@ -325,6 +344,26 @@ export function UserReport() {
                   </p>
                 </div>
 
+                <div className="p-3 rounded-xl border border-border bg-card flex flex-col justify-center shadow-sm items-center text-center">
+                  <CheckCircle2 className="text-emerald-500 mb-2" size={24} />
+                  <span className="text-2xl font-bold text-foreground">
+                    {data.metrics.totalQualifications || 0}
+                  </span>
+                  <p className="text-[9px] uppercase font-bold text-muted-foreground mt-1 tracking-wider">
+                    Qualificações
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-xl border border-border bg-card flex flex-col justify-center shadow-sm items-center text-center">
+                  <AlignLeft className="text-amber-500 mb-2" size={24} />
+                  <span className="text-3xl font-bold text-foreground">
+                    {data.metrics.totalNotes}
+                  </span>
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground mt-1 tracking-wider">
+                    Nº Observações
+                  </p>
+                </div>
+
                 <div className="p-4 rounded-xl border border-border bg-card flex flex-col justify-center shadow-sm items-center text-center">
                   <Calendar className="text-purple-500 mb-2" size={24} />
                   <span className="text-3xl font-bold text-foreground">
@@ -336,87 +375,145 @@ export function UserReport() {
                 </div>
               </div>
 
-              <div className="pt-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <BarChart3 size={24} className="text-primary" />
-                  <h3 className="text-xl font-bold">
-                    Relatório Analítico de Leads
-                  </h3>
+              {/* Resumo de Leads no Período */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Resumo por Etapa do Funil */}
+                <div className="p-5 rounded-xl border border-border bg-card shadow-sm space-y-3">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Leads Ativos por Etapa do Funil
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {data.funnelSummary && Object.keys(data.funnelSummary).length > 0 ? (
+                        Object.entries(data.funnelSummary).map(([stage, count]) => (
+                            <Badge key={stage} variant="outline" className="text-sm py-1.5 px-3 flex items-center gap-2">
+                              <span>{reverseStageMap[stage] || stage}</span>
+                              <span className="font-bold bg-primary/20 text-primary px-2 py-0.5 rounded-full text-xs">
+                            {count}
+                          </span>
+                            </Badge>
+                        ))
+                    ) : (
+                        <span className="text-xs text-muted-foreground">Nenhuma movimentação no período.</span>
+                    )}
+                  </div>
                 </div>
 
-                <div className="rounded-md border border-border bg-card overflow-x-auto shadow-sm flex flex-col h-[500px]">
-                  <ScrollArea className="h-full">
-                    <table className="w-full text-sm text-left whitespace-nowrap min-w-max">
-                      <thead className="text-xs text-muted-foreground uppercase bg-muted/50 border-b border-border sticky top-0 backdrop-blur-sm z-10">
-                        <tr>
-                          <th className="px-6 py-4 font-medium w-[300px] max-w-[300px]">
-                            Nome do Lead
-                          </th>
-                          <th className="px-6 py-4 font-medium">
-                            Etapa do Funil
-                          </th>
-                          <th className="px-6 py-4 font-medium">
-                            Status / Etiqueta
-                          </th>
-                          <th className="px-6 py-4 text-center font-medium">
-                            Vezes Contactado
-                          </th>
-                          <th className="px-6 py-4 text-center font-medium">
-                            Mudanças de Funil
-                          </th>
-                          <th className="px-6 py-4 text-center font-medium">
-                            Mudanças de Status
-                          </th>
-                        </tr>
+                {/* Resumo por Status / Etiqueta */}
+                <div className="p-5 rounded-xl border border-border bg-card shadow-sm space-y-3">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Leads Ativos por Status / Etiqueta
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {data.statusSummary && Object.keys(data.statusSummary).length > 0 ? (
+                        Object.entries(data.statusSummary).map(([status, count]) => (
+                            <Badge key={status} variant="secondary" className="text-sm py-1.5 px-3 flex items-center gap-2 uppercase">
+                              <span>{status}</span>
+                              <span className="font-bold bg-foreground/10 text-foreground px-2 py-0.5 rounded-full text-xs">
+                            {count}
+                          </span>
+                            </Badge>
+                        ))
+                    ) : (
+                        <span className="text-xs text-muted-foreground">Nenhuma etiqueta no período.</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                  <div className="flex items-center gap-3">
+                    <BarChart3 size={24} className="text-primary" />
+                    <h3 className="text-xl font-bold">Relatório Analítico de Leads</h3>
+                  </div>
+
+                  {/* Filtros da Tabela Analítica */}
+                  <div className="flex flex-wrap gap-2 items-center">
+                    {/* Filtro por Etapa */}
+                    <Select value={filterStage} onValueChange={setFilterStage}>
+                      <SelectTrigger className="w-44 bg-card">
+                        <SelectValue placeholder="Todas as Etapas" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL">Todas as Etapas</SelectItem>
+                        <SelectItem value="NOVO">Novos</SelectItem>
+                        <SelectItem value="CONTATO">Contato</SelectItem>
+                        <SelectItem value="NEGOCIACAO">Negociação</SelectItem>
+                        <SelectItem value="CADASTRO">Cadastro</SelectItem>
+                        <SelectItem value="FINALIZADO">Finalizados</SelectItem>
+                        <SelectItem value="SEM_INTERESSE">Sem Interesse</SelectItem>
+                        <SelectItem value="FORA_DE_PERFIL">Descartado</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    {/* Filtro por Status/Etiqueta */}
+                    <Select value={filterStatus} onValueChange={setFilterStatus}>
+                      <SelectTrigger className="w-48 bg-card uppercase text-xs">
+                        <SelectValue placeholder="Todas as Etiquetas" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL">TODAS AS ETIQUETAS</SelectItem>
+                        {data?.statusSummary &&
+                            Object.keys(data.statusSummary).map((tag) => (
+                                <SelectItem key={tag} value={tag} className="uppercase text-xs">
+                                  {tag}
+                                </SelectItem>
+                            ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Tabela Analítica Compacta (Sem Scroll Lateral) */}
+                <div className="rounded-md border border-border bg-card shadow-sm h-[500px] w-full overflow-hidden">
+                  <ScrollArea className="h-full w-full">
+                    <table className="w-full text-xs text-left table-fixed">
+                      <thead className="text-[11px] text-muted-foreground uppercase bg-muted/50 border-b border-border sticky top-0 backdrop-blur-sm z-10">
+                      <tr>
+                        <th className="px-3 py-3 font-semibold w-[30%]">Lead</th>
+                        <th className="px-2 py-3 font-semibold w-[12%]">Etapa</th>
+                        <th className="px-2 py-3 font-semibold w-[14%]">Status</th>
+                        <th className="px-2 py-3 text-center font-semibold w-[10%]">Contatos</th>
+                        <th className="px-2 py-3 text-center font-semibold w-[11%]">Mud. Funil</th>
+                        <th className="px-2 py-3 text-center font-semibold w-[11%]">Mud. Status</th>
+                        <th className="px-2 py-3 text-center font-semibold w-[12%] text-emerald-500">Qualificações</th>
+                      </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
-                        {data.analyticalTable.length === 0 ? (
+                      {filteredAnalyticalTable.length === 0 ? (
                           <tr>
-                            <td
-                              colSpan={6}
-                              className="px-6 py-8 text-center text-muted-foreground"
-                            >
-                              Nenhum histórico encontrado para este período.
+                            <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                              Nenhum histórico encontrado com esses filtros.
                             </td>
                           </tr>
-                        ) : (
-                          data.analyticalTable.map((row) => (
-                            <tr
-                              key={row.leadId}
-                              className="hover:bg-muted/30 transition-colors"
-                            >
-                              <td className="px-6 py-4 font-semibold text-foreground max-w-[300px] truncate">
-                                {row.leadName}
-                              </td>
-                              <td className="px-6 py-4">
-                                <Badge variant="outline">
-                                  {reverseStageMap[row.funnel] || row.funnel}
-                                </Badge>
-                              </td>
-                              <td className="px-6 py-4">
-                                <Badge
-                                  variant="secondary"
-                                  className="uppercase text-[10px]"
-                                >
-                                  {row.status}
-                                </Badge>
-                              </td>
-                              <td className="px-6 py-4 text-center font-medium">
-                                {row.timesContacted}
-                              </td>
-                              <td className="px-6 py-4 text-center text-muted-foreground">
-                                {row.funnelChanges}
-                              </td>
-                              <td className="px-6 py-4 text-center text-muted-foreground">
-                                {row.statusChanges}
-                              </td>
-                            </tr>
+                      ) : (
+                          filteredAnalyticalTable.map((row) => (
+                              <tr key={row.leadId} className="hover:bg-muted/30 transition-colors">
+                                <td className="px-3 py-2.5 font-semibold text-foreground truncate" title={row.leadName}>
+                                  {row.leadName}
+                                </td>
+                                <td className="px-2 py-2.5">
+                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 truncate max-w-full">
+                                    {reverseStageMap[row.funnel] || row.funnel}
+                                  </Badge>
+                                </td>
+                                <td className="px-2 py-2.5">
+                                  <Badge variant="secondary" className="uppercase text-[9px] px-1.5 py-0.5 truncate max-w-full">
+                                    {row.status}
+                                  </Badge>
+                                </td>
+                                <td className="px-2 py-2.5 text-center font-medium">{row.timesContacted}</td>
+                                <td className="px-2 py-2.5 text-center text-muted-foreground">{row.funnelChanges}</td>
+                                <td className="px-2 py-2.5 text-center text-muted-foreground">{row.statusChanges}</td>
+                                <td className="px-2 py-2.5 text-center font-bold text-emerald-500">{row.qualifications || 0}</td>
+                              </tr>
                           ))
-                        )}
+                      )}
                       </tbody>
                     </table>
                   </ScrollArea>
                 </div>
+
               </div>
             </div>
           )}
