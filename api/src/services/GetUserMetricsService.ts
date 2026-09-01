@@ -61,12 +61,22 @@ class GetUserMetricsService {
       },
     });
 
+    // Contagem de Ligações e WhatsApp (SEM as notas)
     const totalCalls = await prismaClient.contact.count({
       where: {
         userId: targetUserId,
         type: {
-          in: ["CALL", "WHATSAPP", "NOTE"] as ContactType[],
+          in: ["CALL", "WHATSAPP"] as ContactType[],
         },
+        date: { gte: start, lte: end },
+      },
+    });
+
+    // 🚀 NOVO: Contagem exclusiva de Observações
+    const totalNotes = await prismaClient.contact.count({
+      where: {
+        userId: targetUserId,
+        type: "NOTE",
         date: { gte: start, lte: end },
       },
     });
@@ -186,6 +196,7 @@ class GetUserMetricsService {
         totalContacts,
         totalEmails,
         totalCalls,
+        totalNotes,
         uniqueLeadsContacted,
         totalVisits,
       },
