@@ -167,6 +167,19 @@ class GetUserMetricsService {
         lead.statusChanges > 0,
     );
 
+    // Agrupamento por Etapa de Funil e Status (apenas dos leads ativos no período)
+    const funnelSummary: Record<string, number> = {};
+    const statusSummary: Record<string, number> = {};
+
+    analyticalTable.forEach((lead) => {
+      if (lead.funnel) {
+        funnelSummary[lead.funnel] = (funnelSummary[lead.funnel] || 0) + 1;
+      }
+      if (lead.status) {
+        statusSummary[lead.status] = (statusSummary[lead.status] || 0) + 1;
+      }
+    });
+
     return {
       user,
       metrics: {
@@ -176,6 +189,8 @@ class GetUserMetricsService {
         uniqueLeadsContacted,
         totalVisits,
       },
+      funnelSummary,
+      statusSummary,
       analyticalTable,
     };
   }
