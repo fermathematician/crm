@@ -725,6 +725,33 @@ export function LeadsList() {
     setIsModalOpen(true);
   }
 
+  async function createHistoryLog(
+      leadId: string,
+      type: string,
+      description: string,
+      didChangeFunnel: boolean = false
+  ) {
+    const token = localStorage.getItem("token");
+    const dateStr = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    try {
+      await fetch(`${import.meta.env.VITE_API_URL}/auth/leads/${leadId}/contacts`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          type,
+          date: dateStr,
+          description,
+          didChangeFunnel,
+        }),
+      });
+    } catch (err) {
+      console.error("Erro ao criar histórico:", err);
+    }
+  }
+
   return (
     <div className="h-screen w-full flex bg-background text-foreground transition-colors duration-300 overflow-hidden">
       <div className="flex-1 flex flex-col min-w-0">
@@ -1458,6 +1485,9 @@ export function LeadsList() {
                                 const isBounced = defaultTag === "a qualificar";
                                 const isUnsubscribed = defaultTag === "bloqueado";
 
+                                const oldStage = lead.funnelStage;
+                                const oldTag = lead.tags?.[0] || "sem etiqueta";
+
                                 // 1. Atualiza a tela local na hora
                                 handleLocalChange(lead.id, "funnelStage", val);
                                 handleLocalChange(lead.id, "tags", [defaultTag]);
@@ -1480,6 +1510,10 @@ export function LeadsList() {
                                     unsubscribed: isUnsubscribed,
                                   }),
                                 });
+                                createHistoryLog(lead.id, "SYSTEM_CHANGE", `Funil alterado: ${oldStage} ➔ ${val}`, true);
+                                if (oldTag !== defaultTag) {
+                                  createHistoryLog(lead.id, "SYSTEM_CHANGE", `Etiqueta alterada: [${oldTag}] ➔ [${defaultTag}]`, false);
+                                }
                               }}
                           >
                             <SelectTrigger className="h-8 border-transparent bg-transparent hover:bg-muted/50 focus:ring-1 shadow-none px-2 w-[140px] text-xs font-semibold">
@@ -1511,6 +1545,7 @@ export function LeadsList() {
                               onValueChange={(val) => {
                                 const isBounced = val === "a qualificar";
                                 const isUnsubscribed = val === "bloqueado";
+                                const oldTag = lead.tags?.[0] || "sem etiqueta";
 
                                 // 1. Atualiza a tela local
                                 handleLocalChange(lead.id, "tags", [val]);
@@ -1532,6 +1567,10 @@ export function LeadsList() {
                                     unsubscribed: isUnsubscribed,
                                   }),
                                 });
+
+                                if (oldTag !== val) {
+                                  createHistoryLog(lead.id, "SYSTEM_CHANGE", `Etiqueta alterada: [${oldTag}] ➔ [${val}]`, false);
+                                }
                               }}
                           >
                             <SelectTrigger className="h-8 border-transparent bg-transparent hover:bg-muted/50 focus:ring-1 shadow-none px-2 w-[120px] text-xs font-semibold uppercase">
