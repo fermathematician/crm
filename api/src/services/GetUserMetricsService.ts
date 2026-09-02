@@ -93,13 +93,24 @@ class GetUserMetricsService {
     });
     const uniqueLeadsContacted = uniqueLeadsGroup.length;
 
-    const totalVisits = await prismaClient.visit.count({
+    const uniqueVisitsGroup = await prismaClient.visit.groupBy({
+      by: ["leadId"],
       where: {
         userId: targetUserId,
-        visitDate: {gte: start, lte: end},
-        ...(visitMode === "ocorrida" ? {isCompleted: true} : {}),
+        ...(visitMode === "marcada"
+            ? {
+              // MARCADA: Criada no sistema dentro do período
+              createdAt: { gte: start, lte: end },
+            }
+            : {
+              // OCORRIDA: Visita agendada para o período
+              visitDate: { gte: start, lte: end },
+            }),
       },
     });
+
+    // A quantidade de itens no array é o total de clientes únicos com visita
+    const totalVisits = uniqueVisitsGroup.length;
 
     const allUserLeads = await prismaClient.lead.findMany({
       where: {ownerId: targetUserId},
