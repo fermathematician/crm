@@ -33,7 +33,7 @@ class GetUserMetricsService {
       throw new Error("Usuário não encontrado.");
     }
 
-    const start = new Date(`${startDate}T00:00:00.000-03:00`);
+    const start = new Date(`${startDate}T00:00:00.000Z`); //pra ajustar o filtro tirei o UTC ja que o log salva como 00h
     const end = new Date(`${endDate}T23:59:59.999-03:00`);
 
     const validContactTypes: ContactType[] = [
@@ -155,6 +155,7 @@ class GetUserMetricsService {
 
 // 1. Declara a variável ANTES do loop (no escopo da função principal)
     let totalQualifications = 0;
+    const qualificationsTable: any[] = [];
 
     // 2. Percorre os contatos do período uma única vez
     contactsInPeriod.forEach((contact) => {
@@ -229,6 +230,15 @@ class GetUserMetricsService {
           ) {
             stats.qualifications = (stats.qualifications || 0) + 1;
             totalQualifications += 1;
+
+            qualificationsTable.push({
+              id: contact.id,
+              leadId: contact.leadId,
+              leadName: contact.lead?.companyName || "Lead sem nome",
+              logDate: contact.date,
+              createdAt: contact.createdAt,
+              description: contact.description,
+            });
           }
         }
       }
@@ -296,6 +306,7 @@ class GetUserMetricsService {
       statusSummary,
       analyticalTable,
       visitsTable,
+      qualificationsTable,
     };
   }
 }
