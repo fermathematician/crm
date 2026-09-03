@@ -255,6 +255,32 @@ class GetUserMetricsService {
       }
     });
 
+    // Busca todas as visitas do período (criadas ou agendadas no intervalo) para auditoria visual
+    const visitsInPeriod = await prismaClient.visit.findMany({
+      where: {
+        userId: targetUserId,
+        OR: [
+          { createdAt: { gte: start, lte: end } },
+          { visitDate: { gte: start, lte: end } },
+        ],
+      },
+      include: {
+        lead: {
+          select: { id: true, companyName: true },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const visitsTable = visitsInPeriod.map((v) => ({
+      id: v.id,
+      leadId: v.leadId,
+      leadName: v.lead?.companyName || "Lead sem nome",
+      createdAt: v.createdAt,
+      visitDate: v.visitDate,
+      isCompleted: v.isCompleted,
+    }));
+
     return {
       user,
       metrics: {
@@ -269,6 +295,7 @@ class GetUserMetricsService {
       funnelSummary,
       statusSummary,
       analyticalTable,
+      visitsTable,
     };
   }
 }
