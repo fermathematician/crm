@@ -15,6 +15,8 @@ import {
   List,
   AlignLeft,
   CheckCircle2,
+  Flame,
+  MessageSquare
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
@@ -36,10 +38,12 @@ interface UserMetrics {
     totalContacts: number;
     totalEmails: number;
     totalCalls: number;
+    totalWhatsApp: number;
     totalNotes: number;
     uniqueLeadsContacted: number;
     totalVisits: number;
     totalQualifications: number;
+    totalListaQuente: number;
   };
   funnelSummary?: Record<string, number>;
   statusSummary?: Record<string, number>;
@@ -319,49 +323,73 @@ export function UserReport() {
                 </Badge>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
-                <div className="p-4 rounded-xl border border-border bg-card flex flex-col justify-center shadow-sm items-center text-center">
-                  <Users className="text-blue-500 mb-2" size={24} />
-                  <span className="text-3xl font-bold text-foreground">
+              {/* LINHA 1: MÉTRICAS DE CONTATOS E INTERAÇÕES (6 Cards) */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+                <div className="p-3 rounded-xl border border-border bg-card flex flex-col justify-center shadow-sm items-center text-center">
+                  <Users className="text-blue-500 mb-1" size={20} />
+                  <span className="text-2xl font-bold text-foreground">
                     {data.metrics.uniqueLeadsContacted}
                   </span>
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground mt-1 tracking-wider">
+                  <p className="text-[9px] uppercase font-bold text-muted-foreground mt-1 tracking-wider">
                     Leads Contactados
                   </p>
                 </div>
 
-                <div className="p-4 rounded-xl border border-border bg-card flex flex-col justify-center shadow-sm items-center text-center">
-                  <List className="text-foreground mb-2" size={24} />
-                  <span className="text-3xl font-bold text-foreground">
+                <div className="p-3 rounded-xl border border-border bg-card flex flex-col justify-center shadow-sm items-center text-center">
+                  <List className="text-foreground mb-1" size={20} />
+                  <span className="text-2xl font-bold text-foreground">
                     {data.metrics.totalContacts}
                   </span>
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground mt-1 tracking-wider">
-                    Total de Contatos
+                  <p className="text-[9px] uppercase font-bold text-muted-foreground mt-1 tracking-wider">
+                    Total Contatos
                   </p>
                 </div>
 
-                <div className="p-4 rounded-xl border border-border bg-card flex flex-col justify-center shadow-sm items-center text-center">
-                  <Phone className="text-green-500 mb-2" size={24} />
-                  <span className="text-3xl font-bold text-foreground">
+                <div className="p-3 rounded-xl border border-border bg-card flex flex-col justify-center shadow-sm items-center text-center">
+                  <Phone className="text-green-500 mb-1" size={20} />
+                  <span className="text-2xl font-bold text-foreground">
                     {data.metrics.totalCalls}
                   </span>
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground mt-1 tracking-wider">
+                  <p className="text-[9px] uppercase font-bold text-muted-foreground mt-1 tracking-wider">
                     Nº Ligações
                   </p>
                 </div>
 
-                <div className="p-4 rounded-xl border border-border bg-card flex flex-col justify-center shadow-sm items-center text-center">
-                  <Mail className="text-orange-500 mb-2" size={24} />
-                  <span className="text-3xl font-bold text-foreground">
+                <div className="p-3 rounded-xl border border-border bg-card flex flex-col justify-center shadow-sm items-center text-center">
+                  <MessageSquare className="text-emerald-500 mb-1" size={20} />
+                  <span className="text-2xl font-bold text-foreground">
+                    {data.metrics.totalWhatsApp || 0}
+                  </span>
+                  <p className="text-[9px] uppercase font-bold text-muted-foreground mt-1 tracking-wider">
+                    WhatsApp
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-xl border border-border bg-card flex flex-col justify-center shadow-sm items-center text-center">
+                  <Mail className="text-orange-500 mb-1" size={20} />
+                  <span className="text-2xl font-bold text-foreground">
                     {data.metrics.totalEmails}
                   </span>
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground mt-1 tracking-wider">
+                  <p className="text-[9px] uppercase font-bold text-muted-foreground mt-1 tracking-wider">
                     Nº E-mails
                   </p>
                 </div>
 
                 <div className="p-3 rounded-xl border border-border bg-card flex flex-col justify-center shadow-sm items-center text-center">
-                  <CheckCircle2 className="text-emerald-500 mb-2" size={24} />
+                  <AlignLeft className="text-amber-500 mb-1" size={20} />
+                  <span className="text-2xl font-bold text-foreground">
+                    {data.metrics.totalNotes}
+                  </span>
+                  <p className="text-[9px] uppercase font-bold text-muted-foreground mt-1 tracking-wider">
+                    Nº Observações
+                  </p>
+                </div>
+              </div>
+
+              {/* LINHA 2: MARCOS E CONVERSÕES (3 Cards) */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="p-3 rounded-xl border border-border bg-card flex flex-col justify-center shadow-sm items-center text-center">
+                  <CheckCircle2 className="text-emerald-500 mb-1" size={20} />
                   <span className="text-2xl font-bold text-foreground">
                     {data.metrics.totalQualifications || 0}
                   </span>
@@ -370,22 +398,22 @@ export function UserReport() {
                   </p>
                 </div>
 
-                <div className="p-4 rounded-xl border border-border bg-card flex flex-col justify-center shadow-sm items-center text-center">
-                  <AlignLeft className="text-amber-500 mb-2" size={24} />
-                  <span className="text-3xl font-bold text-foreground">
-                    {data.metrics.totalNotes}
+                <div className="p-3 rounded-xl border border-border bg-card flex flex-col justify-center shadow-sm items-center text-center">
+                  <Flame className="text-orange-500 fill-orange-500 mb-1" size={20} />
+                  <span className="text-2xl font-bold text-foreground">
+                    {data.metrics.totalListaQuente || 0}
                   </span>
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground mt-1 tracking-wider">
-                    Nº Observações
+                  <p className="text-[9px] uppercase font-bold text-muted-foreground mt-1 tracking-wider">
+                    Lista Quente
                   </p>
                 </div>
 
-                <div className="p-4 rounded-xl border border-border bg-card flex flex-col justify-center shadow-sm items-center text-center">
-                  <Calendar className="text-purple-500 mb-2" size={24} />
-                  <span className="text-3xl font-bold text-foreground">
+                <div className="p-3 rounded-xl border border-border bg-card flex flex-col justify-center shadow-sm items-center text-center">
+                  <Calendar className="text-purple-500 mb-1" size={20} />
+                  <span className="text-2xl font-bold text-foreground">
                     {data.metrics.totalVisits}
                   </span>
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground mt-1 tracking-wider">
+                  <p className="text-[9px] uppercase font-bold text-muted-foreground mt-1 tracking-wider">
                     Visitas ({appliedVisitMode})
                   </p>
                 </div>
@@ -587,57 +615,56 @@ export function UserReport() {
                   </div>
                 </div>
 
-                {/* Tabela Analítica Compacta (Sem Scroll Lateral) */}
-                <div className="rounded-md border border-border bg-card shadow-sm h-[500px] w-full overflow-hidden">
-                  <ScrollArea className="h-full w-full">
-                    <table className="w-full text-xs text-left table-fixed">
-                      <thead className="text-[11px] text-muted-foreground uppercase bg-muted/50 border-b border-border sticky top-0 backdrop-blur-sm z-10">
-                      <tr>
-                        <th className="px-3 py-3 font-semibold w-[30%]">Lead</th>
-                        <th className="px-2 py-3 font-semibold w-[12%]">Etapa</th>
-                        <th className="px-2 py-3 font-semibold w-[14%]">Status</th>
-                        <th className="px-2 py-3 text-center font-semibold w-[10%]">Contatos</th>
-                        <th className="px-2 py-3 text-center font-semibold w-[11%]">Mud. Funil</th>
-                        <th className="px-2 py-3 text-center font-semibold w-[11%]">Mud. Status</th>
-                        <th className="px-2 py-3 text-center font-semibold w-[12%] text-emerald-500">Qualificações</th>
-                      </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border">
-                      {filteredAnalyticalTable.length === 0 ? (
-                          <tr>
-                            <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
-                              Nenhum histórico encontrado com esses filtros.
-                            </td>
-                          </tr>
-                      ) : (
-                          filteredAnalyticalTable.map((row) => (
-                              <tr key={row.leadId} className="hover:bg-muted/30 transition-colors">
-                                <td className="px-3 py-2.5 font-semibold text-foreground truncate" title={row.leadName}>
-                                  {row.leadName}
-                                </td>
-                                <td className="px-2 py-2.5">
-                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 truncate max-w-full">
-                                    {reverseStageMap[row.funnel] || row.funnel}
-                                  </Badge>
-                                </td>
-                                <td className="px-2 py-2.5">
-                                  <Badge variant="secondary" className="uppercase text-[9px] px-1.5 py-0.5 truncate max-w-full">
-                                    {row.status}
-                                  </Badge>
-                                </td>
-                                <td className="px-2 py-2.5 text-center font-medium">{row.timesContacted}</td>
-                                <td className="px-2 py-2.5 text-center text-muted-foreground">{row.funnelChanges}</td>
-                                <td className="px-2 py-2.5 text-center text-muted-foreground">{row.statusChanges}</td>
-                                <td className="px-2 py-2.5 text-center font-bold text-emerald-500">{row.qualifications || 0}</td>
-                              </tr>
-                          ))
-                      )}
-                      </tbody>
-                    </table>
-                  </ScrollArea>
+                {/* 🔴 Tabela com overflow-y-auto direto no conteiner e bg-card no thead */}
+                <div className="rounded-md border border-border bg-card shadow-sm max-h-[350px] w-full overflow-y-auto">
+                  <table className="w-full text-xs text-left table-fixed">
+                    <thead className="text-[11px] text-muted-foreground uppercase bg-card border-b border-border sticky top-0 z-10">
+                    <tr>
+                      <th className="px-3 py-3 font-semibold w-[30%]">Lead</th>
+                      <th className="px-2 py-3 font-semibold w-[12%]">Etapa</th>
+                      <th className="px-2 py-3 font-semibold w-[14%]">Status</th>
+                      <th className="px-2 py-3 text-center font-semibold w-[10%]">Contatos</th>
+                      <th className="px-2 py-3 text-center font-semibold w-[11%]">Mud. Funil</th>
+                      <th className="px-2 py-3 text-center font-semibold w-[11%]">Mud. Status</th>
+                      <th className="px-2 py-3 text-center font-semibold w-[12%] text-emerald-500">Qualificações</th>
+                    </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                    {filteredAnalyticalTable.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                            Nenhum histórico encontrado com esses filtros.
+                          </td>
+                        </tr>
+                    ) : (
+                        filteredAnalyticalTable.map((row) => (
+                            <tr key={row.leadId} className="hover:bg-muted/30 transition-colors">
+                              <td className="px-3 py-2.5 font-semibold text-foreground truncate" title={row.leadName}>
+                                {row.leadName}
+                              </td>
+                              <td className="px-2 py-2.5">
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 truncate max-w-full">
+                                  {reverseStageMap[row.funnel] || row.funnel}
+                                </Badge>
+                              </td>
+                              <td className="px-2 py-2.5">
+                                <Badge variant="secondary" className="uppercase text-[9px] px-1.5 py-0.5 truncate max-w-full">
+                                  {row.status}
+                                </Badge>
+                              </td>
+                              <td className="px-2 py-2.5 text-center font-medium">{row.timesContacted}</td>
+                              <td className="px-2 py-2.5 text-center text-muted-foreground">{row.funnelChanges}</td>
+                              <td className="px-2 py-2.5 text-center text-muted-foreground">{row.statusChanges}</td>
+                              <td className="px-2 py-2.5 text-center font-bold text-emerald-500">{row.qualifications || 0}</td>
+                            </tr>
+                        ))
+                    )}
+                    </tbody>
+                  </table>
                 </div>
 
               </div>
+
             </div>
           )}
         </main>

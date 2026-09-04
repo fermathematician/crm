@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { data, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import type { DropResult } from "@hello-pangea/dnd";
 
@@ -13,7 +13,6 @@ import {
   AlertCircle,
   Clock,
   User,
-  GripVertical,
   Check,
   List,
   ChevronLeft,
@@ -39,6 +38,7 @@ import {
   Trash2,
   Lock,
   Flame,
+  MessageSquare,
 } from "lucide-react";
 import { useTheme } from "../hooks/useTheme";
 
@@ -64,13 +64,6 @@ import { Textarea } from "../components/ui/textarea";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../components/ui/select";
 
 type LeadTag =
   | "frio"
@@ -98,7 +91,7 @@ type LeadTag =
 
 interface ApiContact {
   id: string;
-  type: "EMAIL" | "CALL" | "MEETING" | "NOTE" | "REMINDER" | "SYSTEM_CHANGE";
+  type: "EMAIL" | "CALL" | "WHATSAPP" | "MEETING" | "NOTE" | "REMINDER" | "SYSTEM_CHANGE";
   date: string;
   description: string; //estava description e quebrava quando recebia um descriptionri´ption
   leadId?: string;
@@ -492,6 +485,9 @@ export function Dashboard() {
   const [editingContactId, setEditingContactId] = useState<string | null>(null);
   const [editingContactText, setEditingContactText] = useState("");
 
+  const [whatsappText, setWhatsappText] = useState("");
+  const [whatsappDate, setWhatsappDate] = useState(getTodayDDMMYYYY());
+
 
   const [formData, setFormData] = useState({
     companyName: "",
@@ -679,9 +675,10 @@ export function Dashboard() {
   async function handleSaveInteraction() {
     const isReminder = activeTab === "reminder";
     const isObservation = activeTab === "observation";
+    const isWhatsapp = activeTab === "whatsapp";
     let textToSave = "";
     let dateToSave = "";
-    let interactionType: "REMINDER" | "CALL" | "NOTE" = "CALL";
+    let interactionType: "REMINDER" | "CALL" | "NOTE" | "WHATSAPP"
 
     if (isReminder) {
       textToSave = reminderText;
@@ -691,6 +688,11 @@ export function Dashboard() {
       textToSave = observationText;
       dateToSave = observationDate;
       interactionType = "NOTE";
+    }
+    else if (isWhatsapp) {
+      textToSave = whatsappText;
+      dateToSave = whatsappDate;
+      interactionType = "WHATSAPP";
     } else {
       textToSave = noteText;
       dateToSave = noteDate;
@@ -728,6 +730,7 @@ export function Dashboard() {
 
     if (isReminder) setReminderText("");
     else if (isObservation) setObservationText("");
+    else if (isWhatsapp) setWhatsappText("");
     else setNoteText("");
     setActiveTab("history");
 
@@ -758,7 +761,7 @@ export function Dashboard() {
       }
 
       // Mantém a rota antiga para CALL e NOTE alimentarem o histórico de contatos
-      if (interactionType === "CALL" || interactionType === "NOTE") {
+      if (interactionType === "CALL" || interactionType === "NOTE" || interactionType === "WHATSAPP") {
         const response = await fetch(
             `${import.meta.env.VITE_API_URL}/auth/leads/${selectedLead.id}/contacts`,
             {
@@ -3051,6 +3054,10 @@ export function Dashboard() {
                       <Phone size={16} /> Ligação
                     </TabsTrigger>
 
+                    <TabsTrigger value="whatsapp" className="gap-2">
+                      <MessageSquare size={16} className="text-emerald-500" /> WhatsApp
+                    </TabsTrigger>
+
                     <TabsTrigger value="observation" className="gap-2">
                       <AlignLeft size={16} /> Observação
                     </TabsTrigger>
@@ -3118,17 +3125,21 @@ export function Dashboard() {
                                                 ? "bg-blue-100 text-blue-600"
                                                 : contact.type === "CALL"
                                                     ? "bg-green-100 text-green-600"
-                                                    : contact.type === "NOTE"
-                                                        ? "bg-amber-100 text-amber-600"
-                                                        : contact.type === "REMINDER"
-                                                            ? "bg-purple-100 text-purple-600"
-                                                            : "bg-orange-100 text-orange-600"
+                                                    : contact.type === "WHATSAPP"
+                                                        ? "bg-emerald-100 text-emerald-600" // 👈 COR DO WHATSAPP
+                                                        : contact.type === "NOTE"
+                                                            ? "bg-amber-100 text-amber-600"
+                                                            : contact.type === "REMINDER"
+                                                                ? "bg-purple-100 text-purple-600"
+                                                                : "bg-orange-100 text-orange-600"
                                         }`}
                                     >
                                       {contact.type === "EMAIL" ? (
                                           <Mail size={18} />
                                       ) : contact.type === "CALL" ? (
                                           <Phone size={18} />
+                                      ) : contact.type === "WHATSAPP" ? (
+                                          <MessageSquare size={18} /> // 👈 ÍCONE DO WHATSAPP
                                       ) : contact.type === "NOTE" ? (
                                           <AlignLeft size={18} />
                                       ) : contact.type === "REMINDER" ? (
@@ -3148,11 +3159,13 @@ export function Dashboard() {
                                                 : "E-mail Enviado"
                                             : contact.type === "CALL"
                                                 ? "Registro de Ligação"
-                                                : contact.type === "NOTE"
-                                                    ? "Observação Registrada"
-                                                    : contact.type === "REMINDER"
-                                                        ? "Lembrete Agendado"
-                                                        : "Visita Agendada"}
+                                                : contact.type === "WHATSAPP"
+                                                    ? "Mensagem de WhatsApp" // 👈 TÍTULO
+                                                    : contact.type === "NOTE"
+                                                        ? "Observação Registrada"
+                                                        : contact.type === "REMINDER"
+                                                            ? "Lembrete Agendado"
+                                                            : "Visita Agendada"}
                                       </span>
                                           <span className="text-xs text-muted-foreground">
                                         • {formatDisplayDateTime(contact.date)}
@@ -3430,6 +3443,7 @@ export function Dashboard() {
                         </div>
                       </TabsContent>
 
+                      {/* ABA DE LIGAÇÃO */}
                       <TabsContent value="note" className="m-0 space-y-4">
                         <div className="space-y-2">
                           <Label>Data da Ligação</Label>
@@ -3460,6 +3474,41 @@ export function Dashboard() {
                               className="gap-2 text-white bg-green-600 hover:bg-green-700"
                           >
                             <Phone size={16} /> Salvar Ligação
+                          </Button>
+                        </div>
+                      </TabsContent>
+
+                      {/* 🚀 ABA DE WHATSAPP (SEPARADA E COMPLETA) */}
+                      <TabsContent value="whatsapp" className="m-0 space-y-4">
+                        <div className="space-y-2">
+                          <Label>Data do WhatsApp</Label>
+                          <div className="relative w-1/3">
+                            <CalendarIcon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+                            <Input
+                                type="text"
+                                placeholder="DD/MM/AAAA"
+                                className="pl-9"
+                                value={whatsappDate}
+                                onChange={(e) => setWhatsappDate(maskDate(e.target.value))}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Detalhes / Resumo do WhatsApp</Label>
+                          <Textarea
+                              className="min-h-[150px] resize-none"
+                              placeholder="Ex: Mandei mensagem no WhatsApp, cliente confirmou recebimento..."
+                              value={whatsappText}
+                              onChange={(e) => setWhatsappText(e.target.value)}
+                          />
+                        </div>
+                        <div className="flex justify-end">
+                          <Button
+                              onClick={handleSaveInteraction}
+                              className="gap-2 text-white bg-emerald-600 hover:bg-emerald-700"
+                          >
+                            <MessageSquare size={16} /> Salvar WhatsApp
                           </Button>
                         </div>
                       </TabsContent>

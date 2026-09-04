@@ -66,11 +66,22 @@ class GetUserMetricsService {
       where: {
         userId: targetUserId,
         type: {
-          in: ["CALL", "WHATSAPP"] as ContactType[],
+          in: ["CALL"] as ContactType[],
         },
         date: {gte: start, lte: end},
       },
     });
+
+    const totalWhatsApp = await prismaClient.contact.count({
+      where: {
+        userId: targetUserId,
+        type: {
+          in: ["WHATSAPP"] as ContactType[],
+        },
+        date: {gte: start, lte: end},
+      }
+    })
+
 
     // 🚀 NOVO: Contagem exclusiva de Observações
     const totalNotes = await prismaClient.contact.count({
@@ -80,6 +91,7 @@ class GetUserMetricsService {
         date: {gte: start, lte: end},
       },
     });
+
 
     const uniqueLeadsGroup = await prismaClient.contact.groupBy({
       by: ["leadId"],
@@ -155,6 +167,7 @@ class GetUserMetricsService {
 
 // 1. Declara a variável ANTES do loop (no escopo da função principal)
     let totalQualifications = 0;
+    let totalListaQuente = 0;
     const qualificationsTable: any[] = [];
 
     // 2. Percorre os contatos do período uma única vez
@@ -194,6 +207,10 @@ class GetUserMetricsService {
           const parts = desc.split(arrowRegex);
           const origin = (parts[0] ?? "").trim();
           const target = (parts[1] ?? "").trim();
+
+          if (target.includes("lista quente")) {
+            totalListaQuente++;
+          }
 
           // 1. Vetor com as 7 Etapas do Funil
           const funnelStages = [
@@ -297,10 +314,12 @@ class GetUserMetricsService {
         totalContacts,
         totalEmails,
         totalCalls,
+        totalWhatsApp,
         totalNotes,
         uniqueLeadsContacted,
         totalVisits,
         totalQualifications,
+        totalListaQuente,
       },
       funnelSummary,
       statusSummary,
