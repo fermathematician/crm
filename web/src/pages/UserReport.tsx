@@ -446,50 +446,49 @@ export function UserReport() {
                   </Badge>
                 </div>
 
-                <div className="rounded-md border border-border bg-card shadow-sm max-h-[300px] w-full overflow-hidden">
-                  <ScrollArea className="h-full w-full">
-                    <table className="w-full text-xs text-left table-fixed">
-                      <thead className="text-[11px] text-muted-foreground uppercase bg-muted/50 border-b border-border sticky top-0 backdrop-blur-sm z-10">
-                      <tr>
-                        <th className="px-3 py-3 font-semibold w-[35%]">Lead / Empresa</th>
-                        <th className="px-2 py-3 font-semibold w-[25%]">Data em que foi Marcada (createdAt)</th>
-                        <th className="px-2 py-3 font-semibold w-[25%]">Data da Visita (visitDate)</th>
-                        <th className="px-2 py-3 text-center font-semibold w-[15%]">Status</th>
-                      </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border">
-                      {!data.visitsTable || data.visitsTable.length === 0 ? (
-                          <tr>
-                            <td colSpan={4} className="px-4 py-6 text-center text-muted-foreground">
-                              Nenhuma visita encontrada para este usuário no período selecionado.
-                            </td>
-                          </tr>
-                      ) : (
-                          data.visitsTable.map((v) => (
-                              <tr key={v.id} className="hover:bg-muted/30 transition-colors">
-                                <td className="px-3 py-2.5 font-semibold text-foreground truncate" title={v.leadName}>
-                                  {v.leadName}
-                                </td>
-                                <td className="px-2 py-2.5 text-muted-foreground">
-                                  {new Date(v.createdAt).toLocaleDateString("pt-BR")} às {new Date(v.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                                </td>
-                                <td className="px-2 py-2.5 font-medium text-foreground">
-                                  {new Date(v.visitDate).toLocaleDateString("pt-BR")}
-                                </td>
-                                <td className="px-2 py-2.5 text-center">
-                                  <Badge
-                                      variant={v.isCompleted ? "default" : "secondary"}
-                                      className={`text-[10px] px-2 py-0.5 ${v.isCompleted ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""}`}
-                                  >
-                                    {v.isCompleted ? "Ocorrida" : "Pendente"}
-                                  </Badge>
-                                </td>
-                              </tr>
-                          ))
-                      )}
-                      </tbody>
-                    </table>
-                  </ScrollArea>
+                {/* 🔴 overflow-y-auto direto no conteiner da tabela com max-h-[260px] */}
+                <div className="rounded-md border border-border bg-card shadow-sm max-h-[260px] w-full overflow-y-auto">
+                  <table className="w-full text-xs text-left table-fixed">
+                    <thead className="text-[11px] text-muted-foreground uppercase bg-card border-b border-border sticky top-0 z-10">
+                    <tr>
+                      <th className="px-3 py-3 font-semibold w-[35%]">Lead / Empresa</th>
+                      <th className="px-2 py-3 font-semibold w-[25%]">Data em que foi Marcada (createdAt)</th>
+                      <th className="px-2 py-3 font-semibold w-[25%]">Data da Visita (visitDate)</th>
+                      <th className="px-2 py-3 text-center font-semibold w-[15%]">Status</th>
+                    </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                    {!data.visitsTable || data.visitsTable.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="px-4 py-6 text-center text-muted-foreground">
+                            Nenhuma visita encontrada para este usuário no período selecionado.
+                          </td>
+                        </tr>
+                    ) : (
+                        data.visitsTable.map((v) => (
+                            <tr key={v.id} className="hover:bg-muted/30 transition-colors">
+                              <td className="px-3 py-2.5 font-semibold text-foreground truncate" title={v.leadName}>
+                                {v.leadName}
+                              </td>
+                              <td className="px-2 py-2.5 text-muted-foreground">
+                                {new Date(v.createdAt).toLocaleDateString("pt-BR")} às {new Date(v.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                              </td>
+                              <td className="px-2 py-2.5 font-medium text-foreground">
+                                {new Date(v.visitDate).toLocaleDateString("pt-BR")}
+                              </td>
+                              <td className="px-2 py-2.5 text-center">
+                                <Badge
+                                    variant={v.isCompleted ? "default" : "secondary"}
+                                    className={`text-[10px] px-2 py-0.5 ${v.isCompleted ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""}`}
+                                >
+                                  {v.isCompleted ? "Ocorrida" : "Pendente"}
+                                </Badge>
+                              </td>
+                            </tr>
+                        ))
+                    )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
@@ -503,45 +502,44 @@ export function UserReport() {
                   </Badge>
                 </div>
 
-                <div className="rounded-md border border-border bg-card shadow-sm max-h-[300px] w-full overflow-hidden">
-                  <ScrollArea className="h-full w-full">
-                    <table className="w-full text-xs text-left table-fixed">
-                      <thead className="text-[11px] text-muted-foreground uppercase bg-muted/50 border-b border-border sticky top-0 backdrop-blur-sm z-10">
-                      <tr>
-                        <th className="px-3 py-3 font-semibold w-[25%]">Lead / Empresa</th>
-                        <th className="px-2 py-3 font-semibold w-[20%]">Data do Log (date)</th>
-                        <th className="px-2 py-3 font-semibold w-[20%]">Criado em (createdAt)</th>
-                        <th className="px-3 py-3 font-semibold w-[35%]">Descrição do Histórico</th>
-                      </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border">
-                      {!data.qualificationsTable || data.qualificationsTable.length === 0 ? (
-                          <tr>
-                            <td colSpan={4} className="px-4 py-6 text-center text-muted-foreground">
-                              Nenhuma qualificação registrada para este usuário no período.
-                            </td>
-                          </tr>
-                      ) : (
-                          data.qualificationsTable.map((q) => (
-                              <tr key={q.id} className="hover:bg-muted/30 transition-colors">
-                                <td className="px-3 py-2.5 font-semibold text-foreground truncate" title={q.leadName}>
-                                  {q.leadName}
-                                </td>
-                                <td className="px-2 py-2.5 font-mono text-emerald-400">
-                                  {new Date(q.logDate).toISOString().split("T")[0]}
-                                </td>
-                                <td className="px-2 py-2.5 text-muted-foreground">
-                                  {new Date(q.createdAt).toLocaleDateString("pt-BR")} às {new Date(q.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                                </td>
-                                <td className="px-3 py-2.5 text-muted-foreground truncate" title={q.description}>
-                                  {q.description}
-                                </td>
-                              </tr>
-                          ))
-                      )}
-                      </tbody>
-                    </table>
-                  </ScrollArea>
+                {/* 🔴 overflow-y-auto direto no conteiner da tabela com max-h-[260px] */}
+                <div className="rounded-md border border-border bg-card shadow-sm max-h-[260px] w-full overflow-y-auto">
+                  <table className="w-full text-xs text-left table-fixed">
+                    <thead className="text-[11px] text-muted-foreground uppercase bg-card border-b border-border sticky top-0 z-10">
+                    <tr>
+                      <th className="px-3 py-3 font-semibold w-[25%]">Lead / Empresa</th>
+                      <th className="px-2 py-3 font-semibold w-[20%]">Data do Log (date)</th>
+                      <th className="px-2 py-3 font-semibold w-[20%]">Criado em (createdAt)</th>
+                      <th className="px-3 py-3 font-semibold w-[35%]">Descrição do Histórico</th>
+                    </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                    {!data.qualificationsTable || data.qualificationsTable.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="px-4 py-6 text-center text-muted-foreground">
+                            Nenhuma qualificação registrada para este usuário no período.
+                          </td>
+                        </tr>
+                    ) : (
+                        data.qualificationsTable.map((q) => (
+                            <tr key={q.id} className="hover:bg-muted/30 transition-colors">
+                              <td className="px-3 py-2.5 font-semibold text-foreground truncate" title={q.leadName}>
+                                {q.leadName}
+                              </td>
+                              <td className="px-2 py-2.5 font-mono text-emerald-400">
+                                {new Date(q.logDate).toISOString().split("T")[0]}
+                              </td>
+                              <td className="px-2 py-2.5 text-muted-foreground">
+                                {new Date(q.createdAt).toLocaleDateString("pt-BR")} às {new Date(q.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                              </td>
+                              <td className="px-3 py-2.5 text-muted-foreground truncate" title={q.description}>
+                                {q.description}
+                              </td>
+                            </tr>
+                        ))
+                    )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
