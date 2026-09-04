@@ -212,71 +212,72 @@ export function Reports() {
                 </div>
               </div>
 
-              <div className="rounded-md border border-border bg-card overflow-hidden shadow-sm max-h-[400px] flex flex-col">
-                 <ScrollArea className="flex-1">
-                   <table className="w-full text-sm text-left whitespace-nowrap">
-                     <thead className="text-xs text-muted-foreground uppercase bg-muted/50 border-b border-border sticky top-0 backdrop-blur-sm z-10">
-                       <tr>
-                         <th className="px-6 py-4 font-medium">Nome do Colaborador</th>
-                         <th className="px-6 py-4 font-medium">E-mail</th>
-                         <th className="px-6 py-4 font-medium w-48">Cargo / Nível</th>
-                         <th className="px-6 py-4 text-right font-medium">Ações</th>
-                       </tr>
-                     </thead>
-                     <tbody className="divide-y divide-border">
-                       {loadingUsers ? (
-                         <tr>
-                           <td colSpan={4} className="px-6 py-8 text-center text-muted-foreground">
-                             Carregando equipe...
-                           </td>
-                         </tr>
-                       ) : filteredUsers.length === 0 ? (
-                         <tr>
-                           <td colSpan={4} className="px-6 py-8 text-center text-muted-foreground">
-                             Nenhum colaborador encontrado com "{searchTerm}".
-                           </td>
-                         </tr>
-                       ) : (
-                         filteredUsers.map((user) => (
-                           <tr key={user.id} className="hover:bg-muted/30 transition-colors">
-                             <td className="px-6 py-4 font-semibold text-foreground flex items-center gap-3">
-                               <div className="h-8 w-8 rounded-full bg-accent flex items-center justify-center text-muted-foreground">
-                                 <User size={14} />
-                               </div>
-                               {user.name}
-                             </td>
-                             <td className="px-6 py-4 text-muted-foreground">
-                                {user.email}
-                             </td>
-                             <td className="px-6 py-4">
-                               <Select value={user.role} onValueChange={(value) => handleRoleChange(user.id, value)}>
-                                  <SelectTrigger className="h-9">
-                                      <SelectValue placeholder="Selecione o cargo" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                      <SelectItem value="SALES">Vendedor (SALES)</SelectItem>
-                                      <SelectItem value="ADMIN">Administrador (ADMIN)</SelectItem>
-                                  </SelectContent>
-                               </Select>
-                             </td>
-                             <td className="px-6 py-4 text-right">
-                               <Button 
-                                  variant="outline" 
-                                  size="sm" 
+              {/* TABELA DE GESTÃO DA EQUIPE COM SCROLL E CABEÇALHO FIXO */}
+              <div className="rounded-md border border-border bg-card shadow-sm max-h-[350px] w-full overflow-y-auto">
+                <table className="w-full text-sm text-left whitespace-nowrap">
+                  <thead className="text-xs text-muted-foreground uppercase bg-card border-b border-border sticky top-0 z-10">
+                  <tr>
+                    <th className="px-6 py-4 font-medium">Nome do Colaborador</th>
+                    <th className="px-6 py-4 font-medium">E-mail</th>
+                    <th className="px-6 py-4 font-medium w-48">Cargo / Nível</th>
+                    <th className="px-6 py-4 text-right font-medium">Ações</th>
+                  </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                  {loadingUsers ? (
+                      <tr>
+                        <td colSpan={4} className="px-6 py-8 text-center text-muted-foreground">
+                          Carregando equipe...
+                        </td>
+                      </tr>
+                  ) : filteredUsers.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="px-6 py-8 text-center text-muted-foreground">
+                          Nenhum colaborador encontrado com "{searchTerm}".
+                        </td>
+                      </tr>
+                  ) : (
+                      filteredUsers.map((user) => (
+                          <tr key={user.id} className="hover:bg-muted/30 transition-colors">
+                            <td className="px-6 py-4 font-semibold text-foreground flex items-center gap-3">
+                              <div className="h-8 w-8 rounded-full bg-accent flex items-center justify-center text-muted-foreground">
+                                <User size={14} />
+                              </div>
+                              {user.name}
+                            </td>
+                            <td className="px-6 py-4 text-muted-foreground">
+                              {user.email}
+                            </td>
+                            <td className="px-6 py-4">
+                              <Select value={user.role} onValueChange={(value) => handleRoleChange(user.id, value)}>
+                                <SelectTrigger className="h-9">
+                                  <SelectValue placeholder="Selecione o cargo" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="SALES">Vendedor (SALES)</SelectItem>
+                                  <SelectItem value="ADMIN">Administrador (ADMIN)</SelectItem>
+                                  <SelectItem value="QUALIFICADOR">Qualificador</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              <Button
+                                  variant="outline"
+                                  size="sm"
                                   className="gap-2"
                                   onClick={() => navigate(`/reports/user/${user.id}`)}
-                               >
-                                  <Eye size={14} />
-                                  Ver Desempenho
-                               </Button>
-                             </td>
-                           </tr>
-                         ))
-                       )}
-                     </tbody>
-                   </table>
-                 </ScrollArea>
+                              >
+                                <Eye size={14} />
+                                Ver Desempenho
+                              </Button>
+                            </td>
+                          </tr>
+                      ))
+                  )}
+                  </tbody>
+                </table>
               </div>
+
             </div>
 
           </div>

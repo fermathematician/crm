@@ -125,6 +125,7 @@ const ALL_TAGS = [
   "a qualificar",
   "bloqueado",
   "pesquisado",
+  "lista quente",
   "sem resposta",
   "respondido",
   "geladeira",
@@ -144,7 +145,7 @@ const ALL_TAGS = [
 ];
 
 const allowedTagsByStage: Record<string, string[]> = {
-  NOVO: ["novo", "a qualificar", "bloqueado", "pesquisado"],
+  NOVO: ["novo", "a qualificar", "bloqueado", "pesquisado", "lista quente"],
   CONTATO: ["sem resposta", "aberto", "respondido", "geladeira"],
   NEGOCIACAO: ["frio", "morno", "quente", "visita"],
   CADASTRO: ["promessa", "parcial", "completa"],
@@ -161,31 +162,6 @@ const defaultTagsByStage: Record<string, string> = {
   FINALIZADO: "aprovado",
   SEM_INTERESSE: "sem interesse",
   FORA_DE_PERFIL: "fora de perfil",
-};
-
-const tagColors: Record<string, string> = {
-  novo: "bg-slate-500 border-slate-600",
-  bloqueado: "bg-red-200 border-red-300",
-  "a qualificar": "bg-zinc-300 border-zinc-400",
-  pesquisado: "bg-zinc-600 border-zinc-700",
-  "sem resposta": "bg-gray-400 border-gray-500",
-  respondido: "bg-yellow-400 border-yellow-600",
-  geladeira: "bg-cyan-300 border-cyan-400",
-  aberto: "bg-orange-300 border-orange-500",
-  frio: "bg-cyan-500 border-cyan-600",
-  morno: "bg-orange-400 border-orange-500",
-  quente: "bg-red-500 border-red-600",
-  visita: "bg-green-300 border-green-400",
-  promessa: "bg-indigo-300 border-indigo-400",
-  parcial: "bg-indigo-400 border-indigo-500",
-  completa: "bg-indigo-500 border-indigo-600",
-  aprovado: "bg-green-600 border-green-700",
-  recusado: "bg-rose-600 border-rose-700",
-  "sem interesse": "bg-zinc-500 border-zinc-600",
-  "fora de perfil": "bg-neutral-600 border-neutral-700",
-  inapto: "bg-neutral-600 border-neutral-700",
-  baixado: "bg-neutral-600 border-neutral-700",
-
 };
 
 export function LeadsList() {
