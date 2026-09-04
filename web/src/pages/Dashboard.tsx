@@ -1580,19 +1580,24 @@ export function Dashboard() {
     return null;
   }
 
+  // 🚀 Retorna o timestamp do último contato real do lead (ignorando alterações do sistema)
+  function getLastContactTime(lead: Lead): number {
+    const validContacts = lead.contacts?.filter((c) => c.type !== "SYSTEM_CHANGE") || [];
+    if (validContacts.length === 0) return 0; // Leads sem contato ficam ao final
+    return Math.max(...validContacts.map((c) => new Date(c.date).getTime()));
+  }
+
+// 🚀 Ordena os leads do último contato mais recente para o mais antigo
+  function sortLeadsByLastContact(leads: Lead[]): Lead[] {
+    return [...leads].sort((a, b) => getLastContactTime(b) - getLastContactTime(a));
+  }
+
   function onDragEnd(result: DropResult) {
     const { source, destination, draggableId } = result;
-    console.log("=== EVENTO DE ARRASTO ===");
-    console.log("ID do Lead:", draggableId);
-    console.log("Origem:", source.droppableId);
-    console.log("Destino:", destination?.droppableId || "FORA DE UMA COLUNA");
-    if (!destination) {
-      console.warn("O card foi solto fora de qualquer área de drop!");
-      return;
-    }
+    if (!destination) return;
     if (
-      source.droppableId === destination.droppableId &&
-      source.index === destination.index
+        source.droppableId === destination.droppableId &&
+        source.index === destination.index
     )
       return;
 
@@ -1600,14 +1605,13 @@ export function Dashboard() {
     const destCol = columns[destination.droppableId];
     const sourceItems = [...sourceCol.leads];
     const destItems =
-      source.droppableId === destination.droppableId
-        ? sourceItems
-        : [...destCol.leads];
+        source.droppableId === destination.droppableId
+            ? sourceItems
+            : [...destCol.leads];
 
     const [removed] = sourceItems.splice(source.index, 1);
 
     if (source.droppableId !== destination.droppableId) {
-
       let newTag = columnDefaultTags[destination.droppableId] || removed.tag;
 
       if (destination.droppableId === "negociacao" && removed.visitDate) {
@@ -1615,7 +1619,6 @@ export function Dashboard() {
       }
 
       removed.tag = newTag;
-
       removed.unsubscribed = removed.tag === "bloqueado";
       removed.bounced = removed.tag === "a qualificar";
 
@@ -1637,31 +1640,23 @@ export function Dashboard() {
       removed.contacts = [newLocalContact, ...(removed.contacts || [])];
     }
 
-    destItems.splice(destination.index, 0, removed);
+    destItems.push(removed);
 
+    // 🚀 Atualiza e reordena automaticamente do contato mais novo ao mais antigo
     const newBoard = {
       ...columns,
-      [source.droppableId]: { ...sourceCol, leads: sourceItems },
-      [destination.droppableId]: { ...destCol, leads: destItems },
+      [source.droppableId]: {
+        ...sourceCol,
+        leads: sortLeadsByLastContact(sourceItems),
+      },
+      [destination.droppableId]: {
+        ...destCol,
+        leads: sortLeadsByLastContact(destItems),
+      },
     };
 
     setColumns(newBoard);
     updateTodayNotifications(newBoard);
-
-    const updateLeadList = destItems.map((lead, index) => ({
-      id: lead.id,
-      position: index,
-    }));
-
-    const token = localStorage.getItem("token");
-    fetch(`${import.meta.env.VITE_API_URL}/auth/leads/reorder`, {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ leads: updateLeadList }),
-    }).catch((err) => console.error("Erro ao salvar ordem", err));
   }
 
   async function handleSaveLead() {
@@ -2221,17 +2216,17 @@ export function Dashboard() {
     const column = columns[colId];
     if (!column) return null;
 
-    //leads filtrados por etiqueta
-    const filteredLeads = column.leads.filter((lead) => {
-      const activeFilter = selectedTags[colId];
-      const matchTag = activeFilter === "todas" || lead.tag === activeFilter;
+    const filteredLeads = sortLeadsByLastContact(
+        column.leads.filter((lead) => {
+          const activeFilter = selectedTags[colId];
+          const matchTag = activeFilter === "todas" || lead.tag === activeFilter;
 
-      //leads fitrados por pesquisa
-      const currentSearch = columnSearch[colId].toLowerCase();
-      const matchSearch = lead.name.toLowerCase().includes(currentSearch);
+          const currentSearch = columnSearch[colId].toLowerCase();
+          const matchSearch = lead.name.toLowerCase().includes(currentSearch);
 
-      return matchTag && matchSearch;
-    });
+          return matchTag && matchSearch;
+        })
+    );
 
     return (
       <div
