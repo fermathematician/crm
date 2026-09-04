@@ -34,7 +34,7 @@ class GetUserMetricsService {
     }
 
     const start = new Date(`${startDate}T00:00:00.000Z`); //pra ajustar o filtro tirei o UTC ja que o log salva como 00h
-    const end = new Date(`${endDate}T23:59:59.999-03:00`);
+    const end = new Date(`${endDate}T23:59:59.999Z`);
 
     const validContactTypes: ContactType[] = [
       "EMAIL",
