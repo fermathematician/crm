@@ -38,6 +38,7 @@ import {
   X,
   Trash2,
   Lock,
+  Flame,
 } from "lucide-react";
 import { useTheme } from "../hooks/useTheme";
 
@@ -78,6 +79,7 @@ type LeadTag =
   | "visita"
   | "a qualificar"
   | "pesquisado"
+  | "lista quente"
   | "sem resposta"
   | "respondido"
   | "geladeira"
@@ -153,6 +155,7 @@ const tagColors: Record<LeadTag, string> = {
   bloqueado: "bg-red-200 border-red-300",
   "a qualificar": "bg-zinc-300 border-zinc-400",
   pesquisado: "bg-zinc-600 border-zinc-700",
+  "lista quente": "bg-red-400 border-red-500",
   "sem resposta": "bg-gray-400 border-gray-500",
   respondido: "bg-yellow-400 border-yellow-600",
   geladeira: "bg-cyan-300 border-cyan-400",
@@ -216,7 +219,7 @@ const columnDefaultTags: Record<string, LeadTag> = {
 };
 
 const columnAllowedTags: Record<string, LeadTag[]> = {
-  novos: ["novo", "a qualificar","bloqueado", "pesquisado"],
+  novos: ["novo", "a qualificar","bloqueado", "pesquisado", "lista quente"],
   contato: ["sem resposta", "aberto", "respondido", "geladeira"],
   negociacao: ["frio", "morno", "quente", "visita"],
   cadastro: ["promessa", "parcial", "completa"],
@@ -2170,6 +2173,16 @@ export function Dashboard() {
                   <span title="Pesquisado" className="flex items-center justify-center">
                   <Search size={11} className="text-sky-300" />
                   </span>
+                ) : lead.tag === "lista quente" || lead.tag === "quente" ? (
+                    // 🚀 Ícone de foguinho para QUENTES
+                    <span title="Lista Quente" className="flex items-center justify-center">
+                      <Flame size={11} className="text-orange-500 fill-orange-500" />
+                    </span>
+                ) : lead.tag === "bloqueado" ? (
+                        // 🚀 Ícone de cadeado/bloqueio para BLOQUEADO
+                        <span title="Bloqueado" className="flex items-center justify-center">
+                      <Lock size={11} className="text-red-400" />
+                    </span>
                 ) : lead.tag === "sem resposta" ? (
                     "SEM RESP" // 🚀 Texto encurtado
                 ) : lead.tag === "sem interesse" ? (
@@ -2269,6 +2282,10 @@ export function Dashboard() {
                           <Snowflake size={10} />
                       ) : tag === "pesquisado" ? (
                           <Search size={10} />
+                      ) : tag === "lista quente" ? (
+                          <Flame size={10} className="fill-orange-400 text-orange-400" />
+                      ) : tag === "bloqueado" ? (
+                              <Lock size={10} />
                       ) : (
                           tag
                       )}
