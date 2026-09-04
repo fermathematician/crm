@@ -208,43 +208,12 @@ class GetUserMetricsService {
           const origin = (parts[0] ?? "").trim();
           const target = (parts[1] ?? "").trim();
 
-          if (target.includes("lista quente")) {
-            totalListaQuente++;
-          }
-
-          // 1. Vetor com as 7 Etapas do Funil
-          const funnelStages = [
-            "novo",
-            "contato",
-            "negociacao",
-            "negociação",
-            "cadastro",
-            "finalizado",
-            "finalizados",
-            "sem_interesse",
-            "perdidos",
-            "fora_de_perfil",
-            "descartado"
-          ];
-
-          // 2. Vetor com as Etiquetas da fase inicial
-          const novoTags = ["a qualificar", "novo"];
-
-          // REGRA A: Troca de Etiqueta (Saindo de "a qualificar")
+          // REGRA ÚNICA: Troca de Etiqueta (Saindo de "a qualificar")
           const isTagChange = desc.includes("etiqueta");
           const isFromAQualificarTag = origin.includes("a qualificar");
           const isToAnotherTag = !target.includes("a qualificar") && target.length > 0;
 
-          // REGRA B: Troca de Funil (Saindo da etapa "NOVO" para outra etapa)
-          const isFunnelChange = desc.includes("funil") || contact.didChageFunnel;
-          const isFromNovoStage = origin.includes("novo") || origin.includes("a qualificar");
-          const isToAnotherStage = funnelStages.some((stage) => target.includes(stage)) && !target.includes("novo");
-
-          // Contabiliza se atender à troca de etiqueta OU à troca de funil
-          if (
-              (isTagChange && isFromAQualificarTag && isToAnotherTag) ||
-              (isFunnelChange && isFromNovoStage && isToAnotherStage)
-          ) {
+          if (isTagChange && isFromAQualificarTag && isToAnotherTag) {
             stats.qualifications = (stats.qualifications || 0) + 1;
             totalQualifications += 1;
 
