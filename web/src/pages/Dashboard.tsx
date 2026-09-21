@@ -3038,7 +3038,7 @@ export function Dashboard() {
                 className="flex-1 flex flex-col overflow-hidden"
               >
                 <div className="px-6 pt-4 border-b border-border shrink-0">
-                  <TabsList className="grid w-full grid-cols-6 bg-muted/50 h-12">
+                  <TabsList className="grid w-full grid-cols-7 bg-muted/50 h-12">
                     <TabsTrigger value="history" className="gap-2">
                       <History size={16} /> Histórico
                     </TabsTrigger>
