@@ -208,10 +208,16 @@ class GetUserMetricsService {
           const origin = (parts[0] ?? "").trim();
           const target = (parts[1] ?? "").trim();
 
+          // 🚀 CONTAGEM DA LISTA QUENTE
+          if (target.includes("lista quente")) {
+            totalListaQuente += 1;
+          }
+
           // REGRA ÚNICA: Troca de Etiqueta (Saindo de "a qualificar")
           const isTagChange = desc.includes("etiqueta");
           const isFromAQualificarTag = origin.includes("a qualificar");
-          const isToAnotherTag = !target.includes("a qualificar") && target.length > 0;
+          const isToAnotherTag =
+            !target.includes("a qualificar") && target.length > 0;
 
           if (isTagChange && isFromAQualificarTag && isToAnotherTag) {
             stats.qualifications = (stats.qualifications || 0) + 1;
